@@ -6,12 +6,16 @@ import PrincipalScreen from '../screens/PrincipalScreen';
 import { GruposScreen } from '../screens/GruposScreen';
 import { EventosScreen } from '../screens/EventosScreen';
 import theme from '../styles/theme';
+import RegistroScreen from '../screens/RegistroScreen';
+import CompletarRegistroScreen from '../screens/CompletarRegistroScreen';
 
 export type RootStackParamList = {
   Home: undefined;
   Principal: undefined;
   Grupos: undefined;
   Eventos: undefined;
+  Registro: undefined;
+  CompletarRegistro: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -31,6 +35,8 @@ export default function RootNavigator() {
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Grupos" component={GruposScreen} />
         <Stack.Screen name="Eventos" component={EventosScreen} />
+        <Stack.Screen name="Registro" component={RegistroScreen} />
+        <Stack.Screen name="CompletarRegistro" component={CompletarRegistroScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
