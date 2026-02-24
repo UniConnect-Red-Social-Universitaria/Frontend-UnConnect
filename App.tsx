@@ -2,7 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-const API_BASE_URL = 'http://192.168.1.7:3000';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 type Usuario = {
   id: string;
@@ -20,9 +20,14 @@ export default function App() {
   useEffect(() => {
     let isMounted = true;
 
-    const cargarUsuarios = async () => {
+const cargarUsuarios = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/usuarios`);
+        const response = await fetch(`${API_BASE_URL}/api/usuarios`, {
+          headers: {
+            'ngrok-skip-browser-warning': 'true'
+          }
+        });
+
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }

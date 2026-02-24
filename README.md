@@ -1,0 +1,1 @@
+EXPO_PUBLIC_API_BASE_URL es la dirección que se obtiene al ejecutar ngrok en la terminal, se ve algo así: https://3c9b-152-201-45-251.ngrok-free.app.
