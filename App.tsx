@@ -2,9 +2,11 @@ import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { EventosScreen } from './src/screens/EventosScreen';
+import { GruposScreen } from './src/screens/GruposScreen';
 
 type RootStackParamList = {
   Eventos: undefined;
+  Grupos: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -14,7 +16,7 @@ export default function App() {
     <NavigationContainer>
       <StatusBar style="dark" />
       <Stack.Navigator
-        initialRouteName="Eventos"
+        initialRouteName="Grupos"
         screenOptions={{
           headerStyle: {
             backgroundColor: '#f4c300',
@@ -29,6 +31,7 @@ export default function App() {
         }}
       >
         <Stack.Screen name="Eventos" component={EventosScreen} />
+        <Stack.Screen name="Grupos" component={GruposScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

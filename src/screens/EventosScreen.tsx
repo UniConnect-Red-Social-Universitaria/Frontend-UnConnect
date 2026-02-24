@@ -2,6 +2,14 @@ import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StackNavigationProp } from '@react-navigation/stack';
+
+type RootStackParamList = {
+  Eventos: undefined;
+  Grupos: undefined;
+};
+
+type EventosScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Eventos'>;
 
 const REQUEST_TIMEOUT_MS = 10000;
 const AUTH_TOKEN_STORAGE_KEY = 'uniconnect_auth_token';
@@ -137,7 +145,11 @@ function formatearFechaEvento(fechaIso: string): string {
   }).format(fecha);
 }
 
-export function EventosScreen() {
+type EventosScreenProps = {
+  navigation: EventosScreenNavigationProp;
+};
+
+export function EventosScreen({ navigation }: EventosScreenProps) {
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [loadingEventos, setLoadingEventos] = useState(true);
   const [publicando, setPublicando] = useState(false);
@@ -364,6 +376,13 @@ export function EventosScreen() {
           )}
         </ScrollView>
       )}
+
+      <Pressable 
+        style={styles.navButton}
+        onPress={() => navigation.navigate('Grupos')}
+      >
+        <Text style={styles.navButtonText}>Ver Mis Grupos</Text>
+      </Pressable>
     </View>
   );
 }
@@ -508,5 +527,19 @@ const styles = StyleSheet.create({
     color: '#b00020',
     marginBottom: 12,
     textAlign: 'center',
+  },
+  navButton: {
+    width: '100%',
+    backgroundColor: '#1a4d2e',
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  navButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });
