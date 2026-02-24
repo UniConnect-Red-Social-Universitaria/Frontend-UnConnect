@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, Pressable, useWindowDimensions, Image } from 'react-native';
 import { useHomeScreenStyles } from './HomeScreen.styles';
 
-export default function HomeScreen() {
+export default function HomeScreen({ navigation }: any) {
   const [hoveredButton, setHoveredButton] = useState<string | null>(null);
   const { width } = useWindowDimensions();
 
@@ -11,8 +11,7 @@ export default function HomeScreen() {
   const styles = useHomeScreenStyles();
 
   const handleRegisterPress = () => {
-    // TODO: Navegar a pantalla de registro
-    console.log('Navegar a Registro');
+    navigation.navigate('Registro');
   };
 
   const handleLoginPress = () => {

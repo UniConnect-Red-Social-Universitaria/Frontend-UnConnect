@@ -2,6 +2,7 @@
   "expo": {
     "name": "uniconnect-app",
     "slug": "uniconnect-app",
+    "scheme": "uniconnectapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
