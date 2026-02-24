@@ -1,4 +1,10 @@
-import { StatusBar } from 'expo-status-bar';
+import React from 'react';
+import RootNavigator from './src/navigation/RootNavigator';
+
+export default function App() {
+  return <RootNavigator />;
+}
+/*import { StatusBar } from 'expo-status-bar';
 import Constants from 'expo-constants';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -262,4 +268,5 @@ const styles = StyleSheet.create({
     color: '#b00020',
     marginBottom: 12,
   },
-});
+});*/
+
