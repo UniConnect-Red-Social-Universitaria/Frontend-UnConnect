@@ -4,10 +4,10 @@
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
-    "start:lan": "REACT_NATIVE_PACKAGER_HOSTNAME=$(hostname -I | awk '{print $1}') expo start --lan -c",
+    "start:lan": "node scripts/start-expo.js --lan",
     "start:tunnel": "expo start --tunnel -c",
-    "start:lts": "REACT_NATIVE_PACKAGER_HOSTNAME=$(hostname -I | awk '{print $1}') npx -y node@20 node_modules/expo/bin/cli start . --lan -c",
-    "start:lts:tunnel": "npx -y node@20 node_modules/expo/bin/cli start . --tunnel -c",
+    "start:lts": "node scripts/start-expo.js --lan --node20",
+    "start:lts:tunnel": "node scripts/start-expo.js --tunnel --node20",
     "start:qr": "npm run start:lts",
     "android": "expo start --android",
     "ios": "expo start --ios",
