@@ -3,12 +3,16 @@ import { View, Text, Pressable, TextInput } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import globalStyles from "../styles/global";
 import { styles } from "./PrincipalScreenStyles";
+import { resolverApiBaseUrl } from "../utils/apiConfig";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type RootStackParamList = {
   Principal: undefined;
   Grupos: undefined;
   Eventos: undefined;
   Contactos: undefined;
+  Login: undefined;
+  Home: undefined;
 };
 
 type PrincipalScreenNavigationProp = StackNavigationProp<
@@ -21,13 +25,38 @@ export default function PrincipalScreen({
 }: {
   navigation: PrincipalScreenNavigationProp;
 }) {
-  const handleLogout = () => {
-    console.log("Cerrar sesión");
+  const handleLogout = async () => {
+    try {
+      const apiBaseUrl = resolverApiBaseUrl();
+
+      const token = await AsyncStorage.getItem("userToken");
+
+      const response = await fetch(`${apiBaseUrl}/api/usuarios/logout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      await AsyncStorage.removeItem("userToken");
+
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Home" }],
+      });
+    } catch (error: any) {
+      console.error("Error en el logout:", error);
+      await AsyncStorage.removeItem("userToken");
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Home" }],
+      });
+    }
   };
 
   return (
     <View style={[globalStyles.container || {}, styles.container]}>
-      {/* 1. HEADER (Top) */}
+      {/* 1. HEADER*/}
       <View style={styles.header}>
         <Text style={styles.brand}>UniConnect</Text>
         <Pressable
