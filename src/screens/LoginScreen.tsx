@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   View,
   Text,
@@ -14,6 +15,8 @@ import Constants from "expo-constants";
 import { globalStyles } from "../styles/global";
 import theme from "../styles/theme";
 import { useLoginStyles } from "./LoginScreen.styles";
+
+const AUTH_TOKEN_STORAGE_KEY = "uniconnect_auth_token";
 
 function extraerHostDesdeHostUri(hostUri: string): string | null {
   const valor = hostUri.trim();
@@ -142,6 +145,17 @@ export default function LoginScreen({ navigation }: any) {
             : "Correo o contraseña incorrectos, intenta de nuevo.";
         throw new Error(mensaje);
       }
+
+      const tokenSesion =
+        typeof payload?.data?.token === "string"
+          ? payload.data.token.trim()
+          : "";
+
+      if (!tokenSesion) {
+        throw new Error("No se recibió un token de sesión válido.");
+      }
+
+      await AsyncStorage.setItem(AUTH_TOKEN_STORAGE_KEY, tokenSesion);
 
       navigation.reset({
         index: 0,
