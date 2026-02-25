@@ -180,17 +180,28 @@ export default function CompletarRegistroScreen({ navigation, route }: any) {
         throw new Error(mensaje);
       }
 
-      Alert.alert(
-        "¡Bienvenido a UniConnect!",
-        "Tu cuenta ha sido creada exitosamente.",
-        [
-          {
-            text: "OK",
-            // Aquí puedes redirigir al Login o al Inicio
-            onPress: () => console.log("Redirigir al inicio o login"),
-          },
-        ],
-      );
+      if (Platform.OS === "web") {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: "Principal" }],
+        });
+      } else {
+        Alert.alert(
+          "¡Bienvenido a UniConnect!",
+          "Tu cuenta ha sido creada exitosamente.",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: "Principal" }],
+                });
+              },
+            },
+          ],
+        );
+      }
     } catch (error: any) {
       console.error("Error en el registro:", error);
       Alert.alert(
