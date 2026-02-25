@@ -78,8 +78,8 @@ export default function LoginScreen({ navigation }: any) {
         throw new Error(mensaje);
       }
 
-      if (payload.token) {
-        await AsyncStorage.setItem('userToken', payload.token);
+      if (payload.data && payload.data.token) {
+        await AsyncStorage.setItem('userToken', payload.data.token);
       } else {
         console.warn("El login fue exitoso, pero el backend no devolvió un campo 'token'.");
       }
