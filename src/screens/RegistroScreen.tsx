@@ -95,7 +95,7 @@ export default function RegistroScreen({ navigation }: any) {
     <View style={globalStyles.safeArea}>
       <View style={styles.container}>
         <Image
-          source={require("../../assets/images/logo-caldas.png")}
+          source={require('../../assets/images/logo-caldas.png')}
           style={styles.logo}
         />
 

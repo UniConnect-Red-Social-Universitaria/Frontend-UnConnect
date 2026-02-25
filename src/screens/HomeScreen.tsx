@@ -13,11 +13,10 @@ export default function HomeScreen({ navigation }: any) {
   const handleRegisterPress = () => {
     navigation.navigate('Registro');
   };
-
   const handleLoginPress = () => {
-    // TODO: Navegar a pantalla de login
-    console.log('Navegar a Login');
-  };
+    navigation.navigate('Login');
+  }
+
 
   return (
     <View style={styles.container}>
