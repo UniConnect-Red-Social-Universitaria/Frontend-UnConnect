@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import theme from '../styles/theme';
 
 type RootStackParamList = {
   Eventos: undefined;
@@ -309,7 +310,7 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
           value={titulo}
           onChangeText={setTitulo}
           placeholder="Título"
-          placeholderTextColor="#8b7a3a"
+          placeholderTextColor={theme.colors.primaryMid}
           style={styles.input}
         />
 
@@ -317,7 +318,7 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
           value={descripcion}
           onChangeText={setDescripcion}
           placeholder="Descripción"
-          placeholderTextColor="#8b7a3a"
+          placeholderTextColor={theme.colors.primaryMid}
           style={[styles.input, styles.inputMultiline]}
           multiline
         />
@@ -326,7 +327,7 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
           value={fechaEventoInput}
           onChangeText={setFechaEventoInput}
           placeholder="Fecha (YYYY-MM-DDTHH:mm)"
-          placeholderTextColor="#8b7a3a"
+          placeholderTextColor={theme.colors.primaryMid}
           style={styles.input}
           autoCapitalize="none"
         />
@@ -335,7 +336,7 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
           value={token}
           onChangeText={setToken}
           placeholder="JWT (Bearer token)"
-          placeholderTextColor="#8b7a3a"
+          placeholderTextColor={theme.colors.primaryMid}
           style={styles.input}
           autoCapitalize="none"
           autoCorrect={false}
@@ -356,7 +357,7 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
         </Pressable>
       </View>
 
-      {loadingEventos && <ActivityIndicator color="#a67c00" size="large" />}
+      {loadingEventos && <ActivityIndicator color={theme.colors.primary} size="large" />}
       {error && <Text style={styles.error}>Error: {error}</Text>}
 
       {!loadingEventos && !error && (
@@ -377,7 +378,7 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
         </ScrollView>
       )}
 
-      <Pressable 
+      <Pressable
         style={styles.navButton}
         onPress={() => navigation.navigate('Grupos')}
       >
@@ -390,7 +391,7 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fffdf3',
+    backgroundColor: theme.colors.white,
     alignItems: 'center',
     justifyContent: 'flex-start',
     paddingTop: 56,
@@ -398,7 +399,9 @@ const styles = StyleSheet.create({
   },
   header: {
     width: '100%',
-    backgroundColor: '#f4c300',
+    backgroundColor: theme.colors.white,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 16,
@@ -417,43 +420,43 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 30,
     fontWeight: '700',
-    color: '#1f1f1f',
+    color: theme.colors.primary,
   },
   subtitle: {
     fontSize: 20,
     fontWeight: '600',
     marginTop: 2,
-    color: '#1f1f1f',
+    color: theme.colors.primary,
   },
   caption: {
     fontSize: 13,
     marginTop: 4,
-    color: '#3b3200',
+    color: theme.colors.primaryMid,
   },
   formCard: {
     width: '100%',
     borderWidth: 1,
-    borderColor: '#f0db85',
+    borderColor: '#E0E0E0',
     borderRadius: 12,
     padding: 14,
-    backgroundColor: '#fff9dd',
+    backgroundColor: '#F5F5F5',
     marginBottom: 16,
   },
   formTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1f1f1f',
+    color: theme.colors.primary,
     marginBottom: 10,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#e6cf6e',
+    borderColor: '#E0E0E0',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#1f1f1f',
-    backgroundColor: '#fffef7',
+    color: theme.colors.primary,
+    backgroundColor: theme.colors.white,
     marginBottom: 10,
   },
   inputMultiline: {
@@ -462,11 +465,11 @@ const styles = StyleSheet.create({
   },
   formMessage: {
     fontSize: 13,
-    color: '#6a5500',
+    color: theme.colors.primaryMid,
     marginBottom: 8,
   },
   button: {
-    backgroundColor: '#f4c300',
+    backgroundColor: theme.colors.primary,
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: 'center',
@@ -478,7 +481,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: '#1f1f1f',
+    color: theme.colors.white,
     fontSize: 15,
     fontWeight: '700',
   },
@@ -491,36 +494,36 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     borderWidth: 1,
-    borderColor: '#f0db85',
+    borderColor: '#E0E0E0',
     borderRadius: 12,
     padding: 14,
-    backgroundColor: '#fff9dd',
+    backgroundColor: '#F5F5F5',
   },
   eventTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1f1f1f',
+    color: theme.colors.primary,
   },
   eventDate: {
     fontSize: 14,
-    color: '#7a5d00',
+    color: theme.colors.primaryMid,
     marginTop: 4,
   },
   eventDescription: {
     fontSize: 14,
-    color: '#2c2c2c',
+    color: theme.colors.primary,
     marginTop: 8,
     lineHeight: 20,
   },
   eventAuthor: {
     fontSize: 13,
-    color: '#544200',
+    color: theme.colors.primaryMid,
     marginTop: 10,
     fontWeight: '500',
   },
   empty: {
     marginTop: 16,
-    color: '#6a5500',
+    color: theme.colors.primaryMid,
     textAlign: 'center',
   },
   error: {
@@ -530,7 +533,7 @@ const styles = StyleSheet.create({
   },
   navButton: {
     width: '100%',
-    backgroundColor: '#1a4d2e',
+    backgroundColor: theme.colors.primary,
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',

@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import theme from '../styles/theme';
 
 type RootStackParamList = {
   Eventos: undefined;
@@ -241,7 +242,7 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
         </View>
       </View>
 
-      {loading && <ActivityIndicator color="#a67c00" size="large" />}
+      {loading && <ActivityIndicator color={theme.colors.primary} size="large" />}
       {error && <Text style={styles.error}>{error}</Text>}
 
       {!loading && !error && (
@@ -284,7 +285,7 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fffdf3',
+    backgroundColor: theme.colors.white,
     alignItems: 'center',
     justifyContent: 'flex-start',
     paddingTop: 56,
@@ -292,7 +293,9 @@ const styles = StyleSheet.create({
   },
   header: {
     width: '100%',
-    backgroundColor: '#f4c300',
+    backgroundColor: theme.colors.white,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 16,
@@ -311,18 +314,18 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 30,
     fontWeight: '700',
-    color: '#1f1f1f',
+    color: theme.colors.primary,
   },
   subtitle: {
     fontSize: 20,
     fontWeight: '600',
     marginTop: 2,
-    color: '#1f1f1f',
+    color: theme.colors.primary,
   },
   caption: {
     fontSize: 13,
     marginTop: 4,
-    color: '#3b3200',
+    color: theme.colors.primaryMid,
   },
   list: {
     gap: 12,
@@ -333,26 +336,26 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     borderWidth: 1,
-    borderColor: '#f0db85',
+    borderColor: '#E0E0E0',
     borderRadius: 12,
     padding: 14,
-    backgroundColor: '#fff9dd',
+    backgroundColor: '#F5F5F5',
   },
   groupTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1f1f1f',
+    color: theme.colors.primary,
     marginBottom: 6,
   },
   groupMateria: {
     fontSize: 14,
-    color: '#7a5d00',
+    color: theme.colors.primaryMid,
     marginBottom: 8,
     fontWeight: '600',
   },
   groupMembers: {
     fontSize: 13,
-    color: '#544200',
+    color: theme.colors.primaryMid,
     marginBottom: 8,
   },
   membersList: {
@@ -360,12 +363,12 @@ const styles = StyleSheet.create({
   },
   memberName: {
     fontSize: 13,
-    color: '#2c2c2c',
+    color: theme.colors.primary,
     marginBottom: 2,
   },
   empty: {
     marginTop: 16,
-    color: '#6a5500',
+    color: theme.colors.primaryMid,
     textAlign: 'center',
   },
   error: {
@@ -376,7 +379,7 @@ const styles = StyleSheet.create({
   },
   navButton: {
     width: '100%',
-    backgroundColor: '#1a4d2e',
+    backgroundColor: theme.colors.primary,
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
