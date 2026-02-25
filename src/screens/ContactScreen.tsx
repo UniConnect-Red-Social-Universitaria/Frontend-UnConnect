@@ -13,6 +13,7 @@ import {
 	Pressable,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { resolverApiBaseUrl } from '../utils/apiConfig';
 
 type Contacto = {
 	id: string;
@@ -43,7 +44,8 @@ export default function ContactScreen() {
 					return;
 				}
 
-				const res = await fetch('http://localhost:3000/api/usuarios/companeros', {
+				const apiBaseUrl = resolverApiBaseUrl();
+				const res = await fetch(`${apiBaseUrl}/api/usuarios/companeros`, {
 					headers: { Authorization: `Bearer ${token}` },
 				});
 
