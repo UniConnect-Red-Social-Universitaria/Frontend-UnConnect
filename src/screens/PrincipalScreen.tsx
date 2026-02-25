@@ -1,90 +1,101 @@
-import React from 'react';
-import { View, Text, Pressable } from 'react-native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import theme from '../styles/theme';
-import globalStyles from '../styles/global';
+import React from "react";
+import { View, Text, Pressable, TextInput } from "react-native";
+import { StackNavigationProp } from "@react-navigation/stack";
+import globalStyles from "../styles/global";
+import { styles } from "./PrincipalScreenStyles";
 
 type RootStackParamList = {
   Principal: undefined;
   Grupos: undefined;
   Eventos: undefined;
+  Contactos: undefined;
 };
 
-type PrincipalScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Principal'>;
+type PrincipalScreenNavigationProp = StackNavigationProp<
+  RootStackParamList,
+  "Principal"
+>;
 
-export default function PrincipalScreen({ navigation }: { navigation: PrincipalScreenNavigationProp }) {
+export default function PrincipalScreen({
+  navigation,
+}: {
+  navigation: PrincipalScreenNavigationProp;
+}) {
+  const handleLogout = () => {
+    console.log("Cerrar sesión");
+  };
+
   return (
-    <View style={globalStyles.container || { flex: 1 }}>
-      {/* Navbar */}
-      <View style={[globalStyles.header || {}, styles.navbar]}>
-        <Text style={[globalStyles.title || {}, styles.brand]}>UniConnect</Text>
-        <View style={styles.navActions}>
-          <Pressable
-            style={({ pressed }) => [styles.navButton, { opacity: pressed ? 0.8 : 1 }]}
-            onPress={() => navigation.navigate('Grupos')}
-          >
-            <Text style={styles.navButtonText}>Grupos</Text>
-          </Pressable>
+    <View style={[globalStyles.container || {}, styles.container]}>
+      {/* 1. HEADER (Top) */}
+      <View style={styles.header}>
+        <Text style={styles.brand}>UniConnect</Text>
+        <Pressable
+          onPress={handleLogout}
+          style={({ pressed }) => [
+            styles.logoutButton,
+            { opacity: pressed ? 0.6 : 1 },
+          ]}
+        >
+          <Text style={styles.logoutText}>Salir</Text>
+        </Pressable>
+      </View>
 
-          <Pressable
-            style={({ pressed }) => [styles.navButton, { marginLeft: 12, opacity: pressed ? 0.8 : 1 }]}
-            onPress={() => navigation.navigate('Eventos')}
-          >
-            <Text style={styles.navButtonText}>Eventos</Text>
-          </Pressable>
+      {/* 2. MAIN CONTENT (Middle) */}
+      <View style={styles.mainContent}>
+        <Text style={styles.greeting}>¡Hola!</Text>
+        <Text style={styles.subtitle}>
+          Encuentra tu comunidad en la universidad
+        </Text>
+
+        <View style={styles.searchContainer}>
+          <TextInput
+            placeholder="Buscar compañeros, grupos o eventos..."
+            placeholderTextColor="#999"
+            style={styles.searchInput}
+          />
+        </View>
+
+        <View style={styles.resultsContainer}>
+          <Text style={styles.resultsTitle}>RESULTADOS RECIENTES</Text>
+          <Text style={{ color: "#CCC", fontStyle: "italic", marginTop: 10 }}>
+            Sin búsquedas recientes...
+          </Text>
         </View>
       </View>
 
-      {/* Main content */}
-      <View style={styles.hero}>
-        <Text style={styles.heroTitle}>Bienvenido a UniConnect</Text>
-        <Text style={styles.heroSubtitle}>Selecciona una sección arriba para continuar</Text>
+      {/* 3. BOTTOM BAR*/}
+      <View style={styles.bottomBar}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.navButton,
+            { opacity: pressed ? 0.6 : 1 },
+          ]}
+          onPress={() => navigation.navigate("Grupos")}
+        >
+          <Text style={styles.navButtonText}>Grupos</Text>
+        </Pressable>
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.navButton,
+            { opacity: pressed ? 0.6 : 1 },
+          ]}
+          onPress={() => navigation.navigate("Eventos")}
+        >
+          <Text style={styles.navButtonText}>Eventos</Text>
+        </Pressable>
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.navButton,
+            { opacity: pressed ? 0.6 : 1 },
+          ]}
+          onPress={() => console.log("Ir a Contactos (Próximamente)")}
+        >
+          <Text style={styles.navButtonText}>Contactos</Text>
+        </Pressable>
       </View>
     </View>
   );
 }
-
-const styles = {
-  navbar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-    paddingHorizontal: theme.spacing.md,
-  },
-  brand: {
-    color: theme.colors.gold,
-    fontSize: theme.typography.fontSize.lg,
-  },
-  navActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  navButton: {
-    backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radius.md,
-  },
-  navButtonText: {
-    color: theme.colors.white,
-    fontWeight: '700',
-  },
-  hero: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: theme.spacing.lg,
-  },
-  heroTitle: {
-    color: theme.colors.primary,
-    fontSize: theme.typography.fontSize.xl,
-    fontWeight: '700',
-    marginBottom: theme.spacing.sm,
-  },
-  heroSubtitle: {
-    color: theme.colors.primaryMid,
-    fontSize: theme.typography.fontSize.md,
-    textAlign: 'center',
-  },
-} as const;
