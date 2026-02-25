@@ -6,12 +6,13 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
+import Constants from "expo-constants";
 import { globalStyles } from "../styles/global";
 import { useRegistroScreenStyles } from "./RegistroScreen.styles";
-import * as AuthSession from "expo-auth-session";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -19,11 +20,31 @@ export default function RegistroScreen({ navigation }: any) {
   const styles = useRegistroScreenStyles();
   const [estaCargando, setEstaCargando] = useState(false);
 
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-    scopes: ["profile", "email"]
-  });
+  const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+  const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+  const googleAndroidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
+  const googleExpoClientId =
+    process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID || googleWebClientId;
+  const googleAndroidClientIdFinal =
+    googleAndroidClientId?.trim() || googleExpoClientId?.trim() || googleWebClientId?.trim();
+  const googleIosClientIdFinal =
+    googleIosClientId?.trim() || googleExpoClientId?.trim() || googleWebClientId?.trim();
+  const esExpoGo = Constants.appOwnership === "expo";
+
+  const googleAuthConfig: Google.GoogleAuthRequestConfig = {
+    webClientId: googleWebClientId,
+    expoClientId: googleExpoClientId,
+    scopes: ["profile", "email"],
+  };
+
+  if (googleIosClientIdFinal) {
+    googleAuthConfig.iosClientId = googleIosClientIdFinal;
+  }
+  if (googleAndroidClientIdFinal) {
+    googleAuthConfig.androidClientId = googleAndroidClientIdFinal;
+  }
+
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest(googleAuthConfig);
 
   useEffect(() => {
     if (!response) return;
@@ -87,8 +108,40 @@ export default function RegistroScreen({ navigation }: any) {
   };
 
   const handleGoogleLogin = () => {
+    if (!googleWebClientId?.trim()) {
+      Alert.alert(
+        "Configuración faltante",
+        "Falta EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID en el .env.",
+      );
+      return;
+    }
+
+    if (esExpoGo && !googleExpoClientId?.trim()) {
+      Alert.alert(
+        "Configuración faltante",
+        "Falta EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID en el .env para usar Google en Expo Go.",
+      );
+      return;
+    }
+
+    if (Platform.OS === "android" && !googleAndroidClientIdFinal) {
+      Alert.alert(
+        "Configuración faltante",
+        "Falta configuración de Google para Android en el .env.",
+      );
+      return;
+    }
+
+    if (Platform.OS === "ios" && !googleIosClientIdFinal) {
+      Alert.alert(
+        "Configuración faltante",
+        "Falta configuración de Google para iOS en el .env.",
+      );
+      return;
+    }
+
     setEstaCargando(true);
-    promptAsync();
+    promptAsync(esExpoGo ? { useProxy: true } : undefined);
   };
 
   return (
