@@ -37,6 +37,7 @@ export default function RootNavigator() {
         <Stack.Screen name="Eventos" component={EventosScreen} />
         <Stack.Screen name="Registro" component={RegistroScreen} />
         <Stack.Screen name="CompletarRegistro" component={CompletarRegistroScreen} />
+        <Stack.Screen name="Principal" component={PrincipalScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
