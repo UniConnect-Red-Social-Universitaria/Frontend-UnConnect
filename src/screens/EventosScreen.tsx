@@ -240,7 +240,7 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
     }
 
     if (!token.trim()) {
-      setMensajePublicacion('Debes pegar tu JWT para publicar eventos.');
+      setMensajePublicacion('No hay sesión activa. Inicia sesión para publicar eventos.');
       return;
     }
 
@@ -330,16 +330,6 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
           placeholderTextColor={theme.colors.primaryMid}
           style={styles.input}
           autoCapitalize="none"
-        />
-
-        <TextInput
-          value={token}
-          onChangeText={setToken}
-          placeholder="JWT (Bearer token)"
-          placeholderTextColor={theme.colors.primaryMid}
-          style={styles.input}
-          autoCapitalize="none"
-          autoCorrect={false}
         />
 
         {mensajePublicacion && <Text style={styles.formMessage}>{mensajePublicacion}</Text>}
