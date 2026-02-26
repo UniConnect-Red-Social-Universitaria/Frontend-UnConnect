@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import {
   View,
   Text,
@@ -7,95 +7,61 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
-import * as WebBrowser from "expo-web-browser";
-import * as Google from "expo-auth-session/providers/google";
-import { globalStyles } from "../styles/global";
+import globalStyles from "../styles/global";
 import { useRegistroScreenStyles } from "./RegistroScreen.styles";
-import * as AuthSession from "expo-auth-session";
+import { useGoogleAuth } from "../../Hooks/useGoogleAuth";
 
-WebBrowser.maybeCompleteAuthSession();
+interface GoogleUser {
+  name?: string;
+  email: string;
+  picture?: string;
+  given_name?: string;
+  family_name?: string;
+  id?: string;
+  idToken?: string;
+}
 
 export default function RegistroScreen({ navigation }: any) {
   const styles = useRegistroScreenStyles();
-  const [estaCargando, setEstaCargando] = useState(false);
 
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-    scopes: ["profile", "email"]
-  });
+  const { user, error, loading, request, signIn, signOut } = useGoogleAuth();
 
   useEffect(() => {
-    if (!response) return;
+    if (user) {
+      const googleUser = user as GoogleUser;
 
-    if (response.type === "success") {
-      const idToken =
-        response.authentication?.idToken || response.params?.id_token;
-
-      if (idToken) {
-        obtenerDatosUsuario(idToken);
-      } else {
-        setEstaCargando(false);
-        console.log("Respuesta de Google sin token:", response);
-        Alert.alert("Error", "Google inició sesión pero no devolvió el token.");
-      }
-    } else if (response.type === "error") {
-      setEstaCargando(false);
-      Alert.alert("Error", "No se pudo conectar con Google.");
-      console.log("Error de Google:", response.error);
-    } else if (response.type === "dismiss" || response.type === "cancel") {
-      setEstaCargando(false);
-      console.log("El usuario canceló el inicio de sesión.");
-    }
-  }, [response]);
-
-  const obtenerDatosUsuario = async (idToken: string) => {
-    try {
-      const userInfoResponse = await fetch(
-        `https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`,
-      );
-
-      const userInfo = await userInfoResponse.json();
-
-      if (!userInfo.email.endsWith("@ucaldas.edu.co")) {
-        setEstaCargando(false);
+      if (!googleUser.email.endsWith("@ucaldas.edu.co")) {
         Alert.alert(
           "Acceso denegado",
           "Por favor, utiliza exclusivamente tu correo institucional (@ucaldas.edu.co).",
         );
+        if (signOut) signOut();
         return;
       }
 
       const googleDataReal = {
-        nombre: userInfo.given_name || "",
-        apellido: userInfo.family_name || "",
-        correo: userInfo.email,
-        googleIdToken: idToken,
+        nombre: googleUser.given_name || googleUser.name?.split(" ")[0] || "",
+        apellido:
+          googleUser.family_name ||
+          googleUser.name?.split(" ").slice(1).join(" ") ||
+          "",
+        correo: googleUser.email,
+        googleIdToken: googleUser.idToken || googleUser.id || "",
       };
 
       console.log("¡Login con Google exitoso!", googleDataReal.correo);
-      setEstaCargando(false);
 
       navigation.navigate("CompletarRegistro", {
         googleData: googleDataReal,
       });
-    } catch (error) {
-      console.error("Error obteniendo datos de Google:", error);
-      Alert.alert("Error", "No pudimos obtener tu información de Google.");
-      setEstaCargando(false);
     }
-  };
-
-  const handleGoogleLogin = () => {
-    setEstaCargando(true);
-    promptAsync();
-  };
+  }, [user, navigation, signOut]);
 
   return (
     <View style={globalStyles.safeArea}>
       <View style={styles.container}>
         <Image
-          source={require('../../assets/images/logo-caldas.png')}
+          source={require("../../assets/images/logo-caldas.png")}
           style={styles.logo}
         />
 
@@ -106,13 +72,22 @@ export default function RegistroScreen({ navigation }: any) {
           cuenta de correo institucional de la Universidad de Caldas.
         </Text>
 
+        {error ? (
+          <Text style={{ color: "red", marginBottom: 16, textAlign: "center" }}>
+            {error}
+          </Text>
+        ) : null}
+
         <TouchableOpacity
-          style={[styles.googleButton, estaCargando && { opacity: 0.7 }]}
-          onPress={handleGoogleLogin}
-          disabled={!request || estaCargando}
+          style={[
+            styles.googleButton,
+            (!request || loading) && { opacity: 0.7 },
+          ]}
+          onPress={signIn}
+          disabled={!request || loading}
         >
-          {estaCargando ? (
-            <ActivityIndicator color="#000" />
+          {loading ? (
+            <ActivityIndicator color="#ffffff" />
           ) : (
             <Text style={styles.googleButtonText}>Continuar con Google</Text>
           )}
@@ -121,7 +96,7 @@ export default function RegistroScreen({ navigation }: any) {
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
-          disabled={estaCargando}
+          disabled={loading}
         >
           <Text style={styles.backButtonText}>Volver al inicio</Text>
         </TouchableOpacity>
