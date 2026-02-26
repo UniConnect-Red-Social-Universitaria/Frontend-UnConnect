@@ -1,26 +1,37 @@
 import React from 'react';
-import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import HomeScreen from './src/screens/HomeScreen';
+import HomeScreen from '../screens/HomeScreen';
+import PrincipalScreen from '../screens/PrincipalScreen';
+import { GruposScreen } from '../screens/GruposScreen';
+import { EventosScreen } from '../screens/EventosScreen';
+import theme from '../styles/theme';
+import RegistroScreen from '../screens/RegistroScreen';
+import CompletarRegistroScreen from '../screens/CompletarRegistroScreen';
+import LoginScreen from '../screens/LoginScreen';
 
-import PrincipalScreen from './src/screens/PrincipalScreen';
-import { GruposScreen } from './src/screens/GruposScreen';
-import { EventosScreen } from './src/screens/EventosScreen';
-import RegistroScreen from './src/screens/RegistroScreen';
-import CompletarRegistroScreen from './src/screens/CompletarRegistroScreen';
-import LoginScreen from './src/screens/LoginScreen';
-import ContactScreen from './src/screens/ContactScreen';
-import MensajeDirectoScreen from './src/screens/MensajeDirectoScreen';
-import theme from './src/styles/theme';
-import type { RootStackParamList } from './src/navigation/RootNavigator';
+export type RootStackParamList = {
+	Home: undefined;
+	Principal: undefined;
+	Grupos: undefined;
+	Eventos: undefined;
+	Registro: undefined;
+	CompletarRegistro: undefined;
+	Login: undefined;
+	Contactos: undefined;
+	MensajeDirecto: {
+		contactoId: string;
+		nombre: string;
+		correo: string;
+		userId?: string | null;
+	};
+};
 
 const Stack = createStackNavigator<RootStackParamList>();
 
-export default function App() {
+export default function RootNavigator() {
 	return (
 		<NavigationContainer>
-			<StatusBar style="dark" />
 			<Stack.Navigator
 				initialRouteName="Home"
 				screenOptions={{
@@ -37,8 +48,6 @@ export default function App() {
 				<Stack.Screen name="CompletarRegistro" component={CompletarRegistroScreen} />
 				<Stack.Screen name="Principal" component={PrincipalScreen} />
 				<Stack.Screen name="Login" component={LoginScreen} />
-				<Stack.Screen name="Contactos" component={ContactScreen} />
-				<Stack.Screen name="MensajeDirecto" component={MensajeDirectoScreen} />
 			</Stack.Navigator>
 		</NavigationContainer>
 	);
