@@ -13,7 +13,9 @@ import {
 import { RouteProp, useRoute } from '@react-navigation/native';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import io from 'socket.io-client';
+import { resolverApiBaseUrl } from '../utils/apiConfig';
 
 type MensajeDirectoScreenRouteProp = RouteProp<RootStackParamList, 'MensajeDirecto'>;
 
@@ -29,8 +31,9 @@ export default function MensajeDirectoScreen() {
 	const flatListRef = useRef<FlatList<any>>(null);
 	const socketRef = useRef<any>(null);
 
-	const API_URL = 'http://localhost:3000/api';
-	const SOCKET_URL = 'http://localhost:3000';
+	const apiBaseUrl = resolverApiBaseUrl();
+	const API_URL = `${apiBaseUrl}/api`;
+	const SOCKET_URL = apiBaseUrl;
 
 	useEffect(() => {
 		(async () => {
