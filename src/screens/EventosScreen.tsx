@@ -23,7 +23,7 @@ type RootStackParamList = {
 type EventosScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Eventos'>;
 
 const REQUEST_TIMEOUT_MS = 10000;
-const AUTH_TOKEN_STORAGE_KEY = 'uniconnect_auth_token';
+const AUTH_TOKEN_STORAGE_KEY = 'userToken';
 
 type Evento = {
 	id: string;
@@ -171,7 +171,7 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 	const [titulo, setTitulo] = useState('');
 	const [descripcion, setDescripcion] = useState('');
 	const [fechaEventoInput, setFechaEventoInput] = useState('');
-	const [token, setToken] = useState(process.env.EXPO_PUBLIC_AUTH_TOKEN?.trim() ?? '');
+	const [token, setToken] = useState('');
 
 	const apiBaseUrl = resolverApiBaseUrl();
 
