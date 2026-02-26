@@ -110,7 +110,7 @@ export default function PrincipalScreen({
 		}
 	};
 
-	// Buscar usuarios por nombre/correo (filtrado en frontend)
+	// Buscar usuarios por materia (validación y filtrado en backend)
 	useEffect(() => {
 		if (!search.trim()) {
 			setResults([]);
@@ -124,27 +124,22 @@ export default function PrincipalScreen({
 			try {
 				const apiBaseUrl = resolverApiBaseUrl();
 				const token = await AsyncStorage.getItem('userToken');
-				const res = await fetch(`${apiBaseUrl}/api/usuarios`, {
+				const materia = encodeURIComponent(search.trim());
+				const res = await fetch(`${apiBaseUrl}/api/usuarios/buscar-por-materia?materia=${materia}`, {
 					headers: { Authorization: `Bearer ${token}` },
 				});
 				const data = await res.json();
-				const usuarios = data && Array.isArray(data.data) ? data.data : [];
-				// Filtrar por nombre, apellido o correo
-				const searchLower = search.trim().toLowerCase();
-				const filtered = usuarios.filter(
-					(user: { nombre?: string; apellido?: string; correo?: string }) => {
-						const nombre = (user.nombre || '').toLowerCase();
-						const apellido = (user.apellido || '').toLowerCase();
-						const correo = (user.correo || '').toLowerCase();
-						return (
-							nombre.includes(searchLower) ||
-							apellido.includes(searchLower) ||
-							correo.includes(searchLower)
-						);
-					}
-				);
-				setResults(filtered);
-				if (filtered.length === 0) {
+
+				if (!res.ok || !data?.success) {
+					setResults([]);
+					setError(data?.message || 'No se pudo buscar por materia');
+					setSearching(false);
+					return;
+				}
+
+				const usuarios = Array.isArray(data.data) ? data.data : [];
+				setResults(usuarios);
+				if (usuarios.length === 0) {
 					setError('No se encontraron usuarios');
 				}
 			} catch (e) {
@@ -176,7 +171,7 @@ export default function PrincipalScreen({
 
 				<View style={styles.searchContainer}>
 					<TextInput
-						placeholder="Buscar compañeros por nombre o correo..."
+						placeholder="Buscar compañeros por materia..."
 						placeholderTextColor="#999"
 						style={styles.searchInput}
 						value={search}
