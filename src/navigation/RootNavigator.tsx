@@ -23,6 +23,7 @@ export type RootStackParamList = {
 		contactoId: string;
 		nombre: string;
 		correo: string;
+		userId?: string | null;
 	};
 };
 

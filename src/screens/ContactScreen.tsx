@@ -29,6 +29,7 @@ export default function ContactScreen() {
 	const [contactos, setContactos] = useState<Contacto[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const [userId, setUserId] = useState<string | null>(null);
 
 	useEffect(() => {
 		(async () => {
@@ -37,6 +38,8 @@ export default function ContactScreen() {
 
 			try {
 				const token = await AsyncStorage.getItem('userToken');
+				const userId = await AsyncStorage.getItem('userId');
+				setUserId(userId);
 
 				if (!token) {
 					setError('No autenticado');
@@ -86,6 +89,7 @@ export default function ContactScreen() {
 						contactoId: item.id,
 						nombre: item.nombre,
 						correo: item.correo,
+						userId: userId,
 					})
 				}
 			>

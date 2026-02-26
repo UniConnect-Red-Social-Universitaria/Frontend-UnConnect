@@ -9,6 +9,7 @@ import {
 	TouchableOpacity,
 	KeyboardAvoidingView,
 	Platform,
+	Alert,
 } from 'react-native';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import type { RootStackParamList } from '../navigation/RootNavigator';
@@ -21,11 +22,11 @@ type MensajeDirectoScreenRouteProp = RouteProp<RootStackParamList, 'MensajeDirec
 
 export default function MensajeDirectoScreen() {
 	const route = useRoute<MensajeDirectoScreenRouteProp>();
-	const { contactoId, nombre, correo } = route.params;
+	const { contactoId, nombre, correo, userId: userIdParam } = route.params;
 
 	const [mensajes, setMensajes] = useState<Array<any>>([]);
 	const [nuevoMensaje, setNuevoMensaje] = useState('');
-	const [userId, setUserId] = useState<string | null>(null);
+	const [userId, setUserId] = useState<string | null>(userIdParam ?? null);
 	const [enviando, setEnviando] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const flatListRef = useRef<FlatList<any>>(null);
@@ -37,11 +38,14 @@ export default function MensajeDirectoScreen() {
 
 	useEffect(() => {
 		(async () => {
-			const token = await AsyncStorage.getItem('token');
-			const userId = await AsyncStorage.getItem('userId');
-			setUserId(userId);
-			if (!token || !userId) return;
+			// Siempre usar 'userToken' como fuente principal
+			const token = await AsyncStorage.getItem('userToken');
+			if (!token) {
+				Alert.alert('Token faltante', 'No se encontró el token de usuario autenticado.');
+				return;
+			}
 
+			// Obtener historial de mensajes
 			fetch(`${API_URL}/mensajes/${contactoId}`, {
 				headers: { Authorization: `Bearer ${token}` },
 			})
@@ -52,15 +56,17 @@ export default function MensajeDirectoScreen() {
 					}
 				});
 
+			// Conexión socket
 			socketRef.current = io(SOCKET_URL, {
 				auth: { token },
 				transports: ['websocket'],
 			});
 
 			socketRef.current.on('mensaje', (msg: any) => {
+				// Mostrar solo mensajes entre el usuario autenticado y el contacto
 				if (
-					(msg.emisorId === userId && msg.receptorId === contactoId) ||
-					(msg.emisorId === contactoId && msg.receptorId === userId)
+					(msg.emisorId === msg.usuarioAutenticadoId && msg.receptorId === contactoId) ||
+					(msg.emisorId === contactoId && msg.receptorId === msg.usuarioAutenticadoId)
 				) {
 					setMensajes((prev) => [...prev, msg]);
 				}
@@ -77,8 +83,8 @@ export default function MensajeDirectoScreen() {
 		if (!nuevoMensaje.trim()) return;
 		setEnviando(true);
 		try {
-			const token = await AsyncStorage.getItem('token');
-			if (!token || !userId) {
+			const token = await AsyncStorage.getItem('userToken');
+			if (!token) {
 				setError('No autenticado');
 				setEnviando(false);
 				return;
