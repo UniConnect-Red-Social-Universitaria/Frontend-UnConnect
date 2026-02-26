@@ -22,7 +22,7 @@ type RootStackParamList = {
 type GruposScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Grupos'>;
 
 const REQUEST_TIMEOUT_MS = 10000;
-const AUTH_TOKEN_STORAGE_KEY = 'uniconnect_auth_token';
+const AUTH_TOKEN_STORAGE_KEY = 'userToken';
 
 type Grupo = {
 	id: string;
