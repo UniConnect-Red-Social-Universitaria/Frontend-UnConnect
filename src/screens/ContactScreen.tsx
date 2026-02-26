@@ -11,6 +11,7 @@ import {
 	ListRenderItem,
 	SafeAreaView,
 	Pressable,
+	Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { resolverApiBaseUrl } from '../utils/apiConfig';
@@ -54,9 +55,9 @@ export default function ContactScreen() {
 				if (data.success && Array.isArray(data.data)) {
 					setContactos(
 						data.data.map((c: any) => ({
-							id: c.id,
-							nombre: c.nombre,
-							correo: c.correo,
+							id: c.usuario?.id || c.contactoId || '',
+							nombre: c.usuario?.nombre || '',
+							correo: c.usuario?.correo || '',
 						}))
 					);
 				} else {
@@ -119,7 +120,7 @@ export default function ContactScreen() {
 					<FlatList<Contacto>
 						style={{ flex: 1 }}
 						data={contactos}
-						keyExtractor={(item) => item.id}
+						keyExtractor={(item, index) => item.id?.toString() ?? index.toString()}
 						renderItem={renderItem}
 						showsVerticalScrollIndicator={false}
 						contentContainerStyle={styles.listContent}
