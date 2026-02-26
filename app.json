@@ -2,7 +2,10 @@
   "expo": {
     "name": "uniconnect-app",
     "slug": "uniconnect-app",
-    "scheme": "uniconnectapp",
+    "scheme": [
+      "UniconectIOS",
+      "com.googleusercontent.apps.962671967940-pi085gmpgnnatro0dgcjk1cbrguusva7"
+    ],
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,9 +17,16 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.jackeliner.uniconnectapp",
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "com.jackeliner.uniconnectapp",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -28,7 +38,13 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-font"
-    ]
+      "expo-font",
+      "expo-web-browser"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "d2d84b07-57c2-4e01-ba31-aa2967ae7133"
+      }
+    }
   }
 }

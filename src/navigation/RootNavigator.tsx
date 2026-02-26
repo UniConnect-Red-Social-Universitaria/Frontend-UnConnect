@@ -8,6 +8,7 @@ import { EventosScreen } from '../screens/EventosScreen';
 import theme from '../styles/theme';
 import RegistroScreen from '../screens/RegistroScreen';
 import CompletarRegistroScreen from '../screens/CompletarRegistroScreen';
+//import LoginScreen1 from '../screens/LoginScreen1';
 import LoginScreen from '../screens/LoginScreen';
 
 export type RootStackParamList = {
@@ -22,7 +23,7 @@ export type RootStackParamList = {
 	MensajeDirecto: {
 		contactoId: string;
 		nombre: string;
-		correo: string;
+		correo: string; 
 		userId?: string | null;
 	};
 };
