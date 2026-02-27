@@ -13,7 +13,7 @@ export function useGoogleAuth() {
   const [loading, setLoading] = useState(false);
 
   const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS;
-  const androidClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID;
+  const androidClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB;
   const webClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB;
 
   const googleIosScheme = iosClientId
@@ -28,6 +28,7 @@ export function useGoogleAuth() {
     default: AuthSession.makeRedirectUri({
       scheme: "com.ucaldas.estudiantes",
       path: "oauthredirect",
+      useProxy: true,
     }),
   });
 
