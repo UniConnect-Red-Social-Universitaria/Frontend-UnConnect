@@ -315,89 +315,93 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 
 	return (
 		<View style={styles.container}>
-			<View style={styles.header}>
-				<Image
-					source={require('../../assets/images/logo-caldas.png')}
-					style={styles.logoImage}
-					resizeMode="contain"
-				/>
-				<View style={styles.headerText}>
-					<Text style={styles.title}>UniConnect</Text>
-					<Text style={styles.subtitle}>Eventos</Text>
-					<Text style={styles.caption}>Comunidad Universidad de Caldas</Text>
+			<View style={styles.contentWrapper}>
+				<View style={styles.header}>
+					<Image
+						source={require('../../assets/images/logo-caldas.png')}
+						style={styles.logoImage}
+						resizeMode="contain"
+					/>
+					<View style={styles.headerText}>
+						<Text style={styles.title}>UniConnect</Text>
+						<Text style={styles.subtitle}>Eventos</Text>
+						<Text style={styles.caption}>Comunidad Universidad de Caldas</Text>
+					</View>
 				</View>
-			</View>
 
-			<View style={styles.formCard}>
-				<Text style={styles.formTitle}>Publicar evento</Text>
+				<View style={styles.formCard}>
+					<Text style={styles.formTitle}>Publicar evento</Text>
 
-				<TextInput
-					value={titulo}
-					onChangeText={setTitulo}
-					placeholder="Título"
-					placeholderTextColor={theme.colors.primaryMid}
-					style={styles.input}
-				/>
+					<TextInput
+						value={titulo}
+						onChangeText={setTitulo}
+						placeholder="Título"
+						placeholderTextColor={theme.colors.primaryMid}
+						style={styles.input}
+					/>
 
-				<TextInput
-					value={descripcion}
-					onChangeText={setDescripcion}
-					placeholder="Descripción"
-					placeholderTextColor={theme.colors.primaryMid}
-					style={[styles.input, styles.inputMultiline]}
-					multiline
-				/>
+					<TextInput
+						value={descripcion}
+						onChangeText={setDescripcion}
+						placeholder="Descripción"
+						placeholderTextColor={theme.colors.primaryMid}
+						style={[styles.input, styles.inputMultiline]}
+						multiline
+					/>
 
-				<TextInput
-					value={fechaEventoInput}
-					onChangeText={setFechaEventoInput}
-					placeholder="Fecha (YYYY-MM-DDTHH:mm)"
-					placeholderTextColor={theme.colors.primaryMid}
-					style={styles.input}
-					autoCapitalize="none"
-				/>
+					<TextInput
+						value={fechaEventoInput}
+						onChangeText={setFechaEventoInput}
+						placeholder="Fecha (YYYY-MM-DDTHH:mm)"
+						placeholderTextColor={theme.colors.primaryMid}
+						style={styles.input}
+						autoCapitalize="none"
+					/>
 
-				{mensajePublicacion && (
-					<Text style={styles.formMessage}>{mensajePublicacion}</Text>
-				)}
-
-				<Pressable
-					onPress={publicarEvento}
-					disabled={publicando}
-					style={({ pressed }) => [
-						styles.button,
-						pressed && !publicando ? styles.buttonPressed : null,
-						publicando ? styles.buttonDisabled : null,
-					]}
-				>
-					<Text style={styles.buttonText}>
-						{publicando ? 'Publicando...' : 'Publicar evento'}
-					</Text>
-				</Pressable>
-			</View>
-
-			{loadingEventos && <ActivityIndicator color={theme.colors.primary} size="large" />}
-			{error && <Text style={styles.error}>Error: {error}</Text>}
-
-			{!loadingEventos && !error && (
-				<ScrollView contentContainerStyle={styles.list}>
-					{eventos.map((evento) => (
-						<View key={evento.id} style={styles.card}>
-							<Text style={styles.eventTitle}>{evento.titulo}</Text>
-							<Text style={styles.eventDate}>
-								{formatearFechaEvento(evento.fechaEvento)}
-							</Text>
-							<Text style={styles.eventDescription}>{evento.descripcion}</Text>
-							<Text style={styles.eventAuthor}>
-								Organiza: {evento.creador.nombre} {evento.creador.apellido}
-							</Text>
-						</View>
-					))}
-					{eventos.length === 0 && (
-						<Text style={styles.empty}>No hay eventos próximos en este momento.</Text>
+					{mensajePublicacion && (
+						<Text style={styles.formMessage}>{mensajePublicacion}</Text>
 					)}
-				</ScrollView>
-			)}
+
+					<Pressable
+						onPress={publicarEvento}
+						disabled={publicando}
+						style={({ pressed }) => [
+							styles.button,
+							pressed && !publicando ? styles.buttonPressed : null,
+							publicando ? styles.buttonDisabled : null,
+						]}
+					>
+						<Text style={styles.buttonText}>
+							{publicando ? 'Publicando...' : 'Publicar evento'}
+						</Text>
+					</Pressable>
+				</View>
+
+				{loadingEventos && (
+					<ActivityIndicator color={theme.colors.primary} size="large" />
+				)}
+				{error && <Text style={styles.error}>Error: {error}</Text>}
+
+				{!loadingEventos && !error && (
+					<ScrollView contentContainerStyle={styles.list} style={styles.scrollView}>
+						{eventos.map((evento) => (
+							<View key={evento.id} style={styles.card}>
+								<Text style={styles.eventTitle}>{evento.titulo}</Text>
+								<Text style={styles.eventDate}>
+									{formatearFechaEvento(evento.fechaEvento)}
+								</Text>
+								<Text style={styles.eventDescription}>{evento.descripcion}</Text>
+								<Text style={styles.eventAuthor}>
+									Organiza: {evento.creador.nombre} {evento.creador.apellido}
+								</Text>
+							</View>
+						))}
+						{eventos.length === 0 && (
+							<Text style={styles.empty}>No hay eventos próximos en este momento.</Text>
+						)}
+					</ScrollView>
+				)}
+			</View>
 
 			<Pressable style={styles.navButton} onPress={() => navigation.navigate('Grupos')}>
 				<Text style={styles.navButtonText}>Ver Mis Grupos</Text>
@@ -410,10 +414,16 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 		backgroundColor: theme.colors.white,
+	},
+	contentWrapper: {
+		flex: 1,
 		alignItems: 'center',
 		justifyContent: 'flex-start',
 		paddingTop: 56,
 		paddingHorizontal: 20,
+	},
+	scrollView: {
+		width: '100%',
 	},
 	header: {
 		width: '100%',
@@ -552,15 +562,18 @@ const styles = StyleSheet.create({
 	navButton: {
 		width: '100%',
 		backgroundColor: theme.colors.primary,
-		borderRadius: 10,
-		paddingVertical: 14,
+		borderRadius: 0,
+		paddingVertical: 24,
+		paddingHorizontal: 20,
 		alignItems: 'center',
-		marginTop: 12,
-		marginBottom: 20,
+		marginTop: 0,
+		paddingBottom: 44,
+		paddingTop: 24,
+		minHeight: 80,
 	},
 	navButtonText: {
 		color: '#ffffff',
-		fontSize: 15,
+		fontSize: 20,
 		fontWeight: '700',
 	},
 });
