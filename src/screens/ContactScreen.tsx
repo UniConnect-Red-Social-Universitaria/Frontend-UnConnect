@@ -259,14 +259,20 @@ const styles = StyleSheet.create({
 	},
 
 	footer: {
-		height: 60,
+		width: '100%',
 		backgroundColor: '#002855',
 		justifyContent: 'center',
 		alignItems: 'center',
+		paddingVertical: 24,
+		paddingHorizontal: 20,
+		paddingBottom: 44,
+		paddingTop: 24,
+		minHeight: 80,
 	},
 
 	footerText: {
 		color: '#fff',
 		fontWeight: '600',
+		fontSize: 20,
 	},
 });

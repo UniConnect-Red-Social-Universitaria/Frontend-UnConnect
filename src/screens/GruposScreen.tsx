@@ -243,51 +243,53 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 
 	return (
 		<View style={styles.container}>
-			<View style={styles.header}>
-				<Image
-					source={require('../../assets/images/logo-caldas.png')}
-					style={styles.logoImage}
-					resizeMode="contain"
-				/>
-				<View style={styles.headerText}>
-					<Text style={styles.title}>UniConnect</Text>
-					<Text style={styles.subtitle}>Mis Grupos</Text>
-					<Text style={styles.caption}>Comunidad Universidad de Caldas</Text>
+			<View style={styles.contentWrapper}>
+				<View style={styles.header}>
+					<Image
+						source={require('../../assets/images/logo-caldas.png')}
+						style={styles.logoImage}
+						resizeMode="contain"
+					/>
+					<View style={styles.headerText}>
+						<Text style={styles.title}>UniConnect</Text>
+						<Text style={styles.subtitle}>Mis Grupos</Text>
+						<Text style={styles.caption}>Comunidad Universidad de Caldas</Text>
+					</View>
 				</View>
-			</View>
 
-			{loading && <ActivityIndicator color={theme.colors.primary} size="large" />}
-			{error && <Text style={styles.error}>{error}</Text>}
+				{loading && <ActivityIndicator color={theme.colors.primary} size="large" />}
+				{error && <Text style={styles.error}>{error}</Text>}
 
-			{!loading && !error && (
-				<ScrollView contentContainerStyle={styles.list}>
-					{grupos.map((grupo) => (
-						<View key={grupo.id} style={styles.card}>
-							<Text style={styles.groupTitle}>{grupo.nombre}</Text>
-							<Text style={styles.groupMateria}>Materia: {grupo.materia.nombre}</Text>
-							<Text style={styles.groupMembers}>
-								{grupo.cantidadMiembros}{' '}
-								{grupo.cantidadMiembros === 1 ? 'miembro' : 'miembros'}
-							</Text>
-							<View style={styles.membersList}>
-								{grupo.miembros.slice(0, 3).map((miembro) => (
-									<Text key={miembro.id} style={styles.memberName}>
-										• {miembro.nombre} {miembro.apellido}
-									</Text>
-								))}
-								{grupo.cantidadMiembros > 3 && (
-									<Text style={styles.memberName}>
-										• y {grupo.cantidadMiembros - 3} más...
-									</Text>
-								)}
+				{!loading && !error && (
+					<ScrollView contentContainerStyle={styles.list} style={styles.scrollView}>
+						{grupos.map((grupo) => (
+							<View key={grupo.id} style={styles.card}>
+								<Text style={styles.groupTitle}>{grupo.nombre}</Text>
+								<Text style={styles.groupMateria}>Materia: {grupo.materia.nombre}</Text>
+								<Text style={styles.groupMembers}>
+									{grupo.cantidadMiembros}{' '}
+									{grupo.cantidadMiembros === 1 ? 'miembro' : 'miembros'}
+								</Text>
+								<View style={styles.membersList}>
+									{grupo.miembros.slice(0, 3).map((miembro) => (
+										<Text key={miembro.id} style={styles.memberName}>
+											• {miembro.nombre} {miembro.apellido}
+										</Text>
+									))}
+									{grupo.cantidadMiembros > 3 && (
+										<Text style={styles.memberName}>
+											• y {grupo.cantidadMiembros - 3} más...
+										</Text>
+									)}
+								</View>
 							</View>
-						</View>
-					))}
-					{grupos.length === 0 && (
-						<Text style={styles.empty}>No perteneces a ningún grupo todavía.</Text>
-					)}
-				</ScrollView>
-			)}
+						))}
+						{grupos.length === 0 && (
+							<Text style={styles.empty}>No perteneces a ningún grupo todavía.</Text>
+						)}
+					</ScrollView>
+				)}
+			</View>
 
 			<Pressable style={styles.navButton} onPress={() => navigation.navigate('Eventos')}>
 				<Text style={styles.navButtonText}>Ver Eventos</Text>
@@ -300,10 +302,16 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 		backgroundColor: theme.colors.white,
+	},
+	contentWrapper: {
+		flex: 1,
 		alignItems: 'center',
 		justifyContent: 'flex-start',
 		paddingTop: 56,
 		paddingHorizontal: 20,
+	},
+	scrollView: {
+		width: '100%',
 	},
 	header: {
 		width: '100%',
@@ -394,15 +402,18 @@ const styles = StyleSheet.create({
 	navButton: {
 		width: '100%',
 		backgroundColor: theme.colors.primary,
-		borderRadius: 10,
-		paddingVertical: 14,
+		borderRadius: 0,
+		paddingVertical: 24,
+		paddingHorizontal: 20,
 		alignItems: 'center',
-		marginTop: 12,
-		marginBottom: 20,
+		marginTop: 0,
+		paddingBottom: 46,
+		paddingTop: 24,
+		minHeight: 80,
 	},
 	navButtonText: {
 		color: '#ffffff',
-		fontSize: 15,
+		fontSize: 20,
 		fontWeight: '700',
 	},
 });
