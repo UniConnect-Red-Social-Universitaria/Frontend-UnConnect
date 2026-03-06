@@ -22,8 +22,7 @@ type RootStackParamList = {
 	Home: undefined;
 };
 
-type PrincipalScreenNavigationProp =
-	StackNavigationProp<RootStackParamList, 'Principal'>;
+type PrincipalScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Principal'>;
 
 const normalizarTexto = (texto: string) =>
 	texto
@@ -65,11 +64,7 @@ export default function PrincipalScreen({
 				});
 				const dataUsuarios = await resUsuarios.json();
 				if (dataUsuarios.success) {
-					setUsuarios(
-						Array.isArray(dataUsuarios.data)
-							? dataUsuarios.data
-							: []
-					);
+					setUsuarios(Array.isArray(dataUsuarios.data) ? dataUsuarios.data : []);
 				}
 
 				const resGrupos = await fetch(`${apiBaseUrl}/api/grupos`, {
@@ -77,11 +72,7 @@ export default function PrincipalScreen({
 				});
 				const dataGrupos = await resGrupos.json();
 				if (dataGrupos.success) {
-					setGrupos(
-						Array.isArray(dataGrupos.data)
-							? dataGrupos.data
-							: []
-					);
+					setGrupos(Array.isArray(dataGrupos.data) ? dataGrupos.data : []);
 				}
 
 				const resMaterias = await fetch(`${apiBaseUrl}/api/catalogos`, {
@@ -133,14 +124,9 @@ export default function PrincipalScreen({
 
 		const gruposFiltrados = grupos.filter((g) => {
 			const nombreGrupo = normalizarTexto(g.nombre || '');
-			const nombreMateria = normalizarTexto(
-				g.materia?.nombre || ''
-			);
+			const nombreMateria = normalizarTexto(g.materia?.nombre || '');
 
-			return (
-				nombreGrupo.includes(textoBusqueda) ||
-				nombreMateria.includes(textoBusqueda)
-			);
+			return nombreGrupo.includes(textoBusqueda) || nombreMateria.includes(textoBusqueda);
 		});
 
 		const materiasFiltradas = materias.filter((m) => {
@@ -162,7 +148,7 @@ export default function PrincipalScreen({
 	}
 
 	return (
-		<View style={[globalStyles.container || {}, styles.container]}>
+		<View style={styles.container}>
 			{/* HEADER */}
 			<View style={styles.header}>
 				<Text style={styles.brand}>UniConnect</Text>
@@ -175,9 +161,7 @@ export default function PrincipalScreen({
 			{/* MAIN */}
 			<View style={styles.mainContent}>
 				<Text style={styles.greeting}>¡Hola!</Text>
-				<Text style={styles.subtitle}>
-					Encuentra tu comunidad en la universidad
-				</Text>
+				<Text style={styles.subtitle}>Encuentra tu comunidad en la universidad</Text>
 
 				<View style={styles.searchContainer}>
 					<TextInput
@@ -195,10 +179,7 @@ export default function PrincipalScreen({
 						<>
 							<Text style={styles.resultsTitle}>Usuarios</Text>
 							{results.map((item) => (
-								<View
-									key={item.id || item._id}
-									style={{ paddingVertical: 6 }}
-								>
+								<View key={item.id || item._id} style={{ paddingVertical: 6 }}>
 									<Text style={{ fontWeight: 'bold' }}>
 										{item.nombre} {item.apellido}
 									</Text>
@@ -213,16 +194,9 @@ export default function PrincipalScreen({
 						<>
 							<Text style={styles.resultsTitle}>Grupos</Text>
 							{grupoResults.map((item) => (
-								<View
-									key={item.id || item._id}
-									style={{ paddingVertical: 6 }}
-								>
-									<Text style={{ fontWeight: 'bold' }}>
-										{item.nombre}
-									</Text>
-									<Text>
-										Materia: {item.materia?.nombre}
-									</Text>
+								<View key={item.id || item._id} style={{ paddingVertical: 6 }}>
+									<Text style={{ fontWeight: 'bold' }}>{item.nombre}</Text>
+									<Text>Materia: {item.materia?.nombre}</Text>
 								</View>
 							))}
 						</>
@@ -233,13 +207,8 @@ export default function PrincipalScreen({
 						<>
 							<Text style={styles.resultsTitle}>Materias</Text>
 							{materiaResults.map((item) => (
-								<View
-									key={item.id || item._id}
-									style={{ paddingVertical: 6 }}
-								>
-									<Text style={{ fontWeight: 'bold' }}>
-										{item.nombre}
-									</Text>
+								<View key={item.id || item._id} style={{ paddingVertical: 6 }}>
+									<Text style={{ fontWeight: 'bold' }}>{item.nombre}</Text>
 								</View>
 							))}
 						</>

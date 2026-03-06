@@ -7,7 +7,7 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.white,
   },
-  
+
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -81,19 +81,26 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     backgroundColor: theme.colors?.primary,
-    paddingVertical: theme.spacing?.md || 16,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
     borderTopWidth: 1,
     borderTopColor: '#E0E0E0',
-    paddingBottom: 20,
+    paddingBottom: 48,
+    paddingTop: 24,
+    width: '100%',
+    alignSelf: 'stretch',
+    minHeight: 80,
   },
   navButton: {
     alignItems: 'center',
     justifyContent: 'center',
     flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
   },
   navButtonText: {
     color: theme.colors?.white || '#FFFFFF',
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: 20,
   }
 });
