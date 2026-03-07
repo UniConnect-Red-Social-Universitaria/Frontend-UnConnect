@@ -22,42 +22,60 @@ type Contacto = {
 	correo: string;
 };
 
+type SolicitudPendiente = {
+	solicitudId: string;
+	solicitanteId: string;
+	nombre: string;
+	correo: string;
+	createdAt?: string;
+};
+
 export default function ContactScreen() {
 	const navigation =
 		useNavigation<StackNavigationProp<RootStackParamList, 'Contactos'>>();
 
 	const [contactos, setContactos] = useState<Contacto[]>([]);
+	const [solicitudesPendientes, setSolicitudesPendientes] = useState<SolicitudPendiente[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [userId, setUserId] = useState<string | null>(null);
+	const [processingSolicitudId, setProcessingSolicitudId] = useState<string | null>(null);
 
-	useEffect(() => {
-		(async () => {
+	const cargarDatos = async () => {
 			setLoading(true);
 			setError(null);
 
 			try {
 				const token = await AsyncStorage.getItem('userToken');
-				const userId = await AsyncStorage.getItem('userId');
-				setUserId(userId);
+				const currentUserId = await AsyncStorage.getItem('userId');
+				setUserId(currentUserId);
 
 				if (!token) {
 					setError('No autenticado');
 					setContactos([]);
+					setSolicitudesPendientes([]);
 					setLoading(false);
 					return;
 				}
 
 				const apiBaseUrl = resolverApiBaseUrl();
-				const res = await fetch(`${apiBaseUrl}/api/usuarios/companeros`, {
-					headers: { Authorization: `Bearer ${token}` },
-				});
+				const [resCompaneros, resSolicitudes] = await Promise.all([
+					fetch(`${apiBaseUrl}/api/usuarios/companeros`, {
+						headers: { Authorization: `Bearer ${token}` },
+					}),
+					fetch(`${apiBaseUrl}/api/usuarios/solicitudes-recibidas`, {
+						headers: { Authorization: `Bearer ${token}` },
+					}),
+				]);
 
-				const data = await res.json();
+				const [dataCompaneros, dataSolicitudes] = await Promise.all([
+					resCompaneros.json(),
+					resSolicitudes.json(),
+				]);
 
-				if (data.success && Array.isArray(data.data)) {
+				if (dataCompaneros.success && Array.isArray(dataCompaneros.data)) {
 					setContactos(
-						data.data.map((c: any) => ({
+						dataCompaneros.data.map((c: any) => ({
 							id: c.usuario?.id || c.contactoId || '',
 							nombre: c.usuario?.nombre || '',
 							correo: c.usuario?.correo || '',
@@ -65,15 +83,84 @@ export default function ContactScreen() {
 					);
 				} else {
 					setContactos([]);
-					setError(data.message || 'Error al cargar contactos');
+					setError(dataCompaneros.message || 'Error al cargar contactos');
+				}
+
+				if (dataSolicitudes.success && Array.isArray(dataSolicitudes.data)) {
+					setSolicitudesPendientes(
+						dataSolicitudes.data.map((s: any) => ({
+							solicitudId: s.solicitudId,
+							solicitanteId: s.solicitante?.id || '',
+							nombre: s.solicitante?.nombre || 'Sin nombre',
+							correo: s.solicitante?.correo || '',
+							createdAt: s.createdAt,
+						}))
+					);
+				} else {
+					setSolicitudesPendientes([]);
 				}
 			} catch (e) {
 				setError('Error de red');
+				setSolicitudesPendientes([]);
 			}
 
 			setLoading(false);
-		})();
+	};
+
+	useEffect(() => {
+		cargarDatos();
 	}, []);
+
+	const procesarSolicitud = async (
+		solicitudId: string,
+		action: 'aceptar' | 'rechazar'
+	) => {
+		setProcessingSolicitudId(solicitudId);
+
+		try {
+			const token = await AsyncStorage.getItem('userToken');
+
+			if (!token) {
+				Alert.alert('Sesion expirada', 'Debes iniciar sesion nuevamente.');
+				return;
+			}
+
+			const apiBaseUrl = resolverApiBaseUrl();
+			const endpoint =
+				action === 'aceptar'
+					? '/api/usuarios/solicitudes/aceptar'
+					: '/api/usuarios/solicitudes/rechazar';
+
+			const res = await fetch(`${apiBaseUrl}${endpoint}`, {
+				method: 'POST',
+				headers: {
+					Authorization: `Bearer ${token}`,
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({ solicitudId }),
+			});
+
+			const data = await res.json();
+
+			if (!res.ok || !data.success) {
+				Alert.alert('No se pudo procesar', data.message || 'Intentalo de nuevo.');
+				return;
+			}
+
+			setSolicitudesPendientes((prev) =>
+				prev.filter((s) => s.solicitudId !== solicitudId)
+			);
+
+			if (action === 'aceptar') {
+				// Al aceptar una solicitud se refrescan contactos para mostrar el nuevo companero.
+				await cargarDatos();
+			}
+		} catch (_e) {
+			Alert.alert('Error de red', 'No fue posible procesar la solicitud.');
+		} finally {
+			setProcessingSolicitudId(null);
+		}
+	};
 
 	const renderItem: ListRenderItem<Contacto> = ({ item }) => (
 		<View style={styles.card}>
@@ -118,8 +205,6 @@ export default function ContactScreen() {
 					<Text style={styles.centerText}>Cargando contactos...</Text>
 				) : error ? (
 					<Text style={[styles.centerText, { color: 'red' }]}>{error}</Text>
-				) : contactos.length === 0 ? (
-					<Text style={styles.centerText}>No tienes contactos agregados aún.</Text>
 				) : (
 					<FlatList<Contacto>
 						style={{ flex: 1 }}
@@ -134,7 +219,55 @@ export default function ContactScreen() {
 								<Text style={styles.subtitle}>
 									Aquí podrás ver y gestionar tus contactos de UniConnect.
 								</Text>
+								<View style={styles.solicitudesSection}>
+									<Text style={styles.solicitudesTitle}>Solicitudes pendientes</Text>
+									{solicitudesPendientes.length === 0 ? (
+										<Text style={styles.solicitudVaciaText}>No tienes solicitudes pendientes.</Text>
+									) : (
+										solicitudesPendientes.map((solicitud) => {
+											const estaProcesando = processingSolicitudId === solicitud.solicitudId;
+
+											return (
+												<View key={solicitud.solicitudId} style={styles.solicitudCard}>
+													<View style={styles.solicitudInfo}>
+														<Text style={styles.solicitudNombre}>{solicitud.nombre}</Text>
+														<Text style={styles.solicitudCorreo}>{solicitud.correo}</Text>
+													</View>
+
+													<View style={styles.solicitudActions}>
+														<Pressable
+															style={({ pressed }) => [
+																styles.aceptarButton,
+																pressed && { opacity: 0.85 },
+																estaProcesando && { opacity: 0.45 },
+															]}
+															onPress={() => procesarSolicitud(solicitud.solicitudId, 'aceptar')}
+															disabled={estaProcesando}
+														>
+															<Text style={styles.aceptarButtonText}>Aceptar</Text>
+														</Pressable>
+
+														<Pressable
+															style={({ pressed }) => [
+																styles.rechazarButton,
+																pressed && { opacity: 0.85 },
+																estaProcesando && { opacity: 0.45 },
+															]}
+															onPress={() => procesarSolicitud(solicitud.solicitudId, 'rechazar')}
+															disabled={estaProcesando}
+														>
+															<Text style={styles.rechazarButtonText}>Rechazar</Text>
+														</Pressable>
+													</View>
+												</View>
+											);
+										})
+									)}
+								</View>
 							</View>
+						}
+						ListEmptyComponent={
+							<Text style={styles.centerText}>No tienes contactos agregados aun.</Text>
 						}
 					/>
 				)}
@@ -210,6 +343,81 @@ const styles = StyleSheet.create({
 	subtitle: {
 		fontSize: 14,
 		color: '#64748b',
+	},
+
+	solicitudesSection: {
+		marginTop: 16,
+		padding: 14,
+		borderWidth: 1,
+		borderColor: '#dbe6f2',
+		borderRadius: 12,
+		backgroundColor: '#f7fbff',
+	},
+
+	solicitudesTitle: {
+		fontSize: 16,
+		fontWeight: '700',
+		color: '#002855',
+		marginBottom: 10,
+	},
+
+	solicitudVaciaText: {
+		fontSize: 14,
+		color: '#64748b',
+	},
+
+	solicitudCard: {
+		backgroundColor: '#fff',
+		borderWidth: 1,
+		borderColor: '#e1e9f3',
+		borderRadius: 10,
+		padding: 12,
+		marginBottom: 10,
+	},
+
+	solicitudInfo: {
+		marginBottom: 10,
+	},
+
+	solicitudNombre: {
+		fontSize: 15,
+		fontWeight: '700',
+		color: '#002855',
+	},
+
+	solicitudCorreo: {
+		fontSize: 13,
+		color: '#5e6f84',
+		marginTop: 2,
+	},
+
+	solicitudActions: {
+		flexDirection: 'row',
+		columnGap: 10,
+	},
+
+	aceptarButton: {
+		backgroundColor: '#0f766e',
+		paddingVertical: 8,
+		paddingHorizontal: 14,
+		borderRadius: 8,
+	},
+
+	aceptarButtonText: {
+		color: '#fff',
+		fontWeight: '600',
+	},
+
+	rechazarButton: {
+		backgroundColor: '#b91c1c',
+		paddingVertical: 8,
+		paddingHorizontal: 14,
+		borderRadius: 8,
+	},
+
+	rechazarButtonText: {
+		color: '#fff',
+		fontWeight: '600',
 	},
 
 	card: {

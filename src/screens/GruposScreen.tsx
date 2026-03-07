@@ -12,17 +12,20 @@ import {
 	View,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import * as DocumentPicker from 'expo-document-picker';
 import theme from '../styles/theme';
 
 type RootStackParamList = {
 	Eventos: undefined;
 	Grupos: undefined;
+	Login: undefined;
 };
 
 type GruposScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Grupos'>;
 
 const REQUEST_TIMEOUT_MS = 10000;
 const AUTH_TOKEN_STORAGE_KEY = 'userToken';
+const LIMITE_PDF_BYTES = 10 * 1024 * 1024;
 
 type Grupo = {
 	id: string;
@@ -39,6 +42,37 @@ type Grupo = {
 		apellido: string;
 	}>;
 	createdAt: string;
+};
+
+type GrupoDisponible = {
+	id: string;
+	nombre: string;
+	materia: {
+		id: string;
+		nombre: string;
+	};
+	creadorId: string;
+	cantidadMiembros: number;
+	maxMiembros: number;
+	cuposDisponibles: number;
+	estaLleno: boolean;
+	yaPertenece: boolean;
+	miembros: Array<{
+		id: string;
+		nombre: string;
+		apellido: string;
+	}>;
+	createdAt: string;
+};
+
+type ArchivoGrupo = {
+	id: string;
+	nombre: string;
+	mimeType: string;
+	tamanoBytes: number;
+	grupoId: string;
+	createdAt: string;
+	descargarUrl: string;
 };
 
 function extraerHostDesdeHostUri(hostUri: string): string | null {
@@ -154,11 +188,65 @@ type GruposScreenProps = {
 
 export function GruposScreen({ navigation }: GruposScreenProps) {
 	const [grupos, setGrupos] = useState<Grupo[]>([]);
+	const [gruposDisponibles, setGruposDisponibles] = useState<GrupoDisponible[]>([]);
+	const [recursosPorGrupo, setRecursosPorGrupo] = useState<Record<string, ArchivoGrupo[]>>({});
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
-	const [token, setToken] = useState('');
+	const [processingGrupoId, setProcessingGrupoId] = useState<string | null>(null);
+	const [subiendoGrupoId, setSubiendoGrupoId] = useState<string | null>(null);
 
 	const apiBaseUrl = resolverApiBaseUrl();
+
+	const esPdfValido = (archivo: DocumentPicker.DocumentPickerAsset) => {
+		const nombre = archivo.name?.toLowerCase() ?? '';
+		const mimeType = archivo.mimeType?.toLowerCase() ?? '';
+		const extensionPdf = nombre.endsWith('.pdf');
+		const mimePdf = mimeType === 'application/pdf' || mimeType === '';
+
+		return extensionPdf && mimePdf;
+	};
+
+	const formatearTamano = (bytes: number) => {
+		if (bytes >= 1024 * 1024) {
+			return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+		}
+
+		return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+	};
+
+	const cargarRecursos = useCallback(
+		async (jwt: string, gruposUsuario: Grupo[]) => {
+			if (gruposUsuario.length === 0) {
+				setRecursosPorGrupo({});
+				return;
+			}
+
+			const resultados = await Promise.all(
+				gruposUsuario.map(async (grupo) => {
+					try {
+						const response = await fetch(`${apiBaseUrl}/api/grupos/${grupo.id}/archivos`, {
+							headers: {
+								Authorization: `Bearer ${jwt}`,
+							},
+						});
+
+						if (!response.ok) {
+							return [grupo.id, []] as const;
+						}
+
+						const payload = await response.json();
+						const archivos = Array.isArray(payload.data) ? payload.data : [];
+						return [grupo.id, archivos as ArchivoGrupo[]] as const;
+					} catch {
+						return [grupo.id, []] as const;
+					}
+				})
+			);
+
+			setRecursosPorGrupo(Object.fromEntries(resultados));
+		},
+		[apiBaseUrl]
+	);
 
 	const cargarGrupos = useCallback(
 		async (jwt: string) => {
@@ -180,35 +268,188 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 			}, REQUEST_TIMEOUT_MS);
 
 			try {
-				const response = await fetch(`${apiBaseUrl}/api/grupos`, {
-					signal: controller.signal,
-					headers: {
-						Authorization: `Bearer ${jwt.trim()}`,
-					},
-				});
+				const [misGruposResponse, disponiblesResponse] = await Promise.all([
+					fetch(`${apiBaseUrl}/api/grupos`, {
+						signal: controller.signal,
+						headers: {
+							Authorization: `Bearer ${jwt.trim()}`,
+						},
+					}),
+					fetch(`${apiBaseUrl}/api/grupos/disponibles`, {
+						signal: controller.signal,
+						headers: {
+							Authorization: `Bearer ${jwt.trim()}`,
+						},
+					}),
+				]);
 
-				if (!response.ok) {
-					if (response.status === 401) {
-						throw new Error('Sesión expirada. Inicia sesión nuevamente.');
-					}
-					throw new Error(`HTTP ${response.status}`);
+				const [misGruposPayload, disponiblesPayload] = await Promise.all([
+					misGruposResponse
+						.json()
+						.catch(() => ({ success: false, message: 'Respuesta inválida en /api/grupos' })),
+					disponiblesResponse
+						.json()
+						.catch(() => ({ success: false, message: 'Respuesta inválida en /api/grupos/disponibles' })),
+				]);
+
+				if (misGruposResponse.status === 401 || disponiblesResponse.status === 401) {
+					await AsyncStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+					setError('Sesion expirada o token invalido. Inicia sesion nuevamente.');
+					navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+					setLoading(false);
+					return;
 				}
 
-				const payload = await response.json();
-				setGrupos(payload.data ?? []);
-				setError(null);
+				if (misGruposResponse.ok && misGruposPayload.success) {
+					const gruposUsuario = (misGruposPayload.data ?? []) as Grupo[];
+					setGrupos(gruposUsuario);
+					await cargarRecursos(jwt.trim(), gruposUsuario);
+				} else {
+					setGrupos([]);
+					setRecursosPorGrupo({});
+				}
+
+				if (disponiblesResponse.ok && disponiblesPayload.success) {
+					setGruposDisponibles(disponiblesPayload.data ?? []);
+				} else {
+					setGruposDisponibles([]);
+				}
+
+				if (
+					(!misGruposResponse.ok || !misGruposPayload.success) &&
+					(!disponiblesResponse.ok || !disponiblesPayload.success)
+				) {
+					const mensajeBackend =
+						misGruposPayload.message ??
+						disponiblesPayload.message ??
+						'No se pudieron cargar los grupos.';
+					setError(String(mensajeBackend));
+				} else {
+					setError(null);
+				}
 			} catch (err) {
 				if (err instanceof Error && err.name === 'AbortError') {
 					setError(`Tiempo de espera agotado conectando a ${apiBaseUrl}`);
 				} else {
 					setError(err instanceof Error ? err.message : 'Error desconocido');
 				}
+				setGruposDisponibles([]);
 			} finally {
 				clearTimeout(timeoutId);
 				setLoading(false);
 			}
 		},
-		[apiBaseUrl]
+		[apiBaseUrl, cargarRecursos, navigation]
+	);
+
+	const unirseAGrupo = useCallback(
+		async (grupoId: string) => {
+			setProcessingGrupoId(grupoId);
+
+			try {
+				const tokenGuardado = await AsyncStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+
+				if (!tokenGuardado?.trim()) {
+					setError('No hay sesion activa. Inicia sesion para unirte a grupos.');
+					return;
+				}
+
+				const response = await fetch(`${apiBaseUrl}/api/grupos/${grupoId}/unirse`, {
+					method: 'POST',
+					headers: {
+						Authorization: `Bearer ${tokenGuardado.trim()}`,
+						'Content-Type': 'application/json',
+					},
+				});
+
+				const payload = await response.json();
+
+				if (!response.ok || !payload.success) {
+					setError(payload.message ?? 'No se pudo completar la union al grupo.');
+					return;
+				}
+
+				setError(null);
+				await cargarGrupos(tokenGuardado.trim());
+			} catch (err) {
+				setError(err instanceof Error ? err.message : 'Error al unirse al grupo');
+			} finally {
+				setProcessingGrupoId(null);
+			}
+		},
+		[apiBaseUrl, cargarGrupos]
+	);
+
+	const seleccionarYSubirPdf = useCallback(
+		async (grupoId: string) => {
+			setSubiendoGrupoId(grupoId);
+
+			try {
+				const tokenGuardado = await AsyncStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+
+				if (!tokenGuardado?.trim()) {
+					setError('No hay sesion activa. Inicia sesion para subir archivos.');
+					return;
+				}
+
+				const resultado = await DocumentPicker.getDocumentAsync({
+					type: 'application/pdf',
+					copyToCacheDirectory: true,
+					multiple: false,
+				});
+
+				if (resultado.canceled) {
+					return;
+				}
+
+				const archivo = resultado.assets?.[0];
+
+				if (!archivo) {
+					setError('No se pudo leer el archivo seleccionado.');
+					return;
+				}
+
+				if (!esPdfValido(archivo)) {
+					setError('Solo se permiten archivos PDF.');
+					return;
+				}
+
+				if (typeof archivo.size === 'number' && archivo.size > LIMITE_PDF_BYTES) {
+					setError('El archivo excede el limite de 10MB.');
+					return;
+				}
+
+				const formData = new FormData();
+				formData.append('archivo', {
+					uri: archivo.uri,
+					name: archivo.name || `documento-${Date.now()}.pdf`,
+					type: 'application/pdf',
+				} as unknown as Blob);
+
+				const response = await fetch(`${apiBaseUrl}/api/grupos/${grupoId}/archivos`, {
+					method: 'POST',
+					headers: {
+						Authorization: `Bearer ${tokenGuardado.trim()}`,
+					},
+					body: formData,
+				});
+
+				const payload = await response.json();
+
+				if (!response.ok || !payload.success) {
+					setError(payload.message ?? 'No se pudo subir el archivo PDF.');
+					return;
+				}
+
+				setError(null);
+				await cargarGrupos(tokenGuardado.trim());
+			} catch (err) {
+				setError(err instanceof Error ? err.message : 'Error al subir archivo PDF');
+			} finally {
+				setSubiendoGrupoId(null);
+			}
+		},
+		[apiBaseUrl, cargarGrupos]
 	);
 
 	useEffect(() => {
@@ -217,9 +458,15 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 		const inicializar = async () => {
 			try {
 				const tokenGuardado = await AsyncStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
-				if (isMounted && tokenGuardado?.trim()) {
-					setToken(tokenGuardado.trim());
-					await cargarGrupos(tokenGuardado.trim());
+				const tokenNormalizado = tokenGuardado?.trim() ?? '';
+
+				if (
+					isMounted &&
+					tokenNormalizado &&
+					tokenNormalizado !== 'null' &&
+					tokenNormalizado !== 'undefined'
+				) {
+					await cargarGrupos(tokenNormalizado);
 				} else {
 					if (isMounted) {
 						setError('No hay sesión activa. Inicia sesión para ver tus grupos.');
@@ -262,6 +509,49 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 
 				{!loading && !error && (
 					<ScrollView contentContainerStyle={styles.list} style={styles.scrollView}>
+						<View style={styles.sectionCard}>
+							<Text style={styles.sectionTitle}>Grupos disponibles</Text>
+							{gruposDisponibles.map((grupo) => {
+								const botonDeshabilitado =
+									grupo.yaPertenece || grupo.estaLleno || processingGrupoId === grupo.id;
+
+								let textoBoton = 'Unirme';
+
+								if (grupo.yaPertenece) {
+									textoBoton = 'Ya eres miembro';
+								} else if (grupo.estaLleno) {
+									textoBoton = 'Grupo lleno';
+								} else if (processingGrupoId === grupo.id) {
+									textoBoton = 'Uniendome...';
+								}
+
+								return (
+									<View key={grupo.id} style={styles.card}>
+										<Text style={styles.groupTitle}>{grupo.nombre}</Text>
+										<Text style={styles.groupMateria}>Materia: {grupo.materia.nombre}</Text>
+										<Text style={styles.groupMembers}>
+											{grupo.cantidadMiembros}/{grupo.maxMiembros} integrantes
+										</Text>
+										<Pressable
+											onPress={() => unirseAGrupo(grupo.id)}
+											disabled={botonDeshabilitado}
+											style={[
+												styles.joinButton,
+												botonDeshabilitado ? styles.joinButtonDisabled : null,
+											]}
+										>
+											<Text style={styles.joinButtonText}>{textoBoton}</Text>
+										</Pressable>
+									</View>
+								);
+							})}
+							{gruposDisponibles.length === 0 && (
+								<Text style={styles.empty}>No hay grupos disponibles por ahora.</Text>
+							)}
+						</View>
+
+						<View style={styles.sectionCard}>
+							<Text style={styles.sectionTitle}>Mis grupos</Text>
 						{grupos.map((grupo) => (
 							<View key={grupo.id} style={styles.card}>
 								<Text style={styles.groupTitle}>{grupo.nombre}</Text>
@@ -282,11 +572,48 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 										</Text>
 									)}
 								</View>
+
+								<View style={styles.recursosContainer}>
+									<View style={styles.recursosHeaderRow}>
+										<Text style={styles.recursosTitle}>Recursos del grupo</Text>
+										<Pressable
+											onPress={() => seleccionarYSubirPdf(grupo.id)}
+											disabled={subiendoGrupoId === grupo.id}
+											style={[
+												styles.uploadButton,
+												subiendoGrupoId === grupo.id ? styles.uploadButtonDisabled : null,
+											]}
+										>
+											<Text style={styles.uploadButtonText}>
+												{subiendoGrupoId === grupo.id ? 'Subiendo...' : 'Subir PDF'}
+											</Text>
+										</Pressable>
+									</View>
+
+									{(recursosPorGrupo[grupo.id] ?? []).length === 0 ? (
+										<Text style={styles.emptyResourceText}>
+											No hay archivos cargados en este grupo.
+										</Text>
+									) : (
+										(recursosPorGrupo[grupo.id] ?? []).map((archivo) => (
+											<View key={archivo.id} style={styles.resourceItem}>
+												<View style={styles.resourceInfo}>
+													<Text style={styles.resourceName}>{archivo.nombre}</Text>
+													<Text style={styles.resourceMeta}>
+														{formatearTamano(archivo.tamanoBytes)}
+													</Text>
+												</View>
+												<Text style={styles.resourceTag}>PDF</Text>
+											</View>
+										))
+									)}
+								</View>
 							</View>
 						))}
 						{grupos.length === 0 && (
 							<Text style={styles.empty}>No perteneces a ningún grupo todavía.</Text>
 						)}
+						</View>
 					</ScrollView>
 				)}
 			</View>
@@ -355,6 +682,21 @@ const styles = StyleSheet.create({
 		alignItems: 'stretch',
 		width: '100%',
 	},
+	sectionCard: {
+		width: '100%',
+		backgroundColor: '#FFFFFF',
+		borderWidth: 1,
+		borderColor: '#E0E0E0',
+		borderRadius: 12,
+		padding: 12,
+		marginBottom: 12,
+	},
+	sectionTitle: {
+		fontSize: 18,
+		fontWeight: '700',
+		color: theme.colors.primary,
+		marginBottom: 8,
+	},
 	card: {
 		width: '100%',
 		borderWidth: 1,
@@ -387,6 +729,88 @@ const styles = StyleSheet.create({
 		fontSize: 13,
 		color: theme.colors.primary,
 		marginBottom: 2,
+	},
+	recursosContainer: {
+		marginTop: 12,
+		paddingTop: 10,
+		borderTopWidth: 1,
+		borderTopColor: '#D9E1EA',
+	},
+	recursosHeaderRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+		marginBottom: 8,
+	},
+	recursosTitle: {
+		fontSize: 14,
+		fontWeight: '700',
+		color: theme.colors.primary,
+	},
+	uploadButton: {
+		backgroundColor: '#0A7F5A',
+		paddingVertical: 8,
+		paddingHorizontal: 12,
+		borderRadius: 8,
+	},
+	uploadButtonDisabled: {
+		opacity: 0.5,
+	},
+	uploadButtonText: {
+		color: '#ffffff',
+		fontWeight: '700',
+		fontSize: 12,
+	},
+	emptyResourceText: {
+		fontSize: 13,
+		color: theme.colors.primaryMid,
+	},
+	resourceItem: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+		paddingVertical: 8,
+		borderBottomWidth: 1,
+		borderBottomColor: '#E7EDF3',
+	},
+	resourceInfo: {
+		flex: 1,
+		paddingRight: 10,
+	},
+	resourceName: {
+		fontSize: 13,
+		fontWeight: '600',
+		color: theme.colors.primary,
+	},
+	resourceMeta: {
+		fontSize: 12,
+		color: theme.colors.primaryMid,
+		marginTop: 2,
+	},
+	resourceTag: {
+		fontSize: 11,
+		fontWeight: '700',
+		color: '#0A7F5A',
+		backgroundColor: '#E8F7F1',
+		paddingHorizontal: 8,
+		paddingVertical: 4,
+		borderRadius: 999,
+	},
+	joinButton: {
+		marginTop: 10,
+		backgroundColor: theme.colors.primary,
+		borderRadius: 8,
+		paddingVertical: 10,
+		paddingHorizontal: 14,
+		alignItems: 'center',
+	},
+	joinButtonDisabled: {
+		opacity: 0.5,
+	},
+	joinButtonText: {
+		color: '#ffffff',
+		fontWeight: '700',
+		fontSize: 14,
 	},
 	empty: {
 		marginTop: 16,
