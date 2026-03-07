@@ -41,6 +41,27 @@ type Grupo = {
 	createdAt: string;
 };
 
+type GrupoDisponible = {
+	id: string;
+	nombre: string;
+	materia: {
+		id: string;
+		nombre: string;
+	};
+	creadorId: string;
+	cantidadMiembros: number;
+	maxMiembros: number;
+	cuposDisponibles: number;
+	estaLleno: boolean;
+	yaPertenece: boolean;
+	miembros: Array<{
+		id: string;
+		nombre: string;
+		apellido: string;
+	}>;
+	createdAt: string;
+};
+
 function extraerHostDesdeHostUri(hostUri: string): string | null {
 	const valor = hostUri.trim();
 
@@ -154,9 +175,10 @@ type GruposScreenProps = {
 
 export function GruposScreen({ navigation }: GruposScreenProps) {
 	const [grupos, setGrupos] = useState<Grupo[]>([]);
+	const [gruposDisponibles, setGruposDisponibles] = useState<GrupoDisponible[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
-	const [token, setToken] = useState('');
+	const [processingGrupoId, setProcessingGrupoId] = useState<string | null>(null);
 
 	const apiBaseUrl = resolverApiBaseUrl();
 
@@ -180,22 +202,40 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 			}, REQUEST_TIMEOUT_MS);
 
 			try {
-				const response = await fetch(`${apiBaseUrl}/api/grupos`, {
-					signal: controller.signal,
-					headers: {
-						Authorization: `Bearer ${jwt.trim()}`,
-					},
-				});
+				const [misGruposResponse, disponiblesResponse] = await Promise.all([
+					fetch(`${apiBaseUrl}/api/grupos`, {
+						signal: controller.signal,
+						headers: {
+							Authorization: `Bearer ${jwt.trim()}`,
+						},
+					}),
+					fetch(`${apiBaseUrl}/api/grupos/disponibles`, {
+						signal: controller.signal,
+						headers: {
+							Authorization: `Bearer ${jwt.trim()}`,
+						},
+					}),
+				]);
 
-				if (!response.ok) {
-					if (response.status === 401) {
-						throw new Error('Sesión expirada. Inicia sesión nuevamente.');
+				if (!misGruposResponse.ok || !disponiblesResponse.ok) {
+					const status = !misGruposResponse.ok
+						? misGruposResponse.status
+						: disponiblesResponse.status;
+
+					if (status === 401) {
+						throw new Error('Sesion expirada. Inicia sesion nuevamente.');
 					}
-					throw new Error(`HTTP ${response.status}`);
+
+					throw new Error(`HTTP ${status}`);
 				}
 
-				const payload = await response.json();
-				setGrupos(payload.data ?? []);
+				const [misGruposPayload, disponiblesPayload] = await Promise.all([
+					misGruposResponse.json(),
+					disponiblesResponse.json(),
+				]);
+
+				setGrupos(misGruposPayload.data ?? []);
+				setGruposDisponibles(disponiblesPayload.data ?? []);
 				setError(null);
 			} catch (err) {
 				if (err instanceof Error && err.name === 'AbortError') {
@@ -203,12 +243,51 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 				} else {
 					setError(err instanceof Error ? err.message : 'Error desconocido');
 				}
+				setGruposDisponibles([]);
 			} finally {
 				clearTimeout(timeoutId);
 				setLoading(false);
 			}
 		},
 		[apiBaseUrl]
+	);
+
+	const unirseAGrupo = useCallback(
+		async (grupoId: string) => {
+			setProcessingGrupoId(grupoId);
+
+			try {
+				const tokenGuardado = await AsyncStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+
+				if (!tokenGuardado?.trim()) {
+					setError('No hay sesion activa. Inicia sesion para unirte a grupos.');
+					return;
+				}
+
+				const response = await fetch(`${apiBaseUrl}/api/grupos/${grupoId}/unirse`, {
+					method: 'POST',
+					headers: {
+						Authorization: `Bearer ${tokenGuardado.trim()}`,
+						'Content-Type': 'application/json',
+					},
+				});
+
+				const payload = await response.json();
+
+				if (!response.ok || !payload.success) {
+					setError(payload.message ?? 'No se pudo completar la union al grupo.');
+					return;
+				}
+
+				setError(null);
+				await cargarGrupos(tokenGuardado.trim());
+			} catch (err) {
+				setError(err instanceof Error ? err.message : 'Error al unirse al grupo');
+			} finally {
+				setProcessingGrupoId(null);
+			}
+		},
+		[apiBaseUrl, cargarGrupos]
 	);
 
 	useEffect(() => {
@@ -218,7 +297,6 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 			try {
 				const tokenGuardado = await AsyncStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
 				if (isMounted && tokenGuardado?.trim()) {
-					setToken(tokenGuardado.trim());
 					await cargarGrupos(tokenGuardado.trim());
 				} else {
 					if (isMounted) {
@@ -262,6 +340,49 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 
 				{!loading && !error && (
 					<ScrollView contentContainerStyle={styles.list} style={styles.scrollView}>
+						<View style={styles.sectionCard}>
+							<Text style={styles.sectionTitle}>Grupos disponibles</Text>
+							{gruposDisponibles.map((grupo) => {
+								const botonDeshabilitado =
+									grupo.yaPertenece || grupo.estaLleno || processingGrupoId === grupo.id;
+
+								let textoBoton = 'Unirme';
+
+								if (grupo.yaPertenece) {
+									textoBoton = 'Ya eres miembro';
+								} else if (grupo.estaLleno) {
+									textoBoton = 'Grupo lleno';
+								} else if (processingGrupoId === grupo.id) {
+									textoBoton = 'Uniendome...';
+								}
+
+								return (
+									<View key={grupo.id} style={styles.card}>
+										<Text style={styles.groupTitle}>{grupo.nombre}</Text>
+										<Text style={styles.groupMateria}>Materia: {grupo.materia.nombre}</Text>
+										<Text style={styles.groupMembers}>
+											{grupo.cantidadMiembros}/{grupo.maxMiembros} integrantes
+										</Text>
+										<Pressable
+											onPress={() => unirseAGrupo(grupo.id)}
+											disabled={botonDeshabilitado}
+											style={[
+												styles.joinButton,
+												botonDeshabilitado ? styles.joinButtonDisabled : null,
+											]}
+										>
+											<Text style={styles.joinButtonText}>{textoBoton}</Text>
+										</Pressable>
+									</View>
+								);
+							})}
+							{gruposDisponibles.length === 0 && (
+								<Text style={styles.empty}>No hay grupos disponibles por ahora.</Text>
+							)}
+						</View>
+
+						<View style={styles.sectionCard}>
+							<Text style={styles.sectionTitle}>Mis grupos</Text>
 						{grupos.map((grupo) => (
 							<View key={grupo.id} style={styles.card}>
 								<Text style={styles.groupTitle}>{grupo.nombre}</Text>
@@ -287,6 +408,7 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 						{grupos.length === 0 && (
 							<Text style={styles.empty}>No perteneces a ningún grupo todavía.</Text>
 						)}
+						</View>
 					</ScrollView>
 				)}
 			</View>
@@ -355,6 +477,21 @@ const styles = StyleSheet.create({
 		alignItems: 'stretch',
 		width: '100%',
 	},
+	sectionCard: {
+		width: '100%',
+		backgroundColor: '#FFFFFF',
+		borderWidth: 1,
+		borderColor: '#E0E0E0',
+		borderRadius: 12,
+		padding: 12,
+		marginBottom: 12,
+	},
+	sectionTitle: {
+		fontSize: 18,
+		fontWeight: '700',
+		color: theme.colors.primary,
+		marginBottom: 8,
+	},
 	card: {
 		width: '100%',
 		borderWidth: 1,
@@ -387,6 +524,22 @@ const styles = StyleSheet.create({
 		fontSize: 13,
 		color: theme.colors.primary,
 		marginBottom: 2,
+	},
+	joinButton: {
+		marginTop: 10,
+		backgroundColor: theme.colors.primary,
+		borderRadius: 8,
+		paddingVertical: 10,
+		paddingHorizontal: 14,
+		alignItems: 'center',
+	},
+	joinButtonDisabled: {
+		opacity: 0.5,
+	},
+	joinButtonText: {
+		color: '#ffffff',
+		fontWeight: '700',
+		fontSize: 14,
 	},
 	empty: {
 		marginTop: 16,
