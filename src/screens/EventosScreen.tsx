@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 import {
 	ActivityIndicator,
+	Alert,
 	Image,
 	Platform,
 	Pressable,
@@ -29,6 +30,7 @@ type Evento = {
 	id: string;
 	titulo: string;
 	descripcion: string;
+	lugar?: string | null;
 	fechaEvento: string;
 	creador: {
 		id: string;
@@ -170,16 +172,23 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 	const [mensajePublicacion, setMensajePublicacion] = useState<string | null>(null);
 	const [titulo, setTitulo] = useState('');
 	const [descripcion, setDescripcion] = useState('');
+	const [lugar, setLugar] = useState('');
 	const [fechaEventoInput, setFechaEventoInput] = useState('');
 	const [token, setToken] = useState('');
 
 	const apiBaseUrl = resolverApiBaseUrl();
 
-	const cargarEventos = useCallback(async () => {
+	const cargarEventos = useCallback(async (jwt: string) => {
 		if (!apiBaseUrl.trim()) {
 			setError(
 				'No se pudo resolver la URL del backend. Define EXPO_PUBLIC_API_URL (ej: http://192.168.x.x:3000).'
 			);
+			setLoadingEventos(false);
+			return;
+		}
+
+		if (!jwt.trim()) {
+			setError('No hay sesion activa. Inicia sesion nuevamente.');
 			setLoadingEventos(false);
 			return;
 		}
@@ -192,9 +201,24 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 		try {
 			const response = await fetch(`${apiBaseUrl}/api/eventos`, {
 				signal: controller.signal,
+				headers: {
+					Authorization: `Bearer ${jwt.trim()}`,
+				},
 			});
 			if (!response.ok) {
-				throw new Error(`HTTP ${response.status}`);
+				const payload = await response.json().catch(() => ({}));
+
+				if (response.status === 401) {
+					throw new Error(
+						typeof payload?.message === 'string'
+							? payload.message
+							: 'Sesion expirada. Inicia sesion nuevamente.'
+					);
+				}
+
+				throw new Error(
+					typeof payload?.message === 'string' ? payload.message : `HTTP ${response.status}`
+				);
 			}
 
 			const payload = await response.json();
@@ -221,20 +245,23 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 			try {
 				const tokenGuardado = await AsyncStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
 				if (isMounted && tokenGuardado?.trim()) {
-					setToken((valorActual: string) =>
-						valorActual.trim() ? valorActual : tokenGuardado.trim()
-					);
+					const tokenNormalizado = tokenGuardado.trim();
+					setToken(tokenNormalizado);
+					setLoadingEventos(true);
+					await cargarEventos(tokenNormalizado);
+				} else if (isMounted) {
+					setError('No hay sesion activa. Inicia sesion para ver eventos.');
+					setLoadingEventos(false);
 				}
 			} catch {
 				if (isMounted) {
 					setMensajePublicacion('No se pudo leer el token guardado localmente.');
+					setLoadingEventos(false);
 				}
 			}
 		};
 
 		cargarTokenGuardado();
-		setLoadingEventos(true);
-		cargarEventos();
 
 		return () => {
 			isMounted = false;
@@ -249,6 +276,11 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 
 		if (!descripcion.trim()) {
 			setMensajePublicacion('Debes escribir una descripción.');
+			return;
+		}
+
+		if (!lugar.trim()) {
+			setMensajePublicacion('Debes escribir el lugar del evento.');
 			return;
 		}
 
@@ -270,6 +302,11 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 			return;
 		}
 
+		if (fecha <= new Date()) {
+			Alert.alert('Fecha invalida', 'La fecha del evento debe ser futura.');
+			return;
+		}
+
 		setPublicando(true);
 		setMensajePublicacion(null);
 
@@ -285,6 +322,7 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 				body: JSON.stringify({
 					titulo: titulo.trim(),
 					descripcion: descripcion.trim(),
+					lugar: lugar.trim(),
 					fechaEvento: fecha.toISOString(),
 				}),
 			});
@@ -301,9 +339,10 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 
 			setTitulo('');
 			setDescripcion('');
+			setLugar('');
 			setFechaEventoInput('');
 			setMensajePublicacion('Evento publicado correctamente.');
-			await cargarEventos();
+			await cargarEventos(token.trim());
 		} catch (err) {
 			setMensajePublicacion(
 				err instanceof Error ? err.message : 'No se pudo publicar el evento.'
@@ -350,6 +389,14 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 					/>
 
 					<TextInput
+						value={lugar}
+						onChangeText={setLugar}
+						placeholder="Lugar"
+						placeholderTextColor={theme.colors.primaryMid}
+						style={styles.input}
+					/>
+
+					<TextInput
 						value={fechaEventoInput}
 						onChangeText={setFechaEventoInput}
 						placeholder="Fecha (YYYY-MM-DDTHH:mm)"
@@ -391,6 +438,7 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 									{formatearFechaEvento(evento.fechaEvento)}
 								</Text>
 								<Text style={styles.eventDescription}>{evento.descripcion}</Text>
+								<Text style={styles.eventLocation}>Lugar: {evento.lugar?.trim() || 'Por definir'}</Text>
 								<Text style={styles.eventAuthor}>
 									Organiza: {evento.creador.nombre} {evento.creador.apellido}
 								</Text>
@@ -542,6 +590,12 @@ const styles = StyleSheet.create({
 		color: theme.colors.primary,
 		marginTop: 8,
 		lineHeight: 20,
+	},
+	eventLocation: {
+		fontSize: 13,
+		color: theme.colors.primaryMid,
+		marginTop: 8,
+		fontWeight: '600',
 	},
 	eventAuthor: {
 		fontSize: 13,
