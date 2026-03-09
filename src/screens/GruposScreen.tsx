@@ -345,6 +345,10 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 	const unirseAGrupo = useCallback(
 		async (grupoId: string) => {
 			setProcessingGrupoId(grupoId);
+			const controller = new AbortController();
+			const timeoutId = setTimeout(() => {
+				controller.abort();
+			}, REQUEST_TIMEOUT_MS);
 
 			try {
 				const tokenGuardado = await AsyncStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
@@ -356,13 +360,23 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 
 				const response = await fetch(`${apiBaseUrl}/api/grupos/${grupoId}/unirse`, {
 					method: 'POST',
+					signal: controller.signal,
 					headers: {
 						Authorization: `Bearer ${tokenGuardado.trim()}`,
 						'Content-Type': 'application/json',
 					},
 				});
 
-				const payload = await response.json();
+				const payload = await response
+					.json()
+					.catch(() => ({ success: false, message: 'Respuesta inválida del servidor al unirse.' }));
+
+				if (response.status === 401) {
+					await AsyncStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+					setError('Sesion expirada o token invalido. Inicia sesion nuevamente.');
+					navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+					return;
+				}
 
 				if (!response.ok || !payload.success) {
 					setError(payload.message ?? 'No se pudo completar la union al grupo.');
@@ -372,12 +386,17 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 				setError(null);
 				await cargarGrupos(tokenGuardado.trim());
 			} catch (err) {
-				setError(err instanceof Error ? err.message : 'Error al unirse al grupo');
+				if (err instanceof Error && err.name === 'AbortError') {
+					setError(`Tiempo de espera agotado conectando a ${apiBaseUrl}`);
+				} else {
+					setError(err instanceof Error ? err.message : 'Error al unirse al grupo');
+				}
 			} finally {
+				clearTimeout(timeoutId);
 				setProcessingGrupoId(null);
 			}
 		},
-		[apiBaseUrl, cargarGrupos]
+		[apiBaseUrl, cargarGrupos, navigation]
 	);
 
 	const seleccionarYSubirPdf = useCallback(
