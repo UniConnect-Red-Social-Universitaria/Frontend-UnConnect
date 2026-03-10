@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
 	View,
 	Text,
@@ -21,7 +21,9 @@ import {
 	gruposService,
 	materiasService,
 	onboardingService,
+	apiClient,
 } from '../services';
+// ...existing code...
 import { showToast } from '../utils/toast';
 import {
 	getUnreadNotificationsCount,
@@ -39,13 +41,10 @@ type RootStackParamList = {
 	Home: undefined;
 };
 
-type PrincipalScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Principal'>;
-
-const normalizarTexto = (texto: string) =>
-	texto
-		.toLowerCase()
-		.normalize('NFD')
-		.replace(/[\u0300-\u036f]/g, '');
+type PrincipalScreenNavigationProp = StackNavigationProp<
+	RootStackParamList,
+	'Principal'
+>;
 
 const onboardingSteps = [
 	{
@@ -101,9 +100,6 @@ export default function PrincipalScreen({
 	const logoWidth = width < 380 ? 150 : width < 480 ? 180 : 220;
 
 	const [search, setSearch] = useState('');
-	const [usuarios, setUsuarios] = useState<any[]>([]);
-	const [grupos, setGrupos] = useState<any[]>([]);
-	const [materias, setMaterias] = useState<any[]>([]);
 	const [results, setResults] = useState<any[]>([]);
 	const [grupoResults, setGrupoResults] = useState<any[]>([]);
 	const [materiaResults, setMateriaResults] = useState<any[]>([]);
@@ -121,33 +117,13 @@ export default function PrincipalScreen({
 		try {
 			await authService.logout();
 			navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
-		} catch (err: any) {
+		} catch {
 			showToast.error('Error al cerrar sesión');
 		}
 	};
 
 	useEffect(() => {
-		const fetchData = async () => {
-			try {
-				const [usuariosData, gruposData, materiasData] = await Promise.all([
-					usuariosService.getUsuarios(),
-					gruposService.getGrupos(),
-					materiasService.getMaterias(),
-				]);
-
-				setUsuarios(usuariosData);
-				setGrupos(gruposData);
-				setMaterias(materiasData);
-			} catch (error: any) {
-				console.warn(
-					'[PrincipalScreen] Error cargando datos iniciales:',
-					error?.message ?? error
-				);
-			}
-			setLoading(false);
-		};
-
-		fetchData();
+		setLoading(false);
 	}, []);
 
 	useEffect(() => {
@@ -175,6 +151,47 @@ export default function PrincipalScreen({
 	}, []);
 
 	useEffect(() => {
+		let ignore = false;
+
+		const buscarEnBackend = async () => {
+			try {
+				const query = encodeURIComponent(search.trim());
+
+				const [usuariosMateriasResponse, gruposResponse] = await Promise.all([
+					apiClient.get<any>(`/api/usuarios/buscar?q=${query}`),
+					apiClient.get<any>(`/api/grupos/buscar?q=${query}`),
+				]);
+
+				if (ignore) {
+					return;
+				}
+
+				const usuariosMateriasData = usuariosMateriasResponse.data;
+				const gruposData = gruposResponse.data;
+
+				setResults(
+					Array.isArray(usuariosMateriasData?.estudiantes)
+						? usuariosMateriasData.estudiantes
+						: []
+				);
+				setMateriaResults(
+					Array.isArray(usuariosMateriasData?.materias)
+						? usuariosMateriasData.materias
+						: []
+				);
+				setGrupoResults(Array.isArray(gruposData) ? gruposData : []);
+			} catch (error) {
+				if (ignore) {
+					return;
+				}
+
+				console.log('Error buscando en backend:', error);
+				setResults([]);
+				setGrupoResults([]);
+				setMateriaResults([]);
+			}
+		};
+
 		if (!search.trim()) {
 			setResults([]);
 			setGrupoResults([]);
@@ -182,36 +199,32 @@ export default function PrincipalScreen({
 			return;
 		}
 
-		const textoBusqueda = normalizarTexto(search);
+		const timeoutId = setTimeout(() => {
+			buscarEnBackend();
+		}, 300);
 
-		const usuariosFiltrados = usuarios.filter((u) => {
-			const nombre = normalizarTexto(u.nombre || '');
-			const apellido = normalizarTexto(u.apellido || '');
-			const correo = normalizarTexto(u.correo || '');
+		return () => {
+			ignore = true;
+			clearTimeout(timeoutId);
+		};
+	}, [search]);
+// ...existing code...
+		if (!search.trim()) {
+			setResults([]);
+			setGrupoResults([]);
+			setMateriaResults([]);
+			return;
+		}
 
-			return (
-				nombre.includes(textoBusqueda) ||
-				apellido.includes(textoBusqueda) ||
-				correo.includes(textoBusqueda)
-			);
-		});
+		const timeoutId = setTimeout(() => {
+			buscarEnBackend();
+		}, 300);
 
-		const gruposFiltrados = grupos.filter((g) => {
-			const nombreGrupo = normalizarTexto(g.nombre || '');
-			const nombreMateria = normalizarTexto(g.materia?.nombre || '');
-
-			return nombreGrupo.includes(textoBusqueda) || nombreMateria.includes(textoBusqueda);
-		});
-
-		const materiasFiltradas = materias.filter((m) => {
-			const nombreMateria = normalizarTexto(m.nombre || '');
-			return nombreMateria.includes(textoBusqueda);
-		});
-
-		setResults(usuariosFiltrados);
-		setGrupoResults(gruposFiltrados);
-		setMateriaResults(materiasFiltradas);
-	}, [search, usuarios, grupos, materias]);
+		return () => {
+			ignore = true;
+			clearTimeout(timeoutId);
+		};
+	}, [search]);
 
 	useFocusEffect(
 		React.useCallback(() => {
