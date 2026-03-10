@@ -29,11 +29,13 @@ export default function RegistroScreen({ navigation }: any) {
   useEffect(() => {
     if (user) {
       const googleUser = user as GoogleUser;
+      const allowedDomain =
+        process.env.EXPO_PUBLIC_ALLOWED_DOMAIN || "ucaldas.edu.co";
 
-      if (!googleUser.email.endsWith("@ucaldas.edu.co")) {
+      if (!googleUser.email.endsWith(`@${allowedDomain}`)) {
         Alert.alert(
           "Acceso denegado",
-          "Por favor, utiliza exclusivamente tu correo institucional (@ucaldas.edu.co).",
+          `Por favor, utiliza exclusivamente tu correo institucional (@${allowedDomain}).`,
         );
         if (signOut) signOut();
         return;
@@ -49,7 +51,7 @@ export default function RegistroScreen({ navigation }: any) {
         googleIdToken: googleUser.idToken || googleUser.id || "",
       };
 
-      console.log("¡Login con Google exitoso!", googleDataReal.correo);
+      console.log("¡Login con Auth0 exitoso!", googleDataReal.correo);
 
       navigation.navigate("CompletarRegistro", {
         googleData: googleDataReal,
@@ -89,7 +91,9 @@ export default function RegistroScreen({ navigation }: any) {
           {loading ? (
             <ActivityIndicator color="#ffffff" />
           ) : (
-            <Text style={styles.googleButtonText}>Continuar con Google</Text>
+            <Text style={styles.googleButtonText}>
+              Continuar con cuenta institucional
+            </Text>
           )}
         </TouchableOpacity>
 
