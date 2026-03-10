@@ -36,9 +36,6 @@ export default function PrincipalScreen({
 	navigation: PrincipalScreenNavigationProp;
 }) {
 	const [search, setSearch] = useState('');
-	const [usuarios, setUsuarios] = useState<any[]>([]);
-	const [grupos, setGrupos] = useState<any[]>([]);
-	const [materias, setMaterias] = useState<any[]>([]);
 	const [results, setResults] = useState<any[]>([]);
 	const [grupoResults, setGrupoResults] = useState<any[]>([]);
 	const [materiaResults, setMateriaResults] = useState<any[]>([]);
@@ -54,53 +51,51 @@ export default function PrincipalScreen({
 	};
 
 	useEffect(() => {
-		const fetchData = async () => {
-			try {
-				const apiBaseUrl = resolverApiBaseUrl();
-				const token = await AsyncStorage.getItem('userToken');
-
-				const resUsuarios = await fetch(`${apiBaseUrl}/api/usuarios`, {
-					headers: { Authorization: `Bearer ${token}` },
-				});
-				const dataUsuarios = await resUsuarios.json();
-				if (dataUsuarios.success) {
-					setUsuarios(Array.isArray(dataUsuarios.data) ? dataUsuarios.data : []);
-				}
-
-				const resGrupos = await fetch(`${apiBaseUrl}/api/grupos`, {
-					headers: { Authorization: `Bearer ${token}` },
-				});
-				const dataGrupos = await resGrupos.json();
-				if (dataGrupos.success) {
-					setGrupos(Array.isArray(dataGrupos.data) ? dataGrupos.data : []);
-				}
-
-				const resMaterias = await fetch(`${apiBaseUrl}/api/catalogos`, {
-					headers: { Authorization: `Bearer ${token}` },
-				});
-				const dataMaterias = await resMaterias.json();
-
-				if (dataMaterias.success) {
-					let materiasExtraidas: any[] = [];
-
-					if (Array.isArray(dataMaterias.data)) {
-						materiasExtraidas = dataMaterias.data;
-					} else if (Array.isArray(dataMaterias.data?.materias)) {
-						materiasExtraidas = dataMaterias.data.materias;
-					}
-
-					setMaterias(materiasExtraidas);
-				}
-			} catch (error) {
-				console.log('Error cargando datos:', error);
-			}
-			setLoading(false);
-		};
-
-		fetchData();
+		setLoading(false);
 	}, []);
 
 	useEffect(() => {
+		const buscarEnBackend = async () => {
+			try {
+				const apiBaseUrl = resolverApiBaseUrl();
+				const token = await AsyncStorage.getItem('userToken');
+				const query = encodeURIComponent(search.trim());
+
+				const [usuariosMateriasRes, gruposRes] = await Promise.all([
+					fetch(`${apiBaseUrl}/api/usuarios/buscar?q=${query}`, {
+						headers: { Authorization: `Bearer ${token}` },
+					}),
+					fetch(`${apiBaseUrl}/api/grupos/buscar?q=${query}`, {
+						headers: { Authorization: `Bearer ${token}` },
+					}),
+				]);
+
+				const [usuariosMateriasData, gruposData] = await Promise.all([
+					usuariosMateriasRes.json(),
+					gruposRes.json(),
+				]);
+
+				if (usuariosMateriasData.success) {
+					setResults(Array.isArray(usuariosMateriasData.data?.estudiantes) ? usuariosMateriasData.data.estudiantes : []);
+					setMateriaResults(Array.isArray(usuariosMateriasData.data?.materias) ? usuariosMateriasData.data.materias : []);
+				} else {
+					setResults([]);
+					setMateriaResults([]);
+				}
+
+				if (gruposData.success) {
+					setGrupoResults(Array.isArray(gruposData.data) ? gruposData.data : []);
+				} else {
+					setGrupoResults([]);
+				}
+			} catch (error) {
+				console.log('Error buscando en backend:', error);
+				setResults([]);
+				setGrupoResults([]);
+				setMateriaResults([]);
+			}
+		};
+
 		if (!search.trim()) {
 			setResults([]);
 			setGrupoResults([]);
@@ -108,36 +103,12 @@ export default function PrincipalScreen({
 			return;
 		}
 
-		const textoBusqueda = normalizarTexto(search);
+		const timeoutId = setTimeout(() => {
+			buscarEnBackend();
+		}, 300);
 
-		const usuariosFiltrados = usuarios.filter((u) => {
-			const nombre = normalizarTexto(u.nombre || '');
-			const apellido = normalizarTexto(u.apellido || '');
-			const correo = normalizarTexto(u.correo || '');
-
-			return (
-				nombre.includes(textoBusqueda) ||
-				apellido.includes(textoBusqueda) ||
-				correo.includes(textoBusqueda)
-			);
-		});
-
-		const gruposFiltrados = grupos.filter((g) => {
-			const nombreGrupo = normalizarTexto(g.nombre || '');
-			const nombreMateria = normalizarTexto(g.materia?.nombre || '');
-
-			return nombreGrupo.includes(textoBusqueda) || nombreMateria.includes(textoBusqueda);
-		});
-
-		const materiasFiltradas = materias.filter((m) => {
-			const nombreMateria = normalizarTexto(m.nombre || '');
-			return nombreMateria.includes(textoBusqueda);
-		});
-
-		setResults(usuariosFiltrados);
-		setGrupoResults(gruposFiltrados);
-		setMateriaResults(materiasFiltradas);
-	}, [search, usuarios, grupos, materias]);
+		return () => clearTimeout(timeoutId);
+	}, [search]);
 
 	if (loading) {
 		return (
