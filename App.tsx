@@ -7,6 +7,7 @@ import HomeScreen from './src/screens/HomeScreen';
 import PrincipalScreen from './src/screens/PrincipalScreen';
 import { GruposScreen } from './src/screens/GruposScreen';
 import { EventosScreen } from './src/screens/EventosScreen';
+import { DetalleGrupoScreen } from './src/screens/DetalleGrupoScreen';
 import RegistroScreen from './src/screens/RegistroScreen';
 import CompletarRegistroScreen from './src/screens/CompletarRegistroScreen';
 import LoginScreen from './src/screens/LoginScreen';
@@ -39,6 +40,7 @@ export default function App() {
 				<Stack.Screen name="Login" component={LoginScreen} />
 				<Stack.Screen name="Contactos" component={ContactScreen} />
 				<Stack.Screen name="MensajeDirecto" component={MensajeDirectoScreen} />
+				<Stack.Screen name="DetalleGrupo" component={DetalleGrupoScreen} />
 			</Stack.Navigator>
 		</NavigationContainer>
 	);
