@@ -7,7 +7,6 @@ import {
 	FlatList,
 	TextInput,
 	TouchableOpacity,
-	Alert,
 	KeyboardAvoidingView,
 	Platform,
 } from 'react-native';
@@ -17,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import io from 'socket.io-client';
 import { resolverApiBaseUrl } from '../utils/apiConfig';
 import { jwtDecode, JwtPayload } from 'jwt-decode';
+import { showToast } from '../utils/toast';
 
 interface CustomJwt extends JwtPayload {
 	id?: string;
@@ -72,7 +72,7 @@ export default function MensajeDirectoScreen() {
 		(async () => {
 			token = await AsyncStorage.getItem('userToken');
 			if (!token) {
-				Alert.alert('Token faltante', 'No se encontró el token.');
+				showToast.error('No se encontró el token.');
 				return;
 			}
 

@@ -9,9 +9,14 @@ import {
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import globalStyles from '../styles/global';
-import { styles } from './PrincipalScreenStyles';
-import { resolverApiBaseUrl } from '../utils/apiConfig';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { styles } from '../styles/PrincipalScreenStyles';
+import {
+	authService,
+	usuariosService,
+	gruposService,
+	materiasService,
+} from '../services';
+import { showToast } from '../utils/toast';
 
 type RootStackParamList = {
 	Principal: undefined;
@@ -46,53 +51,27 @@ export default function PrincipalScreen({
 
 	const handleLogout = async () => {
 		try {
-			await AsyncStorage.removeItem('userToken');
+			await authService.logout();
 			navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
-		} catch (err) {
-			console.log('Error al cerrar sesión:', err);
+		} catch (err: any) {
+			showToast.error('Error al cerrar sesión');
 		}
 	};
 
 	useEffect(() => {
 		const fetchData = async () => {
 			try {
-				const apiBaseUrl = resolverApiBaseUrl();
-				const token = await AsyncStorage.getItem('userToken');
+				const [usuariosData, gruposData, materiasData] = await Promise.all([
+					usuariosService.getUsuarios(),
+					gruposService.getGrupos(),
+					materiasService.getMaterias(),
+				]);
 
-				const resUsuarios = await fetch(`${apiBaseUrl}/api/usuarios`, {
-					headers: { Authorization: `Bearer ${token}` },
-				});
-				const dataUsuarios = await resUsuarios.json();
-				if (dataUsuarios.success) {
-					setUsuarios(Array.isArray(dataUsuarios.data) ? dataUsuarios.data : []);
-				}
-
-				const resGrupos = await fetch(`${apiBaseUrl}/api/grupos`, {
-					headers: { Authorization: `Bearer ${token}` },
-				});
-				const dataGrupos = await resGrupos.json();
-				if (dataGrupos.success) {
-					setGrupos(Array.isArray(dataGrupos.data) ? dataGrupos.data : []);
-				}
-
-				const resMaterias = await fetch(`${apiBaseUrl}/api/catalogos`, {
-					headers: { Authorization: `Bearer ${token}` },
-				});
-				const dataMaterias = await resMaterias.json();
-
-				if (dataMaterias.success) {
-					let materiasExtraidas: any[] = [];
-
-					if (Array.isArray(dataMaterias.data)) {
-						materiasExtraidas = dataMaterias.data;
-					} else if (Array.isArray(dataMaterias.data?.materias)) {
-						materiasExtraidas = dataMaterias.data.materias;
-					}
-
-					setMaterias(materiasExtraidas);
-				}
-			} catch (error) {
-				console.log('Error cargando datos:', error);
+				setUsuarios(usuariosData);
+				setGrupos(gruposData);
+				setMaterias(materiasData);
+			} catch (error: any) {
+				showToast.error('Error cargando datos');
 			}
 			setLoading(false);
 		};

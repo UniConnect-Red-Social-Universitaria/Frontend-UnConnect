@@ -11,12 +11,11 @@ import {
 	KeyboardAvoidingView,
 } from 'react-native';
 
-import { resolverApiBaseUrl } from '../utils/apiConfig';
-
 import { globalStyles } from '../styles/global';
 import theme from '../styles/theme';
-import { useLoginStyles } from './LoginScreen.styles';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useLoginStyles } from '../styles/LoginScreen.styles';
+import { authService } from '../services';
+import { showToast } from '../utils/toast';
 
 export default function LoginScreen({ navigation }: any) {
 	const styles = useLoginStyles();
@@ -60,41 +59,17 @@ export default function LoginScreen({ navigation }: any) {
 		setEstaCargando(true);
 
 		try {
-			const apiBaseUrl = resolverApiBaseUrl();
-			const response = await fetch(`${apiBaseUrl}/api/usuarios/login`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({ correo: correo.trim(), contrasena }),
-			});
+			await authService.login(correo.trim(), contrasena);
 
-			const payload = await response.json();
-
-			if (!response.ok) {
-				const mensaje =
-					typeof payload?.message === 'string'
-						? payload.message
-						: 'Correo o contraseña incorrectos, intenta de nuevo.';
-				throw new Error(mensaje);
-			}
-
-			if (payload.data && payload.data.token) {
-				await AsyncStorage.setItem('userToken', payload.data.token);
-			} else {
-				console.warn(
-					"El login fue exitoso, pero el backend no devolvió un campo 'token'."
-				);
-			}
 			navigation.reset({
 				index: 0,
 				routes: [{ name: 'Principal' }],
 			});
 		} catch (error: any) {
-			console.error('Error en el login:', error);
-			setErrorGeneral(
-				error.message || 'Ocurrió un problema de conexión. Intenta de nuevo.'
-			);
+			const mensaje =
+				error.message || 'Correo o contraseña incorrectos, intenta de nuevo.';
+			showToast.error(mensaje);
+			setErrorGeneral(mensaje);
 		} finally {
 			setEstaCargando(false);
 		}
