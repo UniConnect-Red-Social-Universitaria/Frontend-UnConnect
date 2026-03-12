@@ -5,17 +5,16 @@ import {
 	TextInput,
 	ScrollView,
 	Pressable,
-	Alert,
 	ActivityIndicator,
 	Platform,
 	KeyboardAvoidingView,
 } from 'react-native';
-
-import { resolverApiBaseUrl } from '../utils/apiConfig';
+import { showToast } from '../utils/toast';
 
 import { globalStyles } from '../styles/global';
 import theme from '../styles/theme';
-import { useCompletarRegistroStyles } from './CompletarRegistroScreen.styles';
+import { useCompletarRegistroStyles } from '../styles/CompletarRegistroScreen.styles';
+import { authService } from '../services';
 
 export default function CompletarRegistroScreen({ navigation, route }: any) {
 	const styles = useCompletarRegistroStyles();
@@ -89,55 +88,20 @@ export default function CompletarRegistroScreen({ navigation, route }: any) {
 		setEstaCargando(true);
 
 		try {
-			const apiBaseUrl = resolverApiBaseUrl();
-			console.log(`Enviando registro a: ${apiBaseUrl}/api/usuarios/registro`);
+			await authService.registro(datosCompletos);
 
-			const response = await fetch(`${apiBaseUrl}/api/usuarios/registro`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify(datosCompletos),
-			});
+			showToast.success(
+				'¡Bienvenido a UniConnect! Tu cuenta ha sido creada exitosamente.'
+			);
 
-			const payload = await response.json();
-
-			if (!response.ok) {
-				const mensaje =
-					typeof payload?.message === 'string'
-						? payload.message
-						: `HTTP Error ${response.status}`;
-				throw new Error(mensaje);
-			}
-
-			if (Platform.OS === 'web') {
+			setTimeout(() => {
 				navigation.reset({
 					index: 0,
 					routes: [{ name: 'Principal' }],
 				});
-			} else {
-				Alert.alert(
-					'¡Bienvenido a UniConnect!',
-					'Tu cuenta ha sido creada exitosamente.',
-					[
-						{
-							text: 'OK',
-							onPress: () => {
-								navigation.reset({
-									index: 0,
-									routes: [{ name: 'Principal' }],
-								});
-							},
-						},
-					]
-				);
-			}
+			}, 2000);
 		} catch (error: any) {
-			console.error('Error en el registro:', error);
-			Alert.alert(
-				'Error al registrar',
-				error.message || 'Ocurrió un problema de conexión.'
-			);
+			showToast.error(error.message || 'Ocurrió un problema de conexión.');
 		} finally {
 			setEstaCargando(false);
 		}

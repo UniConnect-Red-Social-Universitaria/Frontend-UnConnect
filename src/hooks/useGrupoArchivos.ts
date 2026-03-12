@@ -1,12 +1,10 @@
 import { useState, useCallback } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as DocumentPicker from "expo-document-picker";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
-import { resolverApiBaseUrl } from "../utils/apiConfig";
-import { Platform, Alert } from "react-native";
-
-const AUTH_TOKEN_STORAGE_KEY = "userToken";
+import { Platform } from "react-native";
+import { archivosService } from "../services";
+import { showToast } from "../utils/toast";
 
 export type ArchivoGrupo = {
   id: string;
@@ -25,25 +23,17 @@ export function useGrupoArchivos(grupoId: string) {
   const [uploading, setUploading] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
-  const apiBaseUrl = resolverApiBaseUrl();
-
   const cargarArchivos = useCallback(async () => {
     setLoading(true);
     try {
-      const token = await AsyncStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
-      const res = await fetch(`${apiBaseUrl}/api/grupos/${grupoId}/archivos`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (data.success) {
-        setArchivos(data.data);
-      }
-    } catch (error) {
-      console.log("Error al cargar archivos", error);
+      const archivosData = await archivosService.getArchivosPorGrupo(grupoId);
+      setArchivos(archivosData as any);
+    } catch (error: any) {
+      showToast.error("Error al cargar archivos");
     } finally {
       setLoading(false);
     }
-  }, [grupoId, apiBaseUrl]);
+  }, [grupoId]);
 
   const subirPdf = async () => {
     try {
@@ -58,46 +48,22 @@ export function useGrupoArchivos(grupoId: string) {
       const file = result.assets[0];
 
       if (file.size && file.size > 10 * 1024 * 1024) {
-        Alert.alert("Error", "El archivo excede el límite de 10MB");
+        showToast.error("El archivo excede el límite de 10MB");
         return;
       }
 
       setUploading(true);
-      const token = await AsyncStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
 
-      const formData = new FormData();
-      if (Platform.OS === "web" && file.file) {
-        formData.append("archivo", file.file as any);
-      } else {
-        formData.append("archivo", {
-          uri: file.uri,
-          name: file.name,
-          type: file.mimeType || "application/pdf",
-        } as any);
-      }
+      const fileData = Platform.OS === "web" && file.file
+        ? { uri: "", name: file.name, type: file.mimeType || "application/pdf", file: file.file }
+        : { uri: file.uri, name: file.name, type: file.mimeType || "application/pdf" };
 
-      const response = await fetch(
-        `${apiBaseUrl}/api/grupos/${grupoId}/archivos`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
-        },
-      );
+      await archivosService.subirArchivo(grupoId, fileData as any);
 
-      const payload = await response.json();
-
-      if (response.ok && payload.success) {
-        Alert.alert("Éxito", "PDF subido correctamente");
-        cargarArchivos();
-      } else {
-        Alert.alert("Error", payload.message || "No se pudo subir el archivo");
-      }
-    } catch (error) {
-      console.log("Error subiendo PDF", error);
-      Alert.alert("Error", "Ocurrió un error al subir el archivo");
+      showToast.success("PDF subido correctamente");
+      cargarArchivos();
+    } catch (error: any) {
+      showToast.error(error.message || "Ocurrió un error al subir el archivo");
     } finally {
       setUploading(false);
     }
@@ -106,23 +72,18 @@ export function useGrupoArchivos(grupoId: string) {
   const descargarPdf = async (archivoId: string, nombreArchivo: string) => {
     setDownloadingId(archivoId);
     try {
-      const token = await AsyncStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
-      const url = `${apiBaseUrl}/api/grupos/${grupoId}/archivos/${archivoId}/descargar`;
-
+      const url = await archivosService.descargarArchivo(archivoId);
       const fileUri = `${FileSystem.documentDirectory}${nombreArchivo}`;
 
-      const downloadResult = await FileSystem.downloadAsync(url, fileUri, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const downloadResult = await FileSystem.downloadAsync(url, fileUri);
 
       if (downloadResult.status === 200) {
         await Sharing.shareAsync(downloadResult.uri);
       } else {
-        Alert.alert("Error", "No se pudo descargar el archivo");
+        showToast.error("No se pudo descargar el archivo");
       }
     } catch (error) {
-      console.log("Error descargando", error);
-      Alert.alert("Error", "Ocurrió un error al intentar descargar");
+      showToast.error("Ocurrió un error al intentar descargar");
     } finally {
       setDownloadingId(null);
     }

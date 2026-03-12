@@ -13,8 +13,7 @@ import {
 	Pressable,
 	Alert,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { resolverApiBaseUrl } from '../utils/apiConfig';
+import { usuariosService } from '../services';
 
 type Contacto = {
 	id: string;
@@ -35,76 +34,32 @@ export default function ContactScreen() {
 		useNavigation<StackNavigationProp<RootStackParamList, 'Contactos'>>();
 
 	const [contactos, setContactos] = useState<Contacto[]>([]);
-	const [solicitudesPendientes, setSolicitudesPendientes] = useState<SolicitudPendiente[]>([]);
+	const [solicitudesPendientes, setSolicitudesPendientes] = useState<
+		SolicitudPendiente[]
+	>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [userId, setUserId] = useState<string | null>(null);
 	const [processingSolicitudId, setProcessingSolicitudId] = useState<string | null>(null);
 
 	const cargarDatos = async () => {
-			setLoading(true);
-			setError(null);
+		setLoading(true);
+		setError(null);
 
-			try {
-				const token = await AsyncStorage.getItem('userToken');
-				const currentUserId = await AsyncStorage.getItem('userId');
-				setUserId(currentUserId);
+		try {
+			const [contactosData, solicitudesData] = await Promise.all([
+				usuariosService.getCompaneros(),
+				usuariosService.getSolicitudesRecibidas(),
+			]);
 
-				if (!token) {
-					setError('No autenticado');
-					setContactos([]);
-					setSolicitudesPendientes([]);
-					setLoading(false);
-					return;
-				}
+			setContactos(contactosData);
+			setSolicitudesPendientes(solicitudesData);
+		} catch (e) {
+			setError('Error de red al cargar datos');
+			setSolicitudesPendientes([]);
+		}
 
-				const apiBaseUrl = resolverApiBaseUrl();
-				const [resCompaneros, resSolicitudes] = await Promise.all([
-					fetch(`${apiBaseUrl}/api/usuarios/companeros`, {
-						headers: { Authorization: `Bearer ${token}` },
-					}),
-					fetch(`${apiBaseUrl}/api/usuarios/solicitudes-recibidas`, {
-						headers: { Authorization: `Bearer ${token}` },
-					}),
-				]);
-
-				const [dataCompaneros, dataSolicitudes] = await Promise.all([
-					resCompaneros.json(),
-					resSolicitudes.json(),
-				]);
-
-				if (dataCompaneros.success && Array.isArray(dataCompaneros.data)) {
-					setContactos(
-						dataCompaneros.data.map((c: any) => ({
-							id: c.usuario?.id || c.contactoId || '',
-							nombre: c.usuario?.nombre || '',
-							correo: c.usuario?.correo || '',
-						}))
-					);
-				} else {
-					setContactos([]);
-					setError(dataCompaneros.message || 'Error al cargar contactos');
-				}
-
-				if (dataSolicitudes.success && Array.isArray(dataSolicitudes.data)) {
-					setSolicitudesPendientes(
-						dataSolicitudes.data.map((s: any) => ({
-							solicitudId: s.solicitudId,
-							solicitanteId: s.solicitante?.id || '',
-							nombre: s.solicitante?.nombre || 'Sin nombre',
-							correo: s.solicitante?.correo || '',
-							createdAt: s.createdAt,
-						}))
-					);
-				} else {
-					setSolicitudesPendientes([]);
-				}
-			} catch (e) {
-				setError('Error de red');
-				setSolicitudesPendientes([]);
-			}
-
-			setLoading(false);
+		setLoading(false);
 	};
 
 	useEffect(() => {
@@ -118,33 +73,10 @@ export default function ContactScreen() {
 		setProcessingSolicitudId(solicitudId);
 
 		try {
-			const token = await AsyncStorage.getItem('userToken');
-
-			if (!token) {
-				Alert.alert('Sesion expirada', 'Debes iniciar sesion nuevamente.');
-				return;
-			}
-
-			const apiBaseUrl = resolverApiBaseUrl();
-			const endpoint =
-				action === 'aceptar'
-					? '/api/usuarios/solicitudes/aceptar'
-					: '/api/usuarios/solicitudes/rechazar';
-
-			const res = await fetch(`${apiBaseUrl}${endpoint}`, {
-				method: 'POST',
-				headers: {
-					Authorization: `Bearer ${token}`,
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({ solicitudId }),
-			});
-
-			const data = await res.json();
-
-			if (!res.ok || !data.success) {
-				Alert.alert('No se pudo procesar', data.message || 'Intentalo de nuevo.');
-				return;
+			if (action === 'aceptar') {
+				await usuariosService.aceptarSolicitud(solicitudId);
+			} else {
+				await usuariosService.rechazarSolicitud(solicitudId);
 			}
 
 			setSolicitudesPendientes((prev) =>
@@ -165,29 +97,31 @@ export default function ContactScreen() {
 	const renderItem: ListRenderItem<Contacto> = ({ item }) => (
 		<View style={styles.card}>
 			<View style={styles.infoContainer}>
-				<Text style={styles.name}>{item.nombre}</Text>
-				<Text style={styles.email}>{item.correo}</Text>
+				<Text style={styles.name}>{item.nombre || 'Nombre no disponible'}</Text>
+				<Text style={styles.email}>{item.correo || 'Correo no disponible'}</Text>
 			</View>
-
 			<Pressable
 				style={({ pressed }) => [styles.messageButton, pressed && { opacity: 0.8 }]}
-				onPress={() =>
-					navigation.navigate('MensajeDirecto', {
-						contactoId: item.id,
-						nombre: item.nombre,
-						correo: item.correo,
-						userId: userId,
-					})
-				}
+				onPress={() => {
+					if (item.id) {
+						navigation.navigate('MensajeDirecto', {
+							contactoId: item.id,
+							nombre: item.nombre,
+							correo: item.correo,
+						});
+					} else {
+						Alert.alert('Error', 'No se pudo obtener el ID del contacto');
+					}
+				}}
 			>
-				<Text style={styles.messageButtonText}>Mensaje</Text>
+				<Text style={styles.messageButtonText}>Enviar Mensaje</Text>
 			</Pressable>
 		</View>
 	);
 
 	return (
 		<SafeAreaView style={styles.container}>
-			{/* 🔵 HEADER */}
+			{/* 🔸 HEADER FIJO */}
 			<View style={styles.header}>
 				<View style={styles.headerContent}>
 					<Image
@@ -222,10 +156,13 @@ export default function ContactScreen() {
 								<View style={styles.solicitudesSection}>
 									<Text style={styles.solicitudesTitle}>Solicitudes pendientes</Text>
 									{solicitudesPendientes.length === 0 ? (
-										<Text style={styles.solicitudVaciaText}>No tienes solicitudes pendientes.</Text>
+										<Text style={styles.solicitudVaciaText}>
+											No tienes solicitudes pendientes.
+										</Text>
 									) : (
 										solicitudesPendientes.map((solicitud) => {
-											const estaProcesando = processingSolicitudId === solicitud.solicitudId;
+											const estaProcesando =
+												processingSolicitudId === solicitud.solicitudId;
 
 											return (
 												<View key={solicitud.solicitudId} style={styles.solicitudCard}>
@@ -241,7 +178,9 @@ export default function ContactScreen() {
 																pressed && { opacity: 0.85 },
 																estaProcesando && { opacity: 0.45 },
 															]}
-															onPress={() => procesarSolicitud(solicitud.solicitudId, 'aceptar')}
+															onPress={() =>
+																procesarSolicitud(solicitud.solicitudId, 'aceptar')
+															}
 															disabled={estaProcesando}
 														>
 															<Text style={styles.aceptarButtonText}>Aceptar</Text>
@@ -253,7 +192,9 @@ export default function ContactScreen() {
 																pressed && { opacity: 0.85 },
 																estaProcesando && { opacity: 0.45 },
 															]}
-															onPress={() => procesarSolicitud(solicitud.solicitudId, 'rechazar')}
+															onPress={() =>
+																procesarSolicitud(solicitud.solicitudId, 'rechazar')
+															}
 															disabled={estaProcesando}
 														>
 															<Text style={styles.rechazarButtonText}>Rechazar</Text>
