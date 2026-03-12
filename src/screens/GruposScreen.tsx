@@ -251,29 +251,66 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 
 			const resultados = await Promise.all(
 				gruposUsuario.map(async (grupo) => {
+					const controller = new AbortController();
+					const timeoutId = setTimeout(() => {
+						controller.abort();
+					}, REQUEST_TIMEOUT_MS);
+
 					try {
 						const response = await fetch(`${apiBaseUrl}/api/grupos/${grupo.id}/archivos`, {
+							signal: controller.signal,
 							headers: {
 								Authorization: `Bearer ${jwt}`,
 							},
 						});
 
+						if (response.status === 401) {
+							return {
+								grupoId: grupo.id,
+								archivos: [] as ArchivoGrupo[],
+								authError: true,
+							};
+						}
+
 						if (!response.ok) {
-							return [grupo.id, []] as const;
+							return {
+								grupoId: grupo.id,
+								archivos: [] as ArchivoGrupo[],
+								authError: false,
+							};
 						}
 
 						const payload = await response.json();
 						const archivos = Array.isArray(payload.data) ? payload.data : [];
-						return [grupo.id, archivos as ArchivoGrupo[]] as const;
+						return {
+							grupoId: grupo.id,
+							archivos: archivos as ArchivoGrupo[],
+							authError: false,
+						};
 					} catch {
-						return [grupo.id, []] as const;
+						return {
+							grupoId: grupo.id,
+							archivos: [] as ArchivoGrupo[],
+							authError: false,
+						};
+					} finally {
+						clearTimeout(timeoutId);
 					}
 				})
 			);
 
-			setRecursosPorGrupo(Object.fromEntries(resultados));
+			if (resultados.some((resultado) => resultado.authError)) {
+				await AsyncStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+				setError('Sesion expirada o token invalido. Inicia sesion nuevamente.');
+				navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+				return;
+			}
+
+			setRecursosPorGrupo(
+				Object.fromEntries(resultados.map((resultado) => [resultado.grupoId, resultado.archivos]))
+			);
 		},
-		[apiBaseUrl]
+		[apiBaseUrl, navigation]
 	);
 
 	const cargarGrupos = useCallback(
@@ -444,6 +481,10 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 			errorFallback: string;
 		}) => {
 			setGestionGrupoKey(loadingKey);
+			const controller = new AbortController();
+			const timeoutId = setTimeout(() => {
+				controller.abort();
+			}, REQUEST_TIMEOUT_MS);
 
 			try {
 				const tokenGuardado = await AsyncStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
@@ -455,6 +496,7 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 
 				const response = await fetch(`${apiBaseUrl}${endpoint}`, {
 					method,
+					signal: controller.signal,
 					headers: {
 						Authorization: `Bearer ${tokenGuardado.trim()}`,
 						'Content-Type': 'application/json',
@@ -481,8 +523,13 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 				setError(null);
 				await cargarGrupos(tokenGuardado.trim());
 			} catch (err) {
-				setError(err instanceof Error ? err.message : errorFallback);
+				if (err instanceof Error && err.name === 'AbortError') {
+					setError(`Tiempo de espera agotado conectando a ${apiBaseUrl}`);
+				} else {
+					setError(err instanceof Error ? err.message : errorFallback);
+				}
 			} finally {
+				clearTimeout(timeoutId);
 				setGestionGrupoKey((actual) => (actual === loadingKey ? null : actual));
 			}
 		},
