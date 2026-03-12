@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 import {
 	ActivityIndicator,
+	Alert,
 	Image,
 	Platform,
 	Pressable,
@@ -35,6 +36,15 @@ type Grupo = {
 		nombre: string;
 	};
 	creadorId: string;
+	administradorId: string;
+	administrador: {
+		id: string;
+		nombre: string;
+		apellido: string;
+	} | null;
+	estado: 'ACTIVO' | 'CERRADO';
+	estaCerrado: boolean;
+	esAdministradorActual: boolean;
 	cantidadMiembros: number;
 	miembros: Array<{
 		id: string;
@@ -52,6 +62,15 @@ type GrupoDisponible = {
 		nombre: string;
 	};
 	creadorId: string;
+	administradorId: string;
+	administrador: {
+		id: string;
+		nombre: string;
+		apellido: string;
+	} | null;
+	estado: 'ACTIVO' | 'CERRADO';
+	estaCerrado: boolean;
+	esAdministradorActual: boolean;
 	cantidadMiembros: number;
 	maxMiembros: number;
 	cuposDisponibles: number;
@@ -193,6 +212,7 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [processingGrupoId, setProcessingGrupoId] = useState<string | null>(null);
+	const [gestionGrupoKey, setGestionGrupoKey] = useState<string | null>(null);
 	const [subiendoGrupoId, setSubiendoGrupoId] = useState<string | null>(null);
 
 	const apiBaseUrl = resolverApiBaseUrl();
@@ -212,6 +232,14 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 		}
 
 		return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+	};
+
+	const nombreAdministrador = (grupo: Grupo | GrupoDisponible) => {
+		if (!grupo.administrador) {
+			return 'Sin administrador asignado';
+		}
+
+		return `${grupo.administrador.nombre} ${grupo.administrador.apellido}`;
 	};
 
 	const cargarRecursos = useCallback(
@@ -399,6 +427,154 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 		[apiBaseUrl, cargarGrupos, navigation]
 	);
 
+	const ejecutarAccionGrupo = useCallback(
+		async ({
+			grupoId,
+			loadingKey,
+			endpoint,
+			method = 'POST',
+			body,
+			errorFallback,
+		}: {
+			grupoId: string;
+			loadingKey: string;
+			endpoint: string;
+			method?: 'POST' | 'PATCH' | 'DELETE';
+			body?: Record<string, string>;
+			errorFallback: string;
+		}) => {
+			setGestionGrupoKey(loadingKey);
+
+			try {
+				const tokenGuardado = await AsyncStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+
+				if (!tokenGuardado?.trim()) {
+					setError('No hay sesion activa. Inicia sesion nuevamente.');
+					return;
+				}
+
+				const response = await fetch(`${apiBaseUrl}${endpoint}`, {
+					method,
+					headers: {
+						Authorization: `Bearer ${tokenGuardado.trim()}`,
+						'Content-Type': 'application/json',
+					},
+					body: body ? JSON.stringify(body) : undefined,
+				});
+
+				const payload = await response
+					.json()
+					.catch(() => ({ success: false, message: 'Respuesta inválida del servidor.' }));
+
+				if (response.status === 401) {
+					await AsyncStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+					setError('Sesion expirada o token invalido. Inicia sesion nuevamente.');
+					navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+					return;
+				}
+
+				if (!response.ok || !payload.success) {
+					setError(payload.message ?? errorFallback);
+					return;
+				}
+
+				setError(null);
+				await cargarGrupos(tokenGuardado.trim());
+			} catch (err) {
+				setError(err instanceof Error ? err.message : errorFallback);
+			} finally {
+				setGestionGrupoKey((actual) => (actual === loadingKey ? null : actual));
+			}
+		},
+		[apiBaseUrl, cargarGrupos, navigation]
+	);
+
+	const cerrarGrupo = useCallback(
+		(grupoId: string) => {
+			Alert.alert('Cerrar grupo', 'El grupo dejará de aceptar mensajes, archivos y nuevos miembros.', [
+				{ text: 'Cancelar', style: 'cancel' },
+				{
+					text: 'Cerrar',
+					style: 'destructive',
+					onPress: () => {
+						void ejecutarAccionGrupo({
+							grupoId,
+							loadingKey: `cerrar:${grupoId}`,
+							endpoint: `/api/grupos/${grupoId}/cerrar`,
+							method: 'PATCH',
+							errorFallback: 'No se pudo cerrar el grupo.',
+						});
+					},
+				},
+			]);
+		},
+		[ejecutarAccionGrupo]
+	);
+
+	const salirDelGrupo = useCallback(
+		(grupoId: string) => {
+			Alert.alert('Salir del grupo', 'Dejarás de pertenecer a este grupo.', [
+				{ text: 'Cancelar', style: 'cancel' },
+				{
+					text: 'Salir',
+					style: 'destructive',
+					onPress: () => {
+						void ejecutarAccionGrupo({
+							grupoId,
+							loadingKey: `salir:${grupoId}`,
+							endpoint: `/api/grupos/${grupoId}/salir`,
+							errorFallback: 'No se pudo salir del grupo.',
+						});
+					},
+				},
+			]);
+		},
+		[ejecutarAccionGrupo]
+	);
+
+	const transferirAdministracion = useCallback(
+		(grupoId: string, usuarioId: string, nombreCompleto: string) => {
+			Alert.alert('Cambiar administrador', `¿Asignar a ${nombreCompleto} como nuevo administrador?`, [
+				{ text: 'Cancelar', style: 'cancel' },
+				{
+					text: 'Asignar',
+					onPress: () => {
+						void ejecutarAccionGrupo({
+							grupoId,
+							loadingKey: `admin:${grupoId}:${usuarioId}`,
+							endpoint: `/api/grupos/${grupoId}/administrador`,
+							body: { usuarioId },
+							errorFallback: 'No se pudo cambiar el administrador del grupo.',
+						});
+					},
+				},
+			]);
+		},
+		[ejecutarAccionGrupo]
+	);
+
+	const removerMiembro = useCallback(
+		(grupoId: string, usuarioId: string, nombreCompleto: string) => {
+			Alert.alert('Remover miembro', `¿Remover a ${nombreCompleto} del grupo?`, [
+				{ text: 'Cancelar', style: 'cancel' },
+				{
+					text: 'Remover',
+					style: 'destructive',
+					onPress: () => {
+						void ejecutarAccionGrupo({
+							grupoId,
+							loadingKey: `remover:${grupoId}:${usuarioId}`,
+							endpoint: `/api/grupos/${grupoId}/miembros/${usuarioId}`,
+							method: 'DELETE',
+							errorFallback: 'No se pudo remover al miembro del grupo.',
+						});
+					},
+				},
+			]);
+		},
+		[ejecutarAccionGrupo]
+	);
+
 	const seleccionarYSubirPdf = useCallback(
 		async (grupoId: string) => {
 			setSubiendoGrupoId(grupoId);
@@ -548,6 +724,7 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 									<View key={grupo.id} style={styles.card}>
 										<Text style={styles.groupTitle}>{grupo.nombre}</Text>
 										<Text style={styles.groupMateria}>Materia: {grupo.materia.nombre}</Text>
+										<Text style={styles.groupAdmin}>Admin: {nombreAdministrador(grupo)}</Text>
 										<Text style={styles.groupMembers}>
 											{grupo.cantidadMiembros}/{grupo.maxMiembros} integrantes
 										</Text>
@@ -575,21 +752,97 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 							<View key={grupo.id} style={styles.card}>
 								<Text style={styles.groupTitle}>{grupo.nombre}</Text>
 								<Text style={styles.groupMateria}>Materia: {grupo.materia.nombre}</Text>
+								<View style={styles.statusRow}>
+									<Text style={[styles.statusBadge, grupo.estaCerrado ? styles.statusBadgeClosed : styles.statusBadgeActive]}>
+										{grupo.estaCerrado ? 'Cerrado' : 'Activo'}
+									</Text>
+									{grupo.esAdministradorActual && (
+										<Text style={styles.roleBadge}>Eres administrador</Text>
+									)}
+								</View>
+								<Text style={styles.groupAdmin}>Admin: {nombreAdministrador(grupo)}</Text>
 								<Text style={styles.groupMembers}>
 									{grupo.cantidadMiembros}{' '}
 									{grupo.cantidadMiembros === 1 ? 'miembro' : 'miembros'}
 								</Text>
+								<View style={styles.groupActionsRow}>
+									{grupo.esAdministradorActual && !grupo.estaCerrado ? (
+										<Pressable
+											onPress={() => cerrarGrupo(grupo.id)}
+											disabled={gestionGrupoKey === `cerrar:${grupo.id}`}
+											style={[
+												styles.actionButton,
+												styles.actionButtonDanger,
+												gestionGrupoKey === `cerrar:${grupo.id}` ? styles.actionButtonDisabled : null,
+											]}
+										>
+											<Text style={styles.actionButtonText}>
+												{gestionGrupoKey === `cerrar:${grupo.id}` ? 'Cerrando...' : 'Cerrar grupo'}
+											</Text>
+										</Pressable>
+									) : null}
+									{!grupo.esAdministradorActual && !grupo.estaCerrado ? (
+										<Pressable
+											onPress={() => salirDelGrupo(grupo.id)}
+											disabled={gestionGrupoKey === `salir:${grupo.id}`}
+											style={[
+												styles.actionButton,
+												styles.actionButtonSecondary,
+												gestionGrupoKey === `salir:${grupo.id}` ? styles.actionButtonDisabled : null,
+											]}
+										>
+											<Text style={styles.actionButtonText}>
+												{gestionGrupoKey === `salir:${grupo.id}` ? 'Saliendo...' : 'Salir del grupo'}
+											</Text>
+										</Pressable>
+									) : null}
+								</View>
 								<View style={styles.membersList}>
-									{grupo.miembros.slice(0, 3).map((miembro) => (
-										<Text key={miembro.id} style={styles.memberName}>
-											• {miembro.nombre} {miembro.apellido}
-										</Text>
-									))}
-									{grupo.cantidadMiembros > 3 && (
-										<Text style={styles.memberName}>
-											• y {grupo.cantidadMiembros - 3} más...
-										</Text>
-									)}
+									{grupo.miembros.map((miembro) => {
+										const nombreCompleto = `${miembro.nombre} ${miembro.apellido}`;
+										const esAdmin = miembro.id === grupo.administradorId;
+
+										return (
+											<View key={miembro.id} style={styles.memberRow}>
+												<Text style={styles.memberName}>
+													• {nombreCompleto}{esAdmin ? ' (Admin)' : ''}
+												</Text>
+												{grupo.esAdministradorActual && !grupo.estaCerrado && !esAdmin ? (
+													<View style={styles.memberActionsRow}>
+														<Pressable
+															onPress={() => transferirAdministracion(grupo.id, miembro.id, nombreCompleto)}
+															disabled={gestionGrupoKey === `admin:${grupo.id}:${miembro.id}`}
+															style={[
+																styles.memberActionButton,
+																gestionGrupoKey === `admin:${grupo.id}:${miembro.id}`
+																	? styles.actionButtonDisabled
+																	: null,
+															]}
+														>
+															<Text style={styles.memberActionButtonText}>
+																{gestionGrupoKey === `admin:${grupo.id}:${miembro.id}` ? 'Asignando...' : 'Hacer admin'}
+															</Text>
+														</Pressable>
+														<Pressable
+															onPress={() => removerMiembro(grupo.id, miembro.id, nombreCompleto)}
+															disabled={gestionGrupoKey === `remover:${grupo.id}:${miembro.id}`}
+															style={[
+																styles.memberActionButton,
+																styles.memberActionButtonDanger,
+																gestionGrupoKey === `remover:${grupo.id}:${miembro.id}`
+																	? styles.actionButtonDisabled
+																	: null,
+															]}
+														>
+															<Text style={styles.memberActionButtonText}>
+																{gestionGrupoKey === `remover:${grupo.id}:${miembro.id}` ? 'Removiendo...' : 'Remover'}
+															</Text>
+														</Pressable>
+													</View>
+												) : null}
+											</View>
+										);
+									})}
 								</View>
 
 								<View style={styles.recursosContainer}>
@@ -597,14 +850,14 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 										<Text style={styles.recursosTitle}>Recursos del grupo</Text>
 										<Pressable
 											onPress={() => seleccionarYSubirPdf(grupo.id)}
-											disabled={subiendoGrupoId === grupo.id}
+											disabled={subiendoGrupoId === grupo.id || grupo.estaCerrado}
 											style={[
 												styles.uploadButton,
-												subiendoGrupoId === grupo.id ? styles.uploadButtonDisabled : null,
+												subiendoGrupoId === grupo.id || grupo.estaCerrado ? styles.uploadButtonDisabled : null,
 											]}
 										>
 											<Text style={styles.uploadButtonText}>
-												{subiendoGrupoId === grupo.id ? 'Subiendo...' : 'Subir PDF'}
+												{subiendoGrupoId === grupo.id ? 'Subiendo...' : grupo.estaCerrado ? 'Grupo cerrado' : 'Subir PDF'}
 											</Text>
 										</Pressable>
 									</View>
@@ -741,13 +994,102 @@ const styles = StyleSheet.create({
 		color: theme.colors.primaryMid,
 		marginBottom: 8,
 	},
+	groupAdmin: {
+		fontSize: 13,
+		color: theme.colors.primary,
+		marginBottom: 8,
+		fontWeight: '600',
+	},
+	statusRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 8,
+		marginBottom: 8,
+		flexWrap: 'wrap',
+	},
+	statusBadge: {
+		overflow: 'hidden',
+		paddingHorizontal: 10,
+		paddingVertical: 4,
+		borderRadius: 999,
+		fontSize: 11,
+		fontWeight: '700',
+	},
+	statusBadgeActive: {
+		backgroundColor: '#E8F7F1',
+		color: '#0A7F5A',
+	},
+	statusBadgeClosed: {
+		backgroundColor: '#FCEAEA',
+		color: '#B42318',
+	},
+	roleBadge: {
+		overflow: 'hidden',
+		backgroundColor: '#E8EEF9',
+		color: '#1E4DB7',
+		paddingHorizontal: 10,
+		paddingVertical: 4,
+		borderRadius: 999,
+		fontSize: 11,
+		fontWeight: '700',
+	},
+	groupActionsRow: {
+		flexDirection: 'row',
+		gap: 8,
+		marginBottom: 8,
+		flexWrap: 'wrap',
+	},
+	actionButton: {
+		borderRadius: 8,
+		paddingVertical: 8,
+		paddingHorizontal: 12,
+	},
+	actionButtonDanger: {
+		backgroundColor: '#B42318',
+	},
+	actionButtonSecondary: {
+		backgroundColor: '#475467',
+	},
+	actionButtonDisabled: {
+		opacity: 0.5,
+	},
+	actionButtonText: {
+		color: '#FFFFFF',
+		fontSize: 12,
+		fontWeight: '700',
+	},
 	membersList: {
 		marginTop: 4,
+	},
+	memberRow: {
+		paddingVertical: 6,
+		borderBottomWidth: 1,
+		borderBottomColor: '#E7EDF3',
 	},
 	memberName: {
 		fontSize: 13,
 		color: theme.colors.primary,
 		marginBottom: 2,
+	},
+	memberActionsRow: {
+		flexDirection: 'row',
+		gap: 8,
+		marginTop: 6,
+		flexWrap: 'wrap',
+	},
+	memberActionButton: {
+		backgroundColor: '#1E4DB7',
+		paddingVertical: 6,
+		paddingHorizontal: 10,
+		borderRadius: 8,
+	},
+	memberActionButtonDanger: {
+		backgroundColor: '#B42318',
+	},
+	memberActionButtonText: {
+		color: '#FFFFFF',
+		fontSize: 12,
+		fontWeight: '700',
 	},
 	recursosContainer: {
 		marginTop: 12,
