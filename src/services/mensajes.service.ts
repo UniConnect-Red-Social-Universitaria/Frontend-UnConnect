@@ -35,3 +35,34 @@ export const enviarNuevoMensaje = async (
   });
   return res.json();
 };
+
+export const obtenerHistorialMensajesGrupo = async (grupoId: string) => {
+  const token = await getToken();
+  if (!token) throw new Error("No se encontró el token.");
+
+  const res = await fetch(`${API_URL}/mensajes/grupos/${grupoId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.json();
+};
+
+export const enviarNuevoMensajeGrupo = async (
+  grupoId: string,
+  contenido: string,
+) => {
+  const token = await getToken();
+  if (!token) throw new Error("No autenticado.");
+
+  const res = await fetch(`${API_URL}/mensajes/grupos`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      grupoId,
+      contenido,
+    }),
+  });
+  return res.json();
+};

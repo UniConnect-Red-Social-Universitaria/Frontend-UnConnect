@@ -13,6 +13,7 @@ import { useGrupoArchivos } from "../hooks/useGrupoArchivos";
 
 type DetalleGrupoParamList = {
   DetalleGrupo: { grupoId: string; nombreGrupo: string };
+  MensajeGrupo: { grupoId: string; nombreGrupo: string; userId?: string | null };
 };
 
 type Props = StackScreenProps<DetalleGrupoParamList, "DetalleGrupo">;
@@ -52,7 +53,7 @@ export function DetalleGrupoScreen({ route, navigation }: Props) {
       <View style={styles.actionsRow}>
         <Pressable
           style={styles.actionButton}
-          onPress={() => alert("Próximamente: Chat de grupo")}
+          onPress={() => navigation.navigate("MensajeGrupo", { grupoId, nombreGrupo })}
         >
           <Text style={styles.actionButtonText}> Ir al Chat</Text>
         </Pressable>
