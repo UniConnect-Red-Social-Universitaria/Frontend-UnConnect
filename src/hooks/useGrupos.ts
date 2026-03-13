@@ -1,5 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { gruposService, usuariosService, materiasService, authService } from "../services";
+import {
+  gruposService,
+  usuariosService,
+  materiasService,
+  authService,
+} from "../services";
 import { showToast } from "../utils/toast";
 
 export type Grupo = {
@@ -51,17 +56,24 @@ export function useGrupos(navigation: any) {
     }
   }, []);
 
+  // En useGrupos.ts
   const cargarGrupos = useCallback(async () => {
     try {
-      const gruposData = await gruposService.getGrupos();
-      // Aquí asumimos que el backend devuelve la lista de grupos
-      // y dentro se indica cuáles son disponibles con flags
-      setGrupos(gruposData as any);
-      // Aquí podrías filtrar los disponibles si es necesario
-      setGruposDisponibles(gruposData as any);
+      setLoading(true);
+
+      // Ejecutamos ambas peticiones al mismo tiempo
+      const [misGruposData, disponiblesData] = await Promise.all([
+        gruposService.getGrupos(),
+        gruposService.getGruposDisponibles(),
+      ]);
+
+      // Asignamos cada data a su estado correspondiente
+      setGrupos(misGruposData as any);
+      setGruposDisponibles(disponiblesData as any);
+
       setError(null);
     } catch (err: any) {
-      if (err.message.includes('401')) {
+      if (err.message.includes("401")) {
         await authService.logout();
         navigation.reset({ index: 0, routes: [{ name: "Login" }] });
         return;
@@ -93,10 +105,7 @@ export function useGrupos(navigation: any) {
     const inicializar = async () => {
       const isAuth = await authService.isAuthenticated();
       if (isMounted && isAuth) {
-        await Promise.all([
-          cargarGrupos(),
-          cargarMateriasUsuario(),
-        ]);
+        await Promise.all([cargarGrupos(), cargarMateriasUsuario()]);
       } else if (isMounted) {
         setError("No hay sesión activa. Inicia sesión para ver tus grupos.");
         setLoading(false);
