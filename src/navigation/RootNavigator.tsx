@@ -23,7 +23,13 @@ export type RootStackParamList = {
   CompletarRegistro: undefined;
   Login: undefined;
   Contactos: undefined;
-  DetalleGrupo: { grupoId: string; nombreGrupo: string };
+  DetalleGrupo: {
+    grupoId: string;
+    nombreGrupo: string;
+    creadorId: string;
+    materiaNombre: string;
+    miembrosIds: string[];
+  };
   MensajeDirecto: {
     contactoId: string;
     nombre: string;
@@ -31,7 +37,7 @@ export type RootStackParamList = {
     userId?: string | null;
   };
   MensajeGrupo: {
-    grupoId: string ;
+    grupoId: string;
     nombreGrupo: string | null;
     userId?: string | null;
   };

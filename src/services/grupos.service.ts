@@ -67,6 +67,17 @@ class GruposService {
     );
     return response.data || [];
   }
+  /**
+   * Agregar un miembro al grupo (solo administrador)
+   */
+  async agregarMiembro(
+    grupoId: string,
+    usuarioId: string,
+  ): Promise<ApiResponse> {
+    return await apiClient.post(`/api/grupos/${grupoId}/miembros`, {
+      usuarioId,
+    });
+  }
 }
 
 export const gruposService = new GruposService();

@@ -10,17 +10,33 @@ import {
 import { StackScreenProps } from "@react-navigation/stack";
 import { styles } from "../styles/DetalleGrupoScreen.styles";
 import { useGrupoArchivos } from "../hooks/useGrupoArchivos";
+import { useMiembrosGrupo } from "../hooks/useMiembrosGrupo";
+import { AgregarMiembroModal } from "../components/AgregarMiembroModal";
 
 type DetalleGrupoParamList = {
-  DetalleGrupo: { grupoId: string; nombreGrupo: string };
-  MensajeGrupo: { grupoId: string; nombreGrupo: string; userId?: string | null };
+  DetalleGrupo: {
+    grupoId: string;
+    nombreGrupo: string;
+    creadorId: string;
+    materiaNombre: string;
+    miembrosIds: string[];
+  };
+  MensajeGrupo: {
+    grupoId: string;
+    nombreGrupo: string;
+    userId?: string | null;
+  };
 };
 
 type Props = StackScreenProps<DetalleGrupoParamList, "DetalleGrupo">;
+
 export function DetalleGrupoScreen({ route, navigation }: Props) {
-  const { grupoId, nombreGrupo } = route.params;
+  const { grupoId, nombreGrupo, creadorId, materiaNombre, miembrosIds } =
+    route.params;
 
   const [busqueda, setBusqueda] = useState("");
+  const [modalVisible, setModalVisible] = useState(false);
+
   const {
     archivos,
     loading,
@@ -30,6 +46,15 @@ export function DetalleGrupoScreen({ route, navigation }: Props) {
     subirPdf,
     descargarPdf,
   } = useGrupoArchivos(grupoId);
+
+  const {
+    isAdmin,
+    candidatos,
+    cargandoCandidatos,
+    agregando,
+    cargarCandidatos,
+    agregarMiembro,
+  } = useMiembrosGrupo(grupoId, creadorId, materiaNombre, miembrosIds);
 
   useEffect(() => {
     cargarArchivos();
@@ -53,7 +78,9 @@ export function DetalleGrupoScreen({ route, navigation }: Props) {
       <View style={styles.actionsRow}>
         <Pressable
           style={styles.actionButton}
-          onPress={() => navigation.navigate("MensajeGrupo", { grupoId, nombreGrupo })}
+          onPress={() =>
+            navigation.navigate("MensajeGrupo", { grupoId, nombreGrupo })
+          }
         >
           <Text style={styles.actionButtonText}> Ir al Chat</Text>
         </Pressable>
@@ -69,7 +96,28 @@ export function DetalleGrupoScreen({ route, navigation }: Props) {
             <Text style={styles.actionButtonSolidText}>Subir PDF</Text>
           )}
         </Pressable>
+
+        {isAdmin && (
+          <Pressable
+            style={[styles.actionButton, styles.actionButtonSuccess]}
+            onPress={() => {
+              setModalVisible(true);
+              cargarCandidatos();
+            }}
+          >
+            <Text style={styles.actionButtonSolidText}>+ Miembro</Text>
+          </Pressable>
+        )}
       </View>
+
+      <AgregarMiembroModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        candidatos={candidatos}
+        cargandoCandidatos={cargandoCandidatos}
+        agregando={agregando}
+        onAgregar={(id) => agregarMiembro(id, () => setModalVisible(false))}
+      />
 
       <View style={styles.searchContainer}>
         <TextInput
