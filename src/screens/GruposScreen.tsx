@@ -19,7 +19,7 @@ type RootStackParamList = {
   Eventos: undefined;
   Grupos: undefined;
   Login: undefined;
-  DetalleGrupo: { grupoId: string; nombreGrupo: string };
+  DetalleGrupo: { grupoId: string; nombreGrupo: string; creadorId: string; materiaNombre: string; miembrosIds: string[] };
 };
 
 type GruposScreenNavigationProp = StackNavigationProp<
@@ -87,6 +87,9 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
                       navigation.navigate("DetalleGrupo", {
                         grupoId: grupo.id,
                         nombreGrupo: grupo.nombre,
+                        creadorId: grupo.creadorId,
+                        materiaNombre: grupo.materia.nombre,
+                        miembrosIds: grupo.miembros.map((m: any) => m.id)
                       })
                     }
                   >

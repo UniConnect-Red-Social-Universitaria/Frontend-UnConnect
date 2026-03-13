@@ -131,4 +131,8 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  actionButtonSuccess: {
+    backgroundColor: "#142688",
+    marginLeft: 10,
+  },
 });
