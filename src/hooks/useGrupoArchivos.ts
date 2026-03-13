@@ -4,6 +4,7 @@ import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
 import { Platform } from "react-native";
 import { archivosService } from "../services";
+import { apiClient } from "../services/api.client";
 import { showToast } from "../utils/toast";
 
 export type ArchivoGrupo = {
@@ -54,9 +55,19 @@ export function useGrupoArchivos(grupoId: string) {
 
       setUploading(true);
 
-      const fileData = Platform.OS === "web" && file.file
-        ? { uri: "", name: file.name, type: file.mimeType || "application/pdf", file: file.file }
-        : { uri: file.uri, name: file.name, type: file.mimeType || "application/pdf" };
+      const fileData =
+        Platform.OS === "web" && file.file
+          ? {
+              uri: "",
+              name: file.name,
+              type: file.mimeType || "application/pdf",
+              file: file.file,
+            }
+          : {
+              uri: file.uri,
+              name: file.name,
+              type: file.mimeType || "application/pdf",
+            };
 
       await archivosService.subirArchivo(grupoId, fileData as any);
 
@@ -72,17 +83,26 @@ export function useGrupoArchivos(grupoId: string) {
   const descargarPdf = async (archivoId: string, nombreArchivo: string) => {
     setDownloadingId(archivoId);
     try {
-      const url = await archivosService.descargarArchivo(archivoId);
-      const fileUri = `${FileSystem.documentDirectory}${nombreArchivo}`;
+      const url = await archivosService.descargarArchivo(grupoId, archivoId);
 
-      const downloadResult = await FileSystem.downloadAsync(url, fileUri);
+      const nombreLimpio = nombreArchivo.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const fileUri = `${FileSystem.documentDirectory}${nombreLimpio}`;
+
+      const token = await apiClient.getToken();
+
+      const downloadResult = await FileSystem.downloadAsync(url, fileUri, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (downloadResult.status === 200) {
         await Sharing.shareAsync(downloadResult.uri);
       } else {
-        showToast.error("No se pudo descargar el archivo");
+        showToast.error(`Error del servidor: ${downloadResult.status}`);
       }
     } catch (error) {
+      console.error("Error descargando:", error);
       showToast.error("Ocurrió un error al intentar descargar");
     } finally {
       setDownloadingId(null);

@@ -1,71 +1,103 @@
-import { apiClient } from './api.client';
-import { LoginRequest, RegistroRequest, LoginResponse, ApiResponse } from '../types/api.types';
+import { apiClient } from "./api.client";
+import {
+  LoginRequest,
+  RegistroRequest,
+  LoginResponse,
+  ApiResponse,
+} from "../types/api.types";
+import { jwtDecode, JwtPayload } from "jwt-decode"; // <-- Importamos jwt-decode
+
+// <-- Agregamos la interfaz para el JWT
+interface CustomJwt extends JwtPayload {
+  id?: string;
+  userId?: string;
+  usuarioId?: string;
+  sub?: string;
+}
 
 /**
  * Servicio de autenticación
  */
 class AuthService {
-    /**
-     * Iniciar sesión
-     */
-    async login(correo: string, contrasena: string): Promise<LoginResponse> {
-        const response = await apiClient.publicRequest<LoginResponse>(
-            '/api/usuarios/login',
-            {
-                method: 'POST',
-                body: JSON.stringify({ correo: correo.trim(), contrasena }),
-            }
-        );
+  /**
+   * Iniciar sesión
+   */
+  async login(correo: string, contrasena: string): Promise<LoginResponse> {
+    const response = await apiClient.publicRequest<LoginResponse>(
+      "/api/usuarios/login",
+      {
+        method: "POST",
+        body: JSON.stringify({ correo: correo.trim(), contrasena }),
+      },
+    );
 
-        if (response.data?.token) {
-            await apiClient.setToken(response.data.token);
-        }
-
-        return response.data!;
+    if (response.data?.token) {
+      await apiClient.setToken(response.data.token);
     }
 
-    /**
-     * Registrar nuevo usuario
-     */
-    async registro(datos: RegistroRequest): Promise<ApiResponse> {
-        const response = await apiClient.publicRequest('/api/usuarios/registro', {
-            method: 'POST',
-            body: JSON.stringify(datos),
-        });
+    return response.data!;
+  }
 
-        return response;
-    }
+  /**
+   * Registrar nuevo usuario
+   */
+  async registro(datos: RegistroRequest): Promise<ApiResponse> {
+    const response = await apiClient.publicRequest("/api/usuarios/registro", {
+      method: "POST",
+      body: JSON.stringify(datos),
+    });
 
-    /**
-     * Cerrar sesión
-     */
-    async logout(): Promise<void> {
-        try {
-            // Intentar notificar al servidor
-            await apiClient.post('/api/usuarios/logout');
-        } catch (error) {
-            // Continuar aunque falle la petición al servidor
-            console.log('Error al notificar logout al servidor:', error);
-        } finally {
-            // Limpiar token local siempre
-            await apiClient.removeToken();
-        }
-    }
+    return response;
+  }
 
-    /**
-     * Verificar si el usuario está autenticado
-     */
-    async isAuthenticated(): Promise<boolean> {
-        const token = await apiClient.getToken();
-        return token !== null;
+  /**
+   * Cerrar sesión
+   */
+  async logout(): Promise<void> {
+    try {
+      // Intentar notificar al servidor
+      await apiClient.post("/api/usuarios/logout");
+    } catch (error) {
+      // Continuar aunque falle la petición al servidor
+      console.log("Error al notificar logout al servidor:", error);
+    } finally {
+      // Limpiar token local siempre
+      await apiClient.removeToken();
     }
+  }
 
-    /**
-     * Obtener el token actual
-     */
-    async getToken(): Promise<string | null> {
-        return await apiClient.getToken();
+  /**
+   * Verificar si el usuario está autenticado
+   */
+  async isAuthenticated(): Promise<boolean> {
+    const token = await apiClient.getToken();
+    return token !== null;
+  }
+
+  /**
+   * Obtener el token actual
+   */
+  async getToken(): Promise<string | null> {
+    return await apiClient.getToken();
+  }
+
+  /**
+   * Obtener el ID del usuario decodificando el JWT actual
+   */
+  async obtenerIdUsuarioActual(): Promise<string | null> {
+    try {
+      const token = await this.getToken();
+      if (!token) return null;
+
+      const decoded = jwtDecode<CustomJwt>(token);
+      return (
+        decoded.sub || decoded.id || decoded.userId || decoded.usuarioId || null
+      );
+    } catch (e) {
+      console.error("Error decodificando el token:", e);
+      return null;
     }
+  }
 }
 
 export const authService = new AuthService();
