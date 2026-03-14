@@ -10,6 +10,7 @@ import {
 	useWindowDimensions,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import globalStyles from '../styles/global';
 import { styles } from '../styles/PrincipalScreenStyles';
@@ -20,6 +21,10 @@ import {
 	materiasService,
 } from '../services';
 import { showToast } from '../utils/toast';
+import {
+	getUnreadNotificationsCount,
+	subscribeUnreadNotificationsCount,
+} from '../services/notificaciones-badge.service';
 
 type RootStackParamList = {
 	Principal: undefined;
@@ -56,6 +61,7 @@ export default function PrincipalScreen({
 	const [grupoResults, setGrupoResults] = useState<any[]>([]);
 	const [materiaResults, setMateriaResults] = useState<any[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [unreadNotifications, setUnreadNotifications] = useState(0);
 
 	const handleLogout = async () => {
 		try {
@@ -129,6 +135,29 @@ export default function PrincipalScreen({
 		setMateriaResults(materiasFiltradas);
 	}, [search, usuarios, grupos, materias]);
 
+	useFocusEffect(
+		React.useCallback(() => {
+			let mounted = true;
+
+			void getUnreadNotificationsCount().then((count) => {
+				if (mounted) {
+					setUnreadNotifications(count);
+				}
+			});
+
+			const unsubscribe = subscribeUnreadNotificationsCount((count) => {
+				if (mounted) {
+					setUnreadNotifications(count);
+				}
+			});
+
+			return () => {
+				mounted = false;
+				unsubscribe();
+			};
+		}, [])
+	);
+
 	if (loading) {
 		return (
 			<View style={{ flex: 1, justifyContent: 'center' }}>
@@ -160,7 +189,10 @@ export default function PrincipalScreen({
 						style={styles.iconButton}
 						onPress={() => navigation.navigate('Notificaciones')}
 					>
-						<Ionicons name="notifications-outline" size={32} color="#007AFF" />
+						<View style={styles.iconWithBadgeContainer}>
+							<Ionicons name="notifications-outline" size={32} color="#007AFF" />
+							{unreadNotifications > 0 && <View style={styles.notificationBadgeDot} />}
+						</View>
 					</Pressable>
 				</View>
 

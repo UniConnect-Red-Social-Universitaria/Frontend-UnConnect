@@ -21,6 +21,7 @@ import NotificacionesScreen from '../screens/NotificacionesScreen';
 import { resolverApiBaseUrl } from '../utils/apiConfig';
 import { authService } from '../services';
 import { notifyIncomingMessage } from '../services/notificaciones.service';
+import { incrementUnreadNotificationsCount } from '../services/notificaciones-badge.service';
 
 export type RootStackParamList = {
 	Home: undefined;
@@ -173,6 +174,7 @@ export default function RootNavigator() {
 					.join(' ')
 					.trim();
 
+				await incrementUnreadNotificationsCount();
 				await notifyIncomingMessage({
 					title:
 						emisorNombre.length > 0
@@ -216,6 +218,7 @@ export default function RootNavigator() {
 							? msg.grupo.nombre.trim()
 							: null;
 
+				await incrementUnreadNotificationsCount();
 				await notifyIncomingMessage({
 					title: nombreGrupo
 						? `Nuevo mensaje en ${nombreGrupo}`
@@ -246,6 +249,7 @@ export default function RootNavigator() {
 					.join(' ')
 					.trim();
 
+				await incrementUnreadNotificationsCount();
 				await notifyIncomingMessage({
 					title: 'Nueva solicitud de contacto',
 					body:

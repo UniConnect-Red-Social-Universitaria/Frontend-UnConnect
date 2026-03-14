@@ -1,8 +1,17 @@
 import React from 'react';
 import { View, Text } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { styles } from '../styles/PrincipalScreenStyles';
+import { clearUnreadNotificationsCount } from '../services/notificaciones-badge.service';
 
 export default function NotificacionesScreen() {
+	useFocusEffect(
+		React.useCallback(() => {
+			void clearUnreadNotificationsCount();
+			return undefined;
+		}, [])
+	);
+
 	return (
 		<View
 			style={[

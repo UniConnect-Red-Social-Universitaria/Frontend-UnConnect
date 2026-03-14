@@ -56,6 +56,22 @@ export const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: '#F2F7FF',
   },
+  iconWithBadgeContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notificationBadgeDot: {
+    position: 'absolute',
+    right: -2,
+    top: -1,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#E53935',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
