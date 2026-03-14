@@ -74,8 +74,8 @@ export function useGrupos(navigation: any) {
       setError(null);
     } catch (err: any) {
       if (err.message.includes("401")) {
-        await authService.logout();
-        navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+        setError("Tu sesión sigue activa, pero no tienes autorización para cargar grupos en este momento.");
+        showToast.error("No autorizado para cargar grupos. Intenta de nuevo.");
         return;
       }
       setError(err.message || "Error al cargar grupos");

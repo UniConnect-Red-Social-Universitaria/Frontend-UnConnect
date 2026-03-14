@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { NavigationContainer, NavigationState } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import { ActivityIndicator, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import io, { Socket } from 'socket.io-client';
 import HomeScreen from '../screens/HomeScreen';
@@ -79,120 +80,213 @@ function getCurrentRouteParams(state: NavigationState | undefined): any | null {
 }
 
 export default function RootNavigator() {
+	const [authChecked, setAuthChecked] = useState(false);
+	const [initialRouteName, setInitialRouteName] = useState<'Home' | 'Principal'>('Home');
 	const navigationRef = useRef<any>(null);
 	const notificationSocketRef = useRef<Socket | null>(null);
 	const activeRouteRef = useRef<string | null>(null);
 	const activeRouteParamsRef = useRef<any | null>(null);
+	const currentAuthUserIdRef = useRef<string | null>(null);
+	const currentTokenRef = useRef<string | null>(null);
+	const syncInProgressRef = useRef(false);
 
 	useEffect(() => {
 		let isMounted = true;
 
-		const setupGlobalNotifications = async () => {
+		const restoreSession = async () => {
 			try {
-				const token = await AsyncStorage.getItem('userToken');
-				if (!token || !isMounted) {
+				const isAuth = await authService.isAuthenticated();
+				if (!isMounted) {
 					return;
 				}
 
-				const usuarioActualId = await authService.obtenerIdUsuarioActual();
-				if (!usuarioActualId || !isMounted) {
+				setInitialRouteName(isAuth ? 'Principal' : 'Home');
+			} catch {
+				if (!isMounted) {
 					return;
 				}
-
-				const socket = io(resolverApiBaseUrl(), {
-					auth: { token },
-					transports: ['websocket'],
-					forceNew: true,
-					reconnection: true,
-					reconnectionAttempts: Infinity,
-				});
-
-				notificationSocketRef.current = socket;
-
-				socket.on('mensaje:nuevo', async (msg: any) => {
-					if (!isMounted) {
-						return;
-					}
-
-					// Ignore echo/self messages to avoid noisy notifications.
-					if (msg?.emisorId === usuarioActualId) {
-						return;
-					}
-
-					const currentRoute = activeRouteRef.current;
-					const currentParams = activeRouteParamsRef.current;
-
-					const chatAbiertoConMismoContacto =
-						currentRoute === 'MensajeDirecto' &&
-						(currentParams?.contactoId === msg?.emisorId ||
-							currentParams?.contactoId === msg?.receptorId);
-
-					if (chatAbiertoConMismoContacto) {
-						return;
-					}
-
-					await notifyIncomingMessage({
-						title: 'Nuevo mensaje',
-						body: String(msg?.contenido ?? 'Tienes un nuevo mensaje'),
-						data: {
-							type: 'direct-message',
-							emisorId: String(msg?.emisorId ?? ''),
-							receptorId: String(msg?.receptorId ?? ''),
-						},
-					});
-				});
-
-				socket.on('grupo:mensaje:nuevo', async (msg: any) => {
-					if (!isMounted) {
-						return;
-					}
-
-					if (msg?.emisorId === usuarioActualId) {
-						return;
-					}
-
-					const currentRoute = activeRouteRef.current;
-					const currentParams = activeRouteParamsRef.current;
-					const chatGrupoAbierto =
-						currentRoute === 'MensajeGrupo' && currentParams?.grupoId === msg?.grupoId;
-
-					if (chatGrupoAbierto) {
-						return;
-					}
-
-					const emisorNombre = [msg?.emisor?.nombre, msg?.emisor?.apellido]
-						.filter(Boolean)
-						.join(' ')
-						.trim();
-
-					await notifyIncomingMessage({
-						title: msg?.nombreGrupo
-							? `Nuevo mensaje en ${String(msg.nombreGrupo)}`
-							: 'Nuevo mensaje de grupo',
-						body:
-							emisorNombre.length > 0
-								? `${emisorNombre}: ${String(msg?.contenido ?? '')}`
-								: String(msg?.contenido ?? 'Tienes un nuevo mensaje en grupo'),
-						data: {
-							type: 'group-message',
-							grupoId: String(msg?.grupoId ?? ''),
-							emisorId: String(msg?.emisorId ?? ''),
-						},
-					});
-				});
-			} catch (error) {
-				console.error('[Notifications] Global listener setup failed:', error);
+				setInitialRouteName('Home');
+			} finally {
+				if (isMounted) {
+					setAuthChecked(true);
+				}
 			}
 		};
 
-		setupGlobalNotifications();
+		restoreSession();
 
 		return () => {
 			isMounted = false;
-			notificationSocketRef.current?.disconnect();
-			notificationSocketRef.current = null;
 		};
 	}, []);
+
+	useEffect(() => {
+		let isMounted = true;
+		let syncTimer: ReturnType<typeof setInterval> | null = null;
+
+		const teardownNotificationSocket = () => {
+			notificationSocketRef.current?.disconnect();
+			notificationSocketRef.current = null;
+			currentAuthUserIdRef.current = null;
+			currentTokenRef.current = null;
+		};
+
+		const connectNotificationSocket = (token: string, usuarioActualId: string) => {
+			const socket = io(resolverApiBaseUrl(), {
+				auth: { token },
+				transports: ['websocket'],
+				forceNew: true,
+				reconnection: true,
+				reconnectionAttempts: Infinity,
+			});
+
+			notificationSocketRef.current = socket;
+			currentAuthUserIdRef.current = usuarioActualId;
+			currentTokenRef.current = token;
+
+			socket.on('mensaje:nuevo', async (msg: any) => {
+				if (!isMounted) {
+					return;
+				}
+
+				if (msg?.emisorId === currentAuthUserIdRef.current) {
+					return;
+				}
+
+				const currentRoute = activeRouteRef.current;
+				const currentParams = activeRouteParamsRef.current;
+
+				const chatAbiertoConMismoContacto =
+					currentRoute === 'MensajeDirecto' &&
+					currentParams?.contactoId === msg?.emisorId;
+
+				if (chatAbiertoConMismoContacto) {
+					return;
+				}
+
+				const emisorNombre = [msg?.emisor?.nombre, msg?.emisor?.apellido]
+					.filter(Boolean)
+					.join(' ')
+					.trim();
+
+				await notifyIncomingMessage({
+					title:
+						emisorNombre.length > 0
+							? `Nuevo mensaje de ${emisorNombre}`
+							: 'Nuevo mensaje',
+					body: String(msg?.contenido ?? 'Tienes un nuevo mensaje'),
+					data: {
+						type: 'direct-message',
+						emisorId: String(msg?.emisorId ?? ''),
+						receptorId: String(msg?.receptorId ?? ''),
+					},
+				});
+			});
+
+			socket.on('grupo:mensaje:nuevo', async (msg: any) => {
+				if (!isMounted) {
+					return;
+				}
+
+				if (msg?.emisorId === currentAuthUserIdRef.current) {
+					return;
+				}
+
+				const currentRoute = activeRouteRef.current;
+				const currentParams = activeRouteParamsRef.current;
+				const chatGrupoAbierto =
+					currentRoute === 'MensajeGrupo' && currentParams?.grupoId === msg?.grupoId;
+
+				if (chatGrupoAbierto) {
+					return;
+				}
+
+				const emisorNombre = [msg?.emisor?.nombre, msg?.emisor?.apellido]
+					.filter(Boolean)
+					.join(' ')
+					.trim();
+
+				await notifyIncomingMessage({
+					title: msg?.nombreGrupo
+						? `Nuevo mensaje en ${String(msg.nombreGrupo)}`
+						: 'Nuevo mensaje de grupo',
+					body:
+						emisorNombre.length > 0
+							? `${emisorNombre}: ${String(msg?.contenido ?? '')}`
+							: String(msg?.contenido ?? 'Tienes un nuevo mensaje en grupo'),
+					data: {
+						type: 'group-message',
+						grupoId: String(msg?.grupoId ?? ''),
+						emisorId: String(msg?.emisorId ?? ''),
+					},
+				});
+			});
+		};
+
+		const syncGlobalNotificationsSocket = async () => {
+			if (syncInProgressRef.current || !isMounted) {
+				return;
+			}
+
+			syncInProgressRef.current = true;
+
+			try {
+				const token = await AsyncStorage.getItem('userToken');
+				const usuarioActualId = await authService.obtenerIdUsuarioActual();
+
+				if (!token || !usuarioActualId || !isMounted) {
+					teardownNotificationSocket();
+					return;
+				}
+
+				const socket = notificationSocketRef.current;
+				const tokenCambio = currentTokenRef.current !== token;
+
+				if (!socket || tokenCambio) {
+					teardownNotificationSocket();
+					connectNotificationSocket(token, usuarioActualId);
+				} else {
+					currentAuthUserIdRef.current = usuarioActualId;
+					currentTokenRef.current = token;
+					if (!socket.connected) {
+						socket.connect();
+					}
+				}
+			} catch (error) {
+				console.error('[Notifications] Global listener setup failed:', error);
+			} finally {
+				syncInProgressRef.current = false;
+			}
+		};
+
+		syncGlobalNotificationsSocket();
+		syncTimer = setInterval(() => {
+			syncGlobalNotificationsSocket();
+		}, 3000);
+
+		return () => {
+			isMounted = false;
+			if (syncTimer) {
+				clearInterval(syncTimer);
+			}
+			teardownNotificationSocket();
+		};
+	}, []);
+
+	if (!authChecked) {
+		return (
+			<View
+				style={{
+					flex: 1,
+					justifyContent: 'center',
+					alignItems: 'center',
+					backgroundColor: theme.colors.white,
+				}}
+			>
+				<ActivityIndicator size="large" color={theme.colors.primary} />
+			</View>
+		);
+	}
 
 	return (
 		<NavigationContainer
@@ -208,7 +302,7 @@ export default function RootNavigator() {
 			}}
 		>
 			<Stack.Navigator
-				initialRouteName="Home"
+				initialRouteName={initialRouteName}
 				screenOptions={{
 					headerShown: false,
 					cardStyle: {

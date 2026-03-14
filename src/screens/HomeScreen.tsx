@@ -21,6 +21,9 @@ export default function HomeScreen({ navigation }: any) {
 
 	const handleNotificationTestPress = async () => {
 		try {
+			const status = await notificacionesService.getPermissionStatus();
+			console.log(`[Notifications][HomeTest] Permission status: ${status}`);
+
 			await notificacionesService.sendPushTestToCurrentUser();
 			showToast.success('Notificacion de prueba enviada');
 		} catch (error) {

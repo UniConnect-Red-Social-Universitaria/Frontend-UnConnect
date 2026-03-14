@@ -80,6 +80,32 @@ export async function ensurePermissions(
     }
 }
 
+export async function getPermissionStatus(): Promise<
+    "granted" | "denied" | "undetermined" | "unavailable"
+> {
+    try {
+        const Notifications = await getNotificationsModule();
+
+        if (!Notifications) {
+            return "unavailable";
+        }
+
+        const settings = await Notifications.getPermissionsAsync();
+        if (settings.status === "granted") {
+            return "granted";
+        }
+
+        if (settings.status === "denied") {
+            return "denied";
+        }
+
+        return "undetermined";
+    } catch (error: unknown) {
+        console.error("[Notifications] Error reading permission status:", error);
+        return "unavailable";
+    }
+}
+
 export async function initializeNotifications(): Promise<void> {
     if (IS_EXPO_GO) {
         // In Expo Go, remote push is limited, but local permission flow can still run.
@@ -166,6 +192,7 @@ export async function clearDeliveredNotifications(): Promise<void> {
 export default {
     initializeNotifications,
     ensurePermissions,
+    getPermissionStatus,
     notifyIncomingMessage,
     sendPushTestToCurrentUser,
     clearDeliveredNotifications,

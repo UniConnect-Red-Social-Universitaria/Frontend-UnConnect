@@ -9,8 +9,8 @@
     "start:lts": "node scripts/start-expo.js --lan --node20",
     "start:lts:tunnel": "node scripts/start-expo.js --tunnel --node20",
     "start:qr": "npm run start:lts",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web"
   },
   "engines": {
