@@ -22,6 +22,7 @@ import { resolverApiBaseUrl } from '../utils/apiConfig';
 import { authService } from '../services';
 import { notifyIncomingMessage } from '../services/notificaciones.service';
 import { incrementUnreadNotificationsCount } from '../services/notificaciones-badge.service';
+import { upsertUnreadDirectChatNotification } from '../services/notificaciones-chat.service';
 
 export type RootStackParamList = {
 	Home: undefined;
@@ -173,6 +174,12 @@ export default function RootNavigator() {
 					.filter(Boolean)
 					.join(' ')
 					.trim();
+
+				await upsertUnreadDirectChatNotification({
+					contactoId: String(msg?.emisorId ?? ''),
+					nombre: emisorNombre,
+					mensaje: String(msg?.contenido ?? ''),
+				});
 
 				await incrementUnreadNotificationsCount();
 				await notifyIncomingMessage({
