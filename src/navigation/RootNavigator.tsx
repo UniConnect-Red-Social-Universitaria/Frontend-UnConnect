@@ -205,10 +205,16 @@ export default function RootNavigator() {
 					.filter(Boolean)
 					.join(' ')
 					.trim();
+				const nombreGrupo =
+					typeof msg?.nombreGrupo === 'string' && msg.nombreGrupo.trim().length > 0
+						? msg.nombreGrupo.trim()
+						: typeof msg?.grupo?.nombre === 'string' && msg.grupo.nombre.trim().length > 0
+							? msg.grupo.nombre.trim()
+							: null;
 
 				await notifyIncomingMessage({
-					title: msg?.nombreGrupo
-						? `Nuevo mensaje en ${String(msg.nombreGrupo)}`
+					title: nombreGrupo
+						? `Nuevo mensaje en ${nombreGrupo}`
 						: 'Nuevo mensaje de grupo',
 					body:
 						emisorNombre.length > 0
