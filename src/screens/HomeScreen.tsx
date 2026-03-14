@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, useWindowDimensions, Image } from 'react-native';
 import { useHomeScreenStyles } from '../styles/HomeScreen.styles';
+import { notificacionesService } from '../services';
+import { showToast } from '../utils/toast';
 
 export default function HomeScreen({ navigation }: any) {
 	const [hoveredButton, setHoveredButton] = useState<string | null>(null);
@@ -15,6 +17,18 @@ export default function HomeScreen({ navigation }: any) {
 	};
 	const handleLoginPress = () => {
 		navigation.navigate('Login');
+	};
+
+	const handleNotificationTestPress = async () => {
+		try {
+			const status = await notificacionesService.getPermissionStatus();
+			console.log(`[Notifications][HomeTest] Permission status: ${status}`);
+
+			await notificacionesService.sendPushTestToCurrentUser();
+			showToast.success('Notificacion de prueba enviada');
+		} catch (error) {
+			showToast.error('No se pudo enviar la notificacion de prueba');
+		}
 	};
 
 	return (
@@ -100,6 +114,26 @@ export default function HomeScreen({ navigation }: any) {
 							]}
 						>
 							Login
+						</Text>
+					</Pressable>
+
+					<Pressable
+						style={[
+							styles.button,
+							styles.buttonPrimary,
+							hoveredButton === 'notificaciones' && styles.buttonPrimaryHover,
+						]}
+						onPress={handleNotificationTestPress}
+						onPressIn={() => setHoveredButton('notificaciones')}
+						onPressOut={() => setHoveredButton(null)}
+					>
+						<Text
+							style={[
+								styles.buttonText,
+								hoveredButton === 'notificaciones' && styles.buttonTextHover,
+							]}
+						>
+							Probar notificacion
 						</Text>
 					</Pressable>
 				</View>

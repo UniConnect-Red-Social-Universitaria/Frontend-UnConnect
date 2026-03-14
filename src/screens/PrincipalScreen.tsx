@@ -6,8 +6,12 @@ import {
 	TextInput,
 	ActivityIndicator,
 	ScrollView,
+	Image,
+	useWindowDimensions,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import globalStyles from '../styles/global';
 import { styles } from '../styles/PrincipalScreenStyles';
 import {
@@ -17,12 +21,18 @@ import {
 	materiasService,
 } from '../services';
 import { showToast } from '../utils/toast';
+import {
+	getUnreadNotificationsCount,
+	subscribeUnreadNotificationsCount,
+} from '../services/notificaciones-badge.service';
 
 type RootStackParamList = {
 	Principal: undefined;
 	Grupos: undefined;
 	Eventos: undefined;
 	Contactos: undefined;
+	EditarPerfil: undefined;
+	Notificaciones: undefined;
 	Login: undefined;
 	Home: undefined;
 };
@@ -40,6 +50,9 @@ export default function PrincipalScreen({
 }: {
 	navigation: PrincipalScreenNavigationProp;
 }) {
+	const { width } = useWindowDimensions();
+	const logoWidth = width < 380 ? 150 : width < 480 ? 180 : 220;
+
 	const [search, setSearch] = useState('');
 	const [usuarios, setUsuarios] = useState<any[]>([]);
 	const [grupos, setGrupos] = useState<any[]>([]);
@@ -48,6 +61,7 @@ export default function PrincipalScreen({
 	const [grupoResults, setGrupoResults] = useState<any[]>([]);
 	const [materiaResults, setMateriaResults] = useState<any[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [unreadNotifications, setUnreadNotifications] = useState(0);
 
 	const handleLogout = async () => {
 		try {
@@ -71,7 +85,10 @@ export default function PrincipalScreen({
 				setGrupos(gruposData);
 				setMaterias(materiasData);
 			} catch (error: any) {
-				showToast.error('Error cargando datos');
+				console.warn(
+					'[PrincipalScreen] Error cargando datos iniciales:',
+					error?.message ?? error
+				);
 			}
 			setLoading(false);
 		};
@@ -118,6 +135,29 @@ export default function PrincipalScreen({
 		setMateriaResults(materiasFiltradas);
 	}, [search, usuarios, grupos, materias]);
 
+	useFocusEffect(
+		React.useCallback(() => {
+			let mounted = true;
+
+			void getUnreadNotificationsCount().then((count) => {
+				if (mounted) {
+					setUnreadNotifications(count);
+				}
+			});
+
+			const unsubscribe = subscribeUnreadNotificationsCount((count) => {
+				if (mounted) {
+					setUnreadNotifications(count);
+				}
+			});
+
+			return () => {
+				mounted = false;
+				unsubscribe();
+			};
+		}, [])
+	);
+
 	if (loading) {
 		return (
 			<View style={{ flex: 1, justifyContent: 'center' }}>
@@ -130,11 +170,39 @@ export default function PrincipalScreen({
 		<View style={styles.container}>
 			{/* HEADER */}
 			<View style={styles.header}>
-				<Text style={styles.brand}>UniConnect</Text>
-				{/* botón salir */}
-				<Pressable style={styles.logoutButton} onPress={handleLogout}>
-					<Text style={styles.logoutText}>Salir</Text>
-				</Pressable>
+				<View style={styles.headerLeft}>
+					<Image
+						source={require('../../assets/images/logo-caldas.png')}
+						style={[styles.brandLogo, { width: logoWidth }]}
+						resizeMode="contain"
+					/>
+				</View>
+
+				<View style={styles.headerCenter}>
+					<Pressable
+						style={styles.iconButton}
+						onPress={() => navigation.navigate('EditarPerfil')}
+					>
+						<Ionicons name="person-circle-outline" size={32} color="#007AFF" />
+					</Pressable>
+					<Pressable
+						style={styles.iconButton}
+						onPress={() => navigation.navigate('Notificaciones')}
+					>
+						<View style={styles.iconWithBadgeContainer}>
+							<Ionicons name="notifications-outline" size={32} color="#007AFF" />
+							{unreadNotifications > 0 && <View style={styles.notificationBadgeDot} />}
+						</View>
+					</Pressable>
+				</View>
+
+				<View style={styles.headerRight}>
+					{/* botón salir */}
+					<Pressable style={styles.logoutButton} onPress={handleLogout}>
+						<Text style={styles.logoutText}>Salir</Text>
+						<Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
+					</Pressable>
+				</View>
 			</View>
 
 			{/* MAIN */}
