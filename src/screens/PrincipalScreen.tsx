@@ -15,6 +15,7 @@ import {
 	usuariosService,
 	gruposService,
 	materiasService,
+	notificacionesService,
 } from '../services';
 import { showToast } from '../utils/toast';
 
@@ -48,6 +49,7 @@ export default function PrincipalScreen({
 	const [grupoResults, setGrupoResults] = useState<any[]>([]);
 	const [materiaResults, setMateriaResults] = useState<any[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [sendingPush, setSendingPush] = useState(false);
 
 	const handleLogout = async () => {
 		try {
@@ -55,6 +57,18 @@ export default function PrincipalScreen({
 			navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
 		} catch (err: any) {
 			showToast.error('Error al cerrar sesión');
+		}
+	};
+
+	const handleTestPush = async () => {
+		try {
+			setSendingPush(true);
+			await notificacionesService.sendPushTestToCurrentUser();
+			showToast.success('Notificacion de prueba enviada.');
+		} catch (error: any) {
+			showToast.error(error?.message || 'No se pudo enviar la notificacion de prueba');
+		} finally {
+			setSendingPush(false);
 		}
 	};
 
@@ -71,9 +85,25 @@ export default function PrincipalScreen({
 				setGrupos(gruposData);
 				setMaterias(materiasData);
 			} catch (error: any) {
-				showToast.error('Error cargando datos');
+				const message = String(error?.message || '');
+				const authError = /401|403|token|autenticad|unauthorized|forbidden/i.test(
+					message
+				);
+
+				if (authError) {
+					await authService.logout();
+					navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+					return;
+				}
+
+				// Non-critical startup data errors should not interrupt the user with a toast.
+				console.log('[Principal] Non-blocking data load error:', message || error);
+				setUsuarios([]);
+				setGrupos([]);
+				setMaterias([]);
+			} finally {
+				setLoading(false);
 			}
-			setLoading(false);
 		};
 
 		fetchData();
@@ -141,6 +171,24 @@ export default function PrincipalScreen({
 			<View style={styles.mainContent}>
 				<Text style={styles.greeting}>¡Hola!</Text>
 				<Text style={styles.subtitle}>Encuentra tu comunidad en la universidad</Text>
+
+				<Pressable
+					onPress={handleTestPush}
+					disabled={sendingPush}
+					style={{
+						marginTop: 12,
+						alignSelf: 'flex-start',
+						backgroundColor: '#111827',
+						paddingHorizontal: 14,
+						paddingVertical: 10,
+						borderRadius: 10,
+						opacity: sendingPush ? 0.7 : 1,
+					}}
+				>
+					<Text style={{ color: '#FFFFFF', fontWeight: '600' }}>
+						{sendingPush ? 'Enviando...' : 'Probar push'}
+					</Text>
+				</Pressable>
 
 				<View style={styles.searchContainer}>
 					<TextInput

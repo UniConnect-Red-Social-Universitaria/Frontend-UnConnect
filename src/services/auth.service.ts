@@ -6,6 +6,7 @@ import {
   ApiResponse,
 } from "../types/api.types";
 import { jwtDecode, JwtPayload } from "jwt-decode"; // <-- Importamos jwt-decode
+import { clearDeliveredNotifications } from "./notificaciones.service";
 
 // <-- Agregamos la interfaz para el JWT
 interface CustomJwt extends JwtPayload {
@@ -63,6 +64,7 @@ class AuthService {
     } finally {
       // Limpiar token local siempre
       await apiClient.removeToken();
+      await clearDeliveredNotifications();
     }
   }
 

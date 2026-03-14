@@ -1,45 +1,42 @@
 {
-  "expo": {
-    "name": "uniconnect-app",
-    "slug": "uniconnect-app",
-    "owner": "jackeliner",
-    "scheme": "com.jackeliner.uniconnectapp",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.jackeliner.uniconnectapp",
-      "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      }
-    },
-    "android": {
-      "package": "com.jackeliner.uniconnectapp",
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
-    "plugins": [
-      "expo-font",
-      "expo-web-browser"
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "d2d84b07-57c2-4e01-ba31-aa2967ae7133"
-      }
-    }
-  }
+	"expo": {
+		"name": "uniconnect-app",
+		"slug": "uniconnect-app",
+		"owner": "jackeliner",
+		"scheme": "com.jackeliner.uniconnectapp",
+		"version": "1.0.0",
+		"orientation": "portrait",
+		"icon": "./assets/icon.png",
+		"userInterfaceStyle": "light",
+		"splash": {
+			"image": "./assets/splash-icon.png",
+			"resizeMode": "contain",
+			"backgroundColor": "#ffffff"
+		},
+		"ios": {
+			"supportsTablet": true,
+			"bundleIdentifier": "com.jackeliner.uniconnectapp",
+			"infoPlist": {
+				"ITSAppUsesNonExemptEncryption": false
+			}
+		},
+		"android": {
+			"package": "com.jackeliner.uniconnectapp",
+			"adaptiveIcon": {
+				"foregroundImage": "./assets/adaptive-icon.png",
+				"backgroundColor": "#ffffff"
+			},
+			"edgeToEdgeEnabled": true,
+			"predictiveBackGestureEnabled": false
+		},
+		"web": {
+			"favicon": "./assets/favicon.png"
+		},
+		"plugins": ["expo-font", "expo-web-browser", "expo-notifications"],
+		"extra": {
+			"eas": {
+				"projectId": "d2d84b07-57c2-4e01-ba31-aa2967ae7133"
+			}
+		}
+	}
 }

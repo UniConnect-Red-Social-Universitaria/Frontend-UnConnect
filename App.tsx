@@ -1,17 +1,24 @@
-import React from "react";
-import { StatusBar } from "expo-status-bar";
-import Toast from "react-native-toast-message";
+import React, { useEffect } from 'react';
+import { StatusBar } from 'expo-status-bar';
+import Toast from 'react-native-toast-message';
 
-import RootNavigator from "./src/navigation/RootNavigator";
+import RootNavigator from './src/navigation/RootNavigator';
+import { initializeNotifications } from './src/services/notificaciones.service';
 
 export default function App() {
-  return (
-    <>
-      <StatusBar style="dark" />
+	useEffect(() => {
+		initializeNotifications().catch((error) => {
+			console.error('[Notifications] Bootstrap error:', error);
+		});
+	}, []);
 
-      <RootNavigator />
+	return (
+		<>
+			<StatusBar style="dark" />
 
-      <Toast />
-    </>
-  );
+			<RootNavigator />
+
+			<Toast />
+		</>
+	);
 }

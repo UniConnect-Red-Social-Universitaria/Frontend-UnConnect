@@ -9,6 +9,7 @@ export { gruposService } from './grupos.service';
 export { archivosService } from './archivos.service';
 export { eventosService } from './eventos.service';
 export { materiasService } from './materias.service';
+export { default as notificacionesService } from './notificaciones.service';
 
 // Re-exportar tipos para conveniencia
 export type {
