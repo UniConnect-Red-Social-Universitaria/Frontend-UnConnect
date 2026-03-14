@@ -16,13 +16,18 @@ import { DetalleGrupoScreen } from '../screens/DetalleGrupoScreen';
 import MensajeGrupoScreen from '../screens/MensajeGrupoScreen';
 import MensajeDirectoScreen from '../screens/MensajeDirectoScreen';
 import ContactScreen from '../screens/ContactScreen';
+import SolicitudesScreen from '../screens/SolicitudesScreen';
 import EditarPerfilScreen from '../screens/EditarPerfilScreen';
 import NotificacionesScreen from '../screens/NotificacionesScreen';
 import { resolverApiBaseUrl } from '../utils/apiConfig';
 import { authService } from '../services';
 import { notifyIncomingMessage } from '../services/notificaciones.service';
 import { incrementUnreadNotificationsCount } from '../services/notificaciones-badge.service';
-import { upsertUnreadDirectChatNotification } from '../services/notificaciones-chat.service';
+import {
+	upsertUnreadDirectChatNotification,
+	upsertUnreadGroupChatNotification,
+} from '../services/notificaciones-chat.service';
+import { upsertUnreadContactRequestNotification } from '../services/notificaciones-solicitudes.service';
 
 export type RootStackParamList = {
 	Home: undefined;
@@ -33,6 +38,7 @@ export type RootStackParamList = {
 	CompletarRegistro: undefined;
 	Login: undefined;
 	Contactos: undefined;
+	Solicitudes: undefined;
 	EditarPerfil: undefined;
 	Notificaciones: undefined;
 	DetalleGrupo: {
@@ -225,6 +231,12 @@ export default function RootNavigator() {
 							? msg.grupo.nombre.trim()
 							: null;
 
+				await upsertUnreadGroupChatNotification({
+					grupoId: String(msg?.grupoId ?? ''),
+					nombreGrupo: nombreGrupo ?? 'Grupo',
+					mensaje: String(msg?.contenido ?? ''),
+				});
+
 				await incrementUnreadNotificationsCount();
 				await notifyIncomingMessage({
 					title: nombreGrupo
@@ -255,6 +267,12 @@ export default function RootNavigator() {
 					.filter(Boolean)
 					.join(' ')
 					.trim();
+
+				await upsertUnreadContactRequestNotification({
+					solicitudId: String(payload?.solicitudId ?? ''),
+					solicitanteId: String(payload?.solicitanteId ?? ''),
+					nombre: nombreCompleto,
+				});
 
 				await incrementUnreadNotificationsCount();
 				await notifyIncomingMessage({
@@ -367,6 +385,7 @@ export default function RootNavigator() {
 				<Stack.Screen name="Principal" component={PrincipalScreen} />
 				<Stack.Screen name="Login" component={LoginScreen} />
 				<Stack.Screen name="Contactos" component={ContactScreen} />
+				<Stack.Screen name="Solicitudes" component={SolicitudesScreen} />
 				<Stack.Screen name="EditarPerfil" component={EditarPerfilScreen} />
 				<Stack.Screen name="Notificaciones" component={NotificacionesScreen} />
 				<Stack.Screen name="MensajeDirecto" component={MensajeDirectoScreen} />

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
 	View,
 	Text,
@@ -15,10 +15,20 @@ import { styles } from '../styles/PrincipalScreenStyles';
 import { clearUnreadNotificationsCount } from '../services/notificaciones-badge.service';
 import {
 	clearUnreadDirectChatNotification,
+	clearUnreadGroupChatNotification,
 	getUnreadDirectChatNotifications,
+	getUnreadGroupChatNotifications,
 	subscribeUnreadDirectChatNotifications,
+	subscribeUnreadGroupChatNotifications,
 	type UnreadDirectChatNotification,
+	type UnreadGroupChatNotification,
 } from '../services/notificaciones-chat.service';
+import {
+	clearUnreadContactRequestNotification,
+	getUnreadContactRequestNotifications,
+	subscribeUnreadContactRequestNotifications,
+	type UnreadContactRequestNotification,
+} from '../services/notificaciones-solicitudes.service';
 import { authService } from '../services';
 import { showToast } from '../utils/toast';
 import type { RootStackParamList } from '../navigation/RootNavigator';
@@ -33,20 +43,85 @@ export default function NotificacionesScreen({
 }: {
 	navigation: NotificacionesNavigationProp;
 }) {
-	const [unreadChats, setUnreadChats] = useState<UnreadDirectChatNotification[]>([]);
+	const [unreadDirectChats, setUnreadDirectChats] = useState<
+		UnreadDirectChatNotification[]
+	>([]);
+	const [unreadGroupChats, setUnreadGroupChats] = useState<UnreadGroupChatNotification[]>(
+		[]
+	);
+	const [unreadContactRequests, setUnreadContactRequests] = useState<
+		UnreadContactRequestNotification[]
+	>([]);
 	const { width } = useWindowDimensions();
 	const logoWidth = width < 380 ? 150 : width < 480 ? 180 : 220;
 
+	type NotificationItem =
+		| (UnreadDirectChatNotification & { kind: 'direct'; key: string })
+		| (UnreadGroupChatNotification & { kind: 'group'; key: string })
+		| (UnreadContactRequestNotification & { kind: 'request'; key: string });
+
+	const unreadChats = useMemo<NotificationItem[]>(() => {
+		const directItems: NotificationItem[] = unreadDirectChats.map((item) => ({
+			...item,
+			kind: 'direct',
+			key: `direct-${item.contactoId}`,
+		}));
+
+		const groupItems: NotificationItem[] = unreadGroupChats.map((item) => ({
+			...item,
+			kind: 'group',
+			key: `group-${item.grupoId}`,
+		}));
+
+		const requestItems: NotificationItem[] = unreadContactRequests.map((item) => ({
+			...item,
+			kind: 'request',
+			key: `request-${item.solicitudId}`,
+		}));
+
+		return [...directItems, ...groupItems, ...requestItems].sort((a, b) => {
+			const dateA =
+				a.kind === 'request'
+					? new Date(a.createdAt).getTime()
+					: new Date(a.updatedAt).getTime();
+			const dateB =
+				b.kind === 'request'
+					? new Date(b.createdAt).getTime()
+					: new Date(b.updatedAt).getTime();
+			return dateB - dateA;
+		});
+	}, [unreadDirectChats, unreadGroupChats, unreadContactRequests]);
+
 	useEffect(() => {
-		const unsubscribe = subscribeUnreadDirectChatNotifications((items) => {
-			setUnreadChats(items);
+		const unsubscribeDirect = subscribeUnreadDirectChatNotifications((items) => {
+			setUnreadDirectChats(items);
+		});
+
+		const unsubscribeGroup = subscribeUnreadGroupChatNotifications((items) => {
+			setUnreadGroupChats(items);
+		});
+
+		const unsubscribeRequests = subscribeUnreadContactRequestNotifications((items) => {
+			setUnreadContactRequests(items);
 		});
 
 		void getUnreadDirectChatNotifications().then((items) => {
-			setUnreadChats(items);
+			setUnreadDirectChats(items);
 		});
 
-		return unsubscribe;
+		void getUnreadGroupChatNotifications().then((items) => {
+			setUnreadGroupChats(items);
+		});
+
+		void getUnreadContactRequestNotifications().then((items) => {
+			setUnreadContactRequests(items);
+		});
+
+		return () => {
+			unsubscribeDirect();
+			unsubscribeGroup();
+			unsubscribeRequests();
+		};
 	}, []);
 
 	useFocusEffect(
@@ -65,25 +140,55 @@ export default function NotificacionesScreen({
 		}
 	};
 
-	const handleVerMensaje = async (item: UnreadDirectChatNotification) => {
-		await clearUnreadDirectChatNotification(item.contactoId);
-		navigation.navigate('MensajeDirecto', {
-			contactoId: item.contactoId,
-			nombre: item.nombre,
-			correo: 'Contacto',
+	const handleVerMensaje = async (item: NotificationItem) => {
+		if (item.kind === 'request') {
+			await clearUnreadContactRequestNotification(item.solicitudId);
+			navigation.navigate('Solicitudes');
+			return;
+		}
+
+		if (item.kind === 'direct') {
+			await clearUnreadDirectChatNotification(item.contactoId);
+			navigation.navigate('MensajeDirecto', {
+				contactoId: item.contactoId,
+				nombre: item.nombre,
+				correo: 'Contacto',
+			});
+			return;
+		}
+
+		await clearUnreadGroupChatNotification(item.grupoId);
+		navigation.navigate('MensajeGrupo', {
+			grupoId: item.grupoId,
+			nombreGrupo: item.nombreGrupo,
 		});
 	};
 
-	const renderNotification = ({ item }: { item: UnreadDirectChatNotification }) => (
+	const renderNotification = ({ item }: { item: NotificationItem }) => (
 		<View style={localStyles.card}>
 			<View style={localStyles.cardHeader}>
-				<Text style={localStyles.cardTitle}>{item.nombre}</Text>
-				{item.mensajesNoLeidos > 1 ? (
+				<Text style={localStyles.cardTitle}>
+					{item.kind === 'direct'
+						? item.nombre
+						: item.kind === 'group'
+							? item.nombreGrupo
+							: item.nombre}
+				</Text>
+				{item.kind !== 'request' && item.mensajesNoLeidos > 1 ? (
 					<Text style={localStyles.counter}>{item.mensajesNoLeidos} nuevos</Text>
 				) : null}
 			</View>
+			<Text style={localStyles.typePill}>
+				{item.kind === 'direct'
+					? 'Mensaje directo'
+					: item.kind === 'group'
+						? 'Mensaje de grupo'
+						: 'Solicitud de contacto'}
+			</Text>
 			<Text style={localStyles.cardMessage} numberOfLines={2}>
-				{item.ultimoMensaje || 'Te envio un mensaje nuevo'}
+				{item.kind === 'request'
+					? 'Te envio una solicitud de contacto.'
+					: item.ultimoMensaje || 'Te envio un mensaje nuevo'}
 			</Text>
 
 			<Pressable
@@ -92,7 +197,9 @@ export default function NotificacionesScreen({
 					void handleVerMensaje(item);
 				}}
 			>
-				<Text style={localStyles.viewButtonText}>Ver mensaje</Text>
+				<Text style={localStyles.viewButtonText}>
+					{item.kind === 'request' ? 'Ver solicitud' : 'Ver mensaje'}
+				</Text>
 			</Pressable>
 		</View>
 	);
@@ -133,12 +240,14 @@ export default function NotificacionesScreen({
 
 			<View style={styles.mainContent}>
 				<Text style={styles.greeting}>Notificaciones</Text>
-				<Text style={styles.subtitle}>Aqui veras los chats que aun no has abierto.</Text>
+				<Text style={styles.subtitle}>
+					Aqui veras chats y solicitudes pendientes por revisar.
+				</Text>
 
 				<FlatList
 					data={unreadChats}
 					renderItem={renderNotification}
-					keyExtractor={(item) => item.contactoId}
+					keyExtractor={(item) => item.key}
 					contentContainerStyle={
 						unreadChats.length === 0
 							? localStyles.emptyListContainer
@@ -148,7 +257,8 @@ export default function NotificacionesScreen({
 						<View style={localStyles.emptyState}>
 							<Text style={localStyles.emptyTitle}>No tienes chats pendientes</Text>
 							<Text style={localStyles.emptyText}>
-								Cuando te escriban, aparecera aqui hasta que abras ese chat.
+								Cuando te escriban o recibas una solicitud, aparecera aqui hasta que
+								revises esa notificacion.
 							</Text>
 						</View>
 					}
@@ -223,6 +333,17 @@ const localStyles = StyleSheet.create({
 		fontSize: 14,
 		color: '#3E566E',
 		marginBottom: 10,
+	},
+	typePill: {
+		alignSelf: 'flex-start',
+		fontSize: 11,
+		fontWeight: '700',
+		color: '#0A4478',
+		backgroundColor: '#E8F2FB',
+		paddingHorizontal: 8,
+		paddingVertical: 4,
+		borderRadius: 999,
+		marginBottom: 8,
 	},
 	viewButton: {
 		alignSelf: 'flex-start',
