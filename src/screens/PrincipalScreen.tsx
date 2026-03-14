@@ -6,8 +6,11 @@ import {
 	TextInput,
 	ActivityIndicator,
 	ScrollView,
+	Image,
+	useWindowDimensions,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { Ionicons } from '@expo/vector-icons';
 import globalStyles from '../styles/global';
 import { styles } from '../styles/PrincipalScreenStyles';
 import {
@@ -23,6 +26,8 @@ type RootStackParamList = {
 	Grupos: undefined;
 	Eventos: undefined;
 	Contactos: undefined;
+	EditarPerfil: undefined;
+	Notificaciones: undefined;
 	Login: undefined;
 	Home: undefined;
 };
@@ -40,6 +45,9 @@ export default function PrincipalScreen({
 }: {
 	navigation: PrincipalScreenNavigationProp;
 }) {
+	const { width } = useWindowDimensions();
+	const logoWidth = width < 380 ? 150 : width < 480 ? 180 : 220;
+
 	const [search, setSearch] = useState('');
 	const [usuarios, setUsuarios] = useState<any[]>([]);
 	const [grupos, setGrupos] = useState<any[]>([]);
@@ -71,7 +79,10 @@ export default function PrincipalScreen({
 				setGrupos(gruposData);
 				setMaterias(materiasData);
 			} catch (error: any) {
-				showToast.error('Error cargando datos');
+				console.warn(
+					'[PrincipalScreen] Error cargando datos iniciales:',
+					error?.message ?? error
+				);
 			}
 			setLoading(false);
 		};
@@ -130,11 +141,36 @@ export default function PrincipalScreen({
 		<View style={styles.container}>
 			{/* HEADER */}
 			<View style={styles.header}>
-				<Text style={styles.brand}>UniConnect</Text>
-				{/* botón salir */}
-				<Pressable style={styles.logoutButton} onPress={handleLogout}>
-					<Text style={styles.logoutText}>Salir</Text>
-				</Pressable>
+				<View style={styles.headerLeft}>
+					<Image
+						source={require('../../assets/images/logo-caldas.png')}
+						style={[styles.brandLogo, { width: logoWidth }]}
+						resizeMode="contain"
+					/>
+				</View>
+
+				<View style={styles.headerCenter}>
+					<Pressable
+						style={styles.iconButton}
+						onPress={() => navigation.navigate('EditarPerfil')}
+					>
+						<Ionicons name="person-circle-outline" size={32} color="#007AFF" />
+					</Pressable>
+					<Pressable
+						style={styles.iconButton}
+						onPress={() => navigation.navigate('Notificaciones')}
+					>
+						<Ionicons name="notifications-outline" size={32} color="#007AFF" />
+					</Pressable>
+				</View>
+
+				<View style={styles.headerRight}>
+					{/* botón salir */}
+					<Pressable style={styles.logoutButton} onPress={handleLogout}>
+						<Text style={styles.logoutText}>Salir</Text>
+						<Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
+					</Pressable>
+				</View>
 			</View>
 
 			{/* MAIN */}

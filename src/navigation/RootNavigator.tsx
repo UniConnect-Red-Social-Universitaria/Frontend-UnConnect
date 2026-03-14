@@ -16,6 +16,8 @@ import { DetalleGrupoScreen } from '../screens/DetalleGrupoScreen';
 import MensajeGrupoScreen from '../screens/MensajeGrupoScreen';
 import MensajeDirectoScreen from '../screens/MensajeDirectoScreen';
 import ContactScreen from '../screens/ContactScreen';
+import EditarPerfilScreen from '../screens/EditarPerfilScreen';
+import NotificacionesScreen from '../screens/NotificacionesScreen';
 import { resolverApiBaseUrl } from '../utils/apiConfig';
 import { authService } from '../services';
 import { notifyIncomingMessage } from '../services/notificaciones.service';
@@ -29,6 +31,8 @@ export type RootStackParamList = {
 	CompletarRegistro: undefined;
 	Login: undefined;
 	Contactos: undefined;
+	EditarPerfil: undefined;
+	Notificaciones: undefined;
 	DetalleGrupo: {
 		grupoId: string;
 		nombreGrupo: string;
@@ -227,6 +231,34 @@ export default function RootNavigator() {
 					},
 				});
 			});
+
+			socket.on('contacto:solicitud:nueva', async (payload: any) => {
+				if (!isMounted) {
+					return;
+				}
+
+				if (payload?.solicitanteId === currentAuthUserIdRef.current) {
+					return;
+				}
+
+				const nombreCompleto = [payload?.solicitanteNombre, payload?.solicitanteApellido]
+					.filter(Boolean)
+					.join(' ')
+					.trim();
+
+				await notifyIncomingMessage({
+					title: 'Nueva solicitud de contacto',
+					body:
+						nombreCompleto.length > 0
+							? `${nombreCompleto} te envio una solicitud de contacto`
+							: 'Tienes una nueva solicitud de contacto',
+					data: {
+						type: 'contact-request',
+						solicitudId: String(payload?.solicitudId ?? ''),
+						solicitanteId: String(payload?.solicitanteId ?? ''),
+					},
+				});
+			});
 		};
 
 		const syncGlobalNotificationsSocket = async () => {
@@ -324,6 +356,8 @@ export default function RootNavigator() {
 				<Stack.Screen name="Principal" component={PrincipalScreen} />
 				<Stack.Screen name="Login" component={LoginScreen} />
 				<Stack.Screen name="Contactos" component={ContactScreen} />
+				<Stack.Screen name="EditarPerfil" component={EditarPerfilScreen} />
+				<Stack.Screen name="Notificaciones" component={NotificacionesScreen} />
 				<Stack.Screen name="MensajeDirecto" component={MensajeDirectoScreen} />
 				<Stack.Screen name="DetalleGrupo" component={DetalleGrupoScreen} />
 				<Stack.Screen name="MensajeGrupo" component={MensajeGrupoScreen} />
