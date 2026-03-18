@@ -91,6 +91,26 @@ export default function RegistroScreen({ navigation }: any) {
 					)}
 				</TouchableOpacity>
 
+				{/* Botón temporal para testing */}
+				<TouchableOpacity
+					style={[styles.googleButton, { backgroundColor: '#28a745' }]}
+					onPress={() => {
+						const testGoogleData = {
+							nombre: 'Juan',
+							apellido: 'Pérez',
+							correo: 'juan.perez@ucaldas.edu.co',
+							googleIdToken: 'test-token-123',
+						};
+						navigation.navigate('CompletarRegistro', {
+							googleData: testGoogleData,
+						});
+					}}
+				>
+					<Text style={styles.googleButtonText}>
+						Ir directo al formulario (TESTING)
+					</Text>
+				</TouchableOpacity>
+
 				<TouchableOpacity
 					onPress={() => navigation.goBack()}
 					style={styles.backButton}

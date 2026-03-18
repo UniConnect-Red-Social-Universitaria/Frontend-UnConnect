@@ -84,7 +84,22 @@ export interface RegistroRequest {
     materiasCursando: string[];
 }
 
+export interface Carrera {
+    id: number;
+    nombre: string;
+}
+
+export interface MateriaCatalogo {
+    id: number;
+    nombre: string;
+}
+
 export interface LoginResponse {
     token: string;
     usuario?: Usuario;
+}
+
+export interface CatalogoData {
+    carreras: Carrera[];
+    materias: MateriaCatalogo[];
 }

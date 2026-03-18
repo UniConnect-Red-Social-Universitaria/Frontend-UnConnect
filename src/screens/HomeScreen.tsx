@@ -31,6 +31,10 @@ export default function HomeScreen({ navigation }: any) {
 		}
 	};
 
+	const handleEditarPerfilTestPress = () => {
+		navigation.navigate('EditarPerfil');
+	};
+
 	return (
 		<View style={styles.container}>
 			{/* Navbar - Desktop only */}
@@ -134,6 +138,27 @@ export default function HomeScreen({ navigation }: any) {
 							]}
 						>
 							Probar notificacion
+						</Text>
+					</Pressable>
+
+					<Pressable
+						style={[
+							styles.button,
+							styles.buttonSecondary,
+							hoveredButton === 'editarPerfilTest' && styles.buttonSecondaryHover,
+						]}
+						onPress={handleEditarPerfilTestPress}
+						onPressIn={() => setHoveredButton('editarPerfilTest')}
+						onPressOut={() => setHoveredButton(null)}
+					>
+						<Text
+							style={[
+								styles.buttonText,
+								styles.buttonSecondaryText,
+								hoveredButton === 'editarPerfilTest' && styles.buttonSecondaryTextHover,
+							]}
+						>
+							Test editar perfil
 						</Text>
 					</Pressable>
 				</View>
