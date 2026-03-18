@@ -15,7 +15,7 @@ import { showToast } from '../utils/toast';
 import { globalStyles } from '../styles/global';
 import theme from '../styles/theme';
 import { useCompletarRegistroStyles } from '../styles/CompletarRegistroScreen.styles';
-import { authService } from '../services';
+import { authService, onboardingService } from '../services';
 import { apiClient } from '../services';
 import { Carrera, MateriaCatalogo } from '../types/api.types';
 
@@ -138,6 +138,7 @@ export default function CompletarRegistroScreen({ navigation, route }: any) {
 			showToast.success(
 				'¡Bienvenido a UniConnect! Tu cuenta ha sido creada exitosamente.'
 			);
+			await onboardingService.markPrincipalOnboardingPending();
 
 			setTimeout(() => {
 				navigation.reset({
