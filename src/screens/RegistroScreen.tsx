@@ -91,7 +91,7 @@ export default function RegistroScreen({ navigation }: any) {
 					)}
 				</TouchableOpacity>
 
-				{/* Botón temporal para testing */}
+				{/* Botón temporal para testing }
 				<TouchableOpacity
 					style={[styles.googleButton, { backgroundColor: '#28a745' }]}
 					onPress={() => {
@@ -110,6 +110,7 @@ export default function RegistroScreen({ navigation }: any) {
 						Ir directo al formulario (TESTING)
 					</Text>
 				</TouchableOpacity>
+				*/}
 
 				<TouchableOpacity
 					onPress={() => navigation.goBack()}

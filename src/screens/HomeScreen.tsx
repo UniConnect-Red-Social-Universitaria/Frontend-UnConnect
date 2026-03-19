@@ -129,67 +129,6 @@ export default function HomeScreen({ navigation }: any) {
 							Login
 						</Text>
 					</Pressable>
-
-					<Pressable
-						style={[
-							styles.button,
-							styles.buttonPrimary,
-							hoveredButton === 'notificaciones' && styles.buttonPrimaryHover,
-						]}
-						onPress={handleNotificationTestPress}
-						onPressIn={() => setHoveredButton('notificaciones')}
-						onPressOut={() => setHoveredButton(null)}
-					>
-						<Text
-							style={[
-								styles.buttonText,
-								hoveredButton === 'notificaciones' && styles.buttonTextHover,
-							]}
-						>
-							Probar notificacion
-						</Text>
-					</Pressable>
-
-					<Pressable
-						style={[
-							styles.button,
-							styles.buttonSecondary,
-							hoveredButton === 'editarPerfilTest' && styles.buttonSecondaryHover,
-						]}
-						onPress={handleEditarPerfilTestPress}
-						onPressIn={() => setHoveredButton('editarPerfilTest')}
-						onPressOut={() => setHoveredButton(null)}
-					>
-						<Text
-							style={[
-								styles.buttonText,
-								styles.buttonSecondaryText,
-								hoveredButton === 'editarPerfilTest' && styles.buttonSecondaryTextHover,
-							]}
-						>
-							Test editar perfil
-						</Text>
-					</Pressable>
-
-					<Pressable
-						style={[
-							styles.button,
-							styles.buttonPrimary,
-							hoveredButton === 'onboardingTest' && styles.buttonPrimaryHover,
-						]}
-						onPress={handleOnboardingTestPress}
-						onPressIn={() => setHoveredButton('onboardingTest')}
-						onPressOut={() => setHoveredButton(null)}
-					>
-						<Text
-							style={[
-								styles.buttonText,
-								hoveredButton === 'onboardingTest' && styles.buttonTextHover,
-							]}
-						>
-							Test onboarding
-						</Text>
-					</Pressable>
 				</View>
 			</View>
 		</View>
