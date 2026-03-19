@@ -10,6 +10,7 @@ export { archivosService } from './archivos.service';
 export { eventosService } from './eventos.service';
 export { materiasService } from './materias.service';
 export { default as notificacionesService } from './notificaciones.service';
+export { onboardingService } from './onboarding.service';
 
 // Re-exportar tipos para conveniencia
 export type {
