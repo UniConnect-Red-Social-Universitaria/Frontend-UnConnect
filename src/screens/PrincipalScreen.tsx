@@ -209,22 +209,6 @@ export default function PrincipalScreen({
 		};
 	}, [search]);
 // ...existing code...
-		if (!search.trim()) {
-			setResults([]);
-			setGrupoResults([]);
-			setMateriaResults([]);
-			return;
-		}
-
-		const timeoutId = setTimeout(() => {
-			buscarEnBackend();
-		}, 300);
-
-		return () => {
-			ignore = true;
-			clearTimeout(timeoutId);
-		};
-	}, [search]);
 
 	useFocusEffect(
 		React.useCallback(() => {

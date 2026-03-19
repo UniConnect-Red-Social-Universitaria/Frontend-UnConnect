@@ -1,6 +1,7 @@
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import {
 	ActivityIndicator,
 	Alert,
@@ -174,6 +175,13 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 	const [descripcion, setDescripcion] = useState('');
 	const [lugar, setLugar] = useState('');
 	const [fechaEventoInput, setFechaEventoInput] = useState('');
+	const [isDatePickerVisible, setDatePickerVisible] = useState(false);
+		const showDatePicker = () => setDatePickerVisible(true);
+		const hideDatePicker = () => setDatePickerVisible(false);
+		const handleConfirmDate = (date: Date) => {
+			setFechaEventoInput(date.toISOString());
+			hideDatePicker();
+		};
 	const [token, setToken] = useState('');
 
 	const apiBaseUrl = resolverApiBaseUrl();
@@ -396,14 +404,42 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 						style={styles.input}
 					/>
 
-					<TextInput
-						value={fechaEventoInput}
-						onChangeText={setFechaEventoInput}
-						placeholder="Fecha (YYYY-MM-DDTHH:mm)"
-						placeholderTextColor={theme.colors.primaryMid}
-						style={styles.input}
-						autoCapitalize="none"
-					/>
+					{Platform.OS === 'web' ? (
+						<input
+							type="datetime-local"
+							value={fechaEventoInput ? new Date(fechaEventoInput).toISOString().slice(0, 16) : ''}
+							onChange={e => {
+								// Mantener la hora local sin desfase
+								const value = e.target.value;
+								// value es 'YYYY-MM-DDTHH:mm', sin zona horaria
+								// Convertir a ISO conservando la hora local
+								const [date, time] = value.split('T');
+								const [year, month, day] = date.split('-');
+								const [hour, minute] = time.split(':');
+								const localDate = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+								setFechaEventoInput(localDate.toISOString());
+							}}
+							style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ccc', marginBottom: 12 }}
+						/>
+					) : (
+						<View>
+							<Pressable onPress={showDatePicker} style={styles.input}>
+								<Text style={{ color: fechaEventoInput ? theme.colors.primary : theme.colors.primaryMid }}>
+									{fechaEventoInput
+										? formatearFechaEvento(fechaEventoInput)
+										: 'Selecciona la fecha y hora'}
+								</Text>
+							</Pressable>
+							<DateTimePickerModal
+								isVisible={isDatePickerVisible}
+								mode="datetime"
+								onConfirm={handleConfirmDate}
+								onCancel={hideDatePicker}
+								locale="es-CO"
+								minimumDate={new Date()}
+							/>
+						</View>
+					)}
 
 					{mensajePublicacion && (
 						<Text style={styles.formMessage}>{mensajePublicacion}</Text>
