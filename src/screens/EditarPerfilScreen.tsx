@@ -28,19 +28,28 @@ const styles = StyleSheet.create({
 	scrollContainer: {
 		flexGrow: 1,
 		padding: theme.spacing.lg,
+		justifyContent: 'center',
 	},
 	container: {
-		flex: 1,
 		gap: theme.spacing.lg,
+		maxWidth: 480,
+		width: '100%',
+		alignSelf: 'center',
+	},
+	header: {
+		alignItems: 'center',
+		gap: theme.spacing.xs,
 	},
 	title: {
 		fontSize: theme.typography.fontSize.xl,
 		fontWeight: '700',
 		color: theme.colors.primaryDark,
+		textAlign: 'center',
 	},
 	subtitle: {
 		fontSize: theme.typography.fontSize.md,
 		color: theme.colors.primaryMid,
+		textAlign: 'center',
 	},
 	card: {
 		backgroundColor: theme.colors.white,
@@ -124,7 +133,7 @@ export default function EditarPerfilScreen({
 }: {
 	navigation: EditarPerfilScreenNavigationProp;
 }) {
-	const [perfil, setPerfil] = useState<Usuario | null>(null);
+	const [nombre, setNombre] = useState('');
 	const [materiasCatalogo, setMateriasCatalogo] = useState<Materia[]>([]);
 	const [semestre, setSemestre] = useState('');
 	const [selectedMateriasIds, setSelectedMateriasIds] = useState<string[]>([]);
@@ -143,9 +152,21 @@ export default function EditarPerfilScreen({
 				materiasService.getMaterias(),
 			]);
 
-			setPerfil(perfilData);
+
+			setNombre(`${perfilData.nombre || ''} ${perfilData.apellido || ''}`.trim());
 			setSemestre(perfilData.semestre ? String(perfilData.semestre) : '');
-			setSelectedMateriasIds((perfilData.materiasCursando || []).map(String));
+
+			// Resolver nombres→IDs usando el catálogo y eliminar duplicados
+			const catalogoIds = new Set((materiasData || []).map((m) => String(m.id)));
+			const idsResueltos = [...new Set(
+				(perfilData.materiasCursando || []).map((item) => {
+					const asString = String(item);
+					if (catalogoIds.has(asString)) return asString;
+					const match = (materiasData || []).find((m) => m.nombre === asString);
+					return match ? String(match.id) : null;
+				}).filter((id): id is string => id !== null)
+			)];
+			setSelectedMateriasIds(idsResueltos);
 			setMateriasCatalogo(materiasData || []);
 		} catch (error: any) {
 			showToast.error(error?.message || 'No se pudo cargar el perfil académico');
@@ -192,7 +213,7 @@ export default function EditarPerfilScreen({
 		try {
 			const payload = {
 				semestre: Number(semestre),
-				materiasCursando: selectedMateriasIds,
+				materiasCursando: [...new Set(selectedMateriasIds)],
 			};
 
 			const response = await usuariosService.updatePerfil(payload);
@@ -228,7 +249,7 @@ export default function EditarPerfilScreen({
 			<View style={globalStyles.safeArea}>
 				<ScrollView contentContainerStyle={styles.scrollContainer}>
 					<View style={styles.container}>
-						<View>
+						<View style={styles.header}>
 							<Text style={styles.title}>Editar perfil académico</Text>
 							<Text style={styles.subtitle}>
 								Actualiza tu semestre y las materias que estás cursando.
@@ -237,13 +258,12 @@ export default function EditarPerfilScreen({
 
 						<View style={styles.card}>
 							<View style={styles.inputGroup}>
-								<Text style={styles.label}>Carrera</Text>
+								<Text style={styles.label}>Nombre</Text>
 								<TextInput
 									style={[styles.input, styles.inputDisabled]}
-									value={perfil?.carrera || 'No registrada'}
+									value={nombre || 'No disponible'}
 									editable={false}
 								/>
-								<Text style={styles.hint}>La carrera no puede editarse desde esta pantalla.</Text>
 							</View>
 
 							<View style={styles.inputGroup}>
@@ -281,7 +301,7 @@ export default function EditarPerfilScreen({
 									valueField="value"
 									value={selectedMateriasIds}
 									onChange={(items) => {
-										setSelectedMateriasIds(items);
+									setSelectedMateriasIds([...new Set(items)]);
 										setErrores((prev) => ({ ...prev, materias: '' }));
 									}}
 									selectedStyle={{ backgroundColor: theme.colors.goldLight }}

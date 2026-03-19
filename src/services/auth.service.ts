@@ -47,6 +47,11 @@ class AuthService {
       body: JSON.stringify(datos),
     });
 
+    // Guardar el token si el backend lo retorna al registrarse
+    if (response.data?.token) {
+      await apiClient.setToken(response.data.token);
+    }
+
     return response;
   }
 
