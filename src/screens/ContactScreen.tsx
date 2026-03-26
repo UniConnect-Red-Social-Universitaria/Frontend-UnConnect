@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
 	},
 
 	aceptarButton: {
-		backgroundColor: '#0f766e',
+		backgroundColor: '#003d70',
 		paddingVertical: 8,
 		paddingHorizontal: 14,
 		borderRadius: 8,
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
 	},
 
 	rechazarButton: {
-		backgroundColor: '#b91c1c',
+		backgroundColor: '#bb4b4e',
 		paddingVertical: 8,
 		paddingHorizontal: 14,
 		borderRadius: 8,

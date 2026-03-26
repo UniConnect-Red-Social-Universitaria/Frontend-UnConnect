@@ -57,10 +57,24 @@ class UsuariosService {
    * Obtener solicitudes recibidas
    */
   async getSolicitudesRecibidas(): Promise<SolicitudPendiente[]> {
-    const response = await apiClient.get<SolicitudPendiente[]>(
+    const response = await apiClient.get<any[]>(
       "/api/usuarios/solicitudes-recibidas",
     );
-    return response.data || [];
+
+    return (response.data || []).map((solicitud: any) => {
+      const solicitante = solicitud?.solicitante || {};
+      const nombre = [solicitante?.nombre, solicitante?.apellido]
+        .filter((parte) => typeof parte === "string" && parte.trim().length > 0)
+        .join(" ");
+
+      return {
+        solicitudId: String(solicitud?.solicitudId || solicitud?.id || ""),
+        solicitanteId: String(solicitante?.id || solicitud?.solicitanteId || ""),
+        nombre,
+        correo: String(solicitante?.correo || solicitud?.correo || ""),
+        createdAt: solicitud?.createdAt,
+      };
+    });
   }
 
   /**
