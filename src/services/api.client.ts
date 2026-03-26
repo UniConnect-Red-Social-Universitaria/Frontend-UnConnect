@@ -77,7 +77,18 @@ class ApiClient {
                 headers,
             });
 
-            const data = await response.json();
+            const contentType = response.headers.get('content-type') || '';
+            const rawBody = await response.text();
+
+            if (!contentType.includes('application/json')) {
+                if (!response.ok) {
+                    throw new Error(`Error ${response.status}: respuesta no JSON desde ${endpoint}`);
+                }
+
+                throw new Error(`Respuesta inesperada del servidor en ${endpoint}`);
+            }
+
+            const data = rawBody ? JSON.parse(rawBody) : {};
 
             if (!response.ok) {
                 throw new Error(data.message || `Error ${response.status}`);
@@ -146,7 +157,18 @@ class ApiClient {
                 headers,
             });
 
-            const data = await response.json();
+            const contentType = response.headers.get('content-type') || '';
+            const rawBody = await response.text();
+
+            if (!contentType.includes('application/json')) {
+                if (!response.ok) {
+                    throw new Error(`Error ${response.status}: respuesta no JSON desde ${endpoint}`);
+                }
+
+                throw new Error(`Respuesta inesperada del servidor en ${endpoint}`);
+            }
+
+            const data = rawBody ? JSON.parse(rawBody) : {};
 
             if (!response.ok) {
                 throw new Error(data.message || `Error ${response.status}`);

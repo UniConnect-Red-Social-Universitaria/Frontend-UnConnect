@@ -47,7 +47,10 @@ class UsuariosService {
    * Enviar solicitud de contacto
    */
   async enviarSolicitud(receptorId: string): Promise<ApiResponse> {
-    return await apiClient.post("/api/usuarios/solicitudes", { receptorId });
+    return await apiClient.post("/api/usuarios/solicitudes", {
+      receptorId,
+      usuarioDestinoId: receptorId,
+    });
   }
 
   /**

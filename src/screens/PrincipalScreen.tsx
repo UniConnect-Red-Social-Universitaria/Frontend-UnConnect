@@ -41,10 +41,7 @@ type RootStackParamList = {
 	Home: undefined;
 };
 
-type PrincipalScreenNavigationProp = StackNavigationProp<
-	RootStackParamList,
-	'Principal'
->;
+type PrincipalScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Principal'>;
 
 const onboardingSteps = [
 	{
@@ -64,8 +61,7 @@ const onboardingSteps = [
 	{
 		icon: 'notifications-outline' as const,
 		title: 'Mantente conectado',
-		description:
-			'Edita tu perfil y revisa tus notificaciones en cualquier momento.',
+		description: 'Edita tu perfil y revisa tus notificaciones en cualquier momento.',
 		cardPlacement: 'bottom' as const,
 	},
 	{
@@ -78,15 +74,13 @@ const onboardingSteps = [
 	{
 		icon: 'log-out-outline' as const,
 		title: 'Control total',
-		description:
-			'Puedes cerrar sesion cuando lo necesites desde el boton Salir.',
+		description: 'Puedes cerrar sesion cuando lo necesites desde el boton Salir.',
 		cardPlacement: 'bottom' as const,
 	},
 	{
 		icon: 'rocket-outline' as const,
 		title: '¡Todo listo! 🎉',
-		description:
-			'Empieza a explorar y conecta con la U.',
+		description: 'Empieza a explorar y conecta con la U.',
 		cardPlacement: 'center' as const,
 	},
 ];
@@ -103,6 +97,12 @@ export default function PrincipalScreen({
 	const [results, setResults] = useState<any[]>([]);
 	const [grupoResults, setGrupoResults] = useState<any[]>([]);
 	const [materiaResults, setMateriaResults] = useState<any[]>([]);
+	const [contactIds, setContactIds] = useState<Set<string>>(new Set());
+	const [solicitudesEnviadasIds, setSolicitudesEnviadasIds] = useState<Set<string>>(
+		new Set()
+	);
+	const [sendingRequestIds, setSendingRequestIds] = useState<Set<string>>(new Set());
+	const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [unreadNotifications, setUnreadNotifications] = useState(0);
 	const [showOnboarding, setShowOnboarding] = useState(false);
@@ -124,6 +124,12 @@ export default function PrincipalScreen({
 
 	useEffect(() => {
 		setLoading(false);
+	}, []);
+
+	useEffect(() => {
+		void authService.obtenerIdUsuarioActual().then((id) => {
+			setCurrentUserId(id);
+		});
 	}, []);
 
 	useEffect(() => {
@@ -157,7 +163,7 @@ export default function PrincipalScreen({
 			try {
 				const query = encodeURIComponent(search.trim());
 
-				const [usuariosMateriasResponse, gruposResponse] = await Promise.all([
+				const [usuariosMateriasResult, gruposResult] = await Promise.allSettled([
 					apiClient.get<any>(`/api/usuarios/buscar?q=${query}`),
 					apiClient.get<any>(`/api/grupos/buscar?q=${query}`),
 				]);
@@ -166,8 +172,20 @@ export default function PrincipalScreen({
 					return;
 				}
 
-				const usuariosMateriasData = usuariosMateriasResponse.data;
-				const gruposData = gruposResponse.data;
+				const usuariosMateriasData =
+					usuariosMateriasResult.status === 'fulfilled'
+						? usuariosMateriasResult.value.data
+						: null;
+				const gruposData =
+					gruposResult.status === 'fulfilled' ? gruposResult.value.data : null;
+
+				if (usuariosMateriasResult.status === 'rejected') {
+					console.log('Error buscando usuarios/materias:', usuariosMateriasResult.reason);
+				}
+
+				if (gruposResult.status === 'rejected') {
+					console.log('Error buscando grupos:', gruposResult.reason);
+				}
 
 				setResults(
 					Array.isArray(usuariosMateriasData?.estudiantes)
@@ -208,7 +226,60 @@ export default function PrincipalScreen({
 			clearTimeout(timeoutId);
 		};
 	}, [search]);
-// ...existing code...
+	// ...existing code...
+
+	const cargarContactos = React.useCallback(async () => {
+		try {
+			const contactos = await usuariosService.getCompaneros();
+			setContactIds(new Set(contactos.map((contacto) => String(contacto.id))));
+		} catch {
+			setContactIds(new Set());
+		}
+	}, []);
+
+	const handleEnviarSolicitud = async (usuarioDestinoId: string, nombre?: string) => {
+		if (!usuarioDestinoId) {
+			return;
+		}
+
+		setSendingRequestIds((prev) => {
+			const next = new Set(prev);
+			next.add(usuarioDestinoId);
+			return next;
+		});
+
+		try {
+			await usuariosService.enviarSolicitud(usuarioDestinoId);
+			setSolicitudesEnviadasIds((prev) => {
+				const next = new Set(prev);
+				next.add(usuarioDestinoId);
+				return next;
+			});
+			showToast.success(
+				nombre ? `Solicitud enviada a ${nombre}` : 'Solicitud enviada correctamente'
+			);
+		} catch (error) {
+			const message =
+				error instanceof Error ? error.message : 'No se pudo enviar la solicitud';
+
+			if (message.toLowerCase().includes('ya existe')) {
+				setSolicitudesEnviadasIds((prev) => {
+					const next = new Set(prev);
+					next.add(usuarioDestinoId);
+					return next;
+				});
+				showToast.info('Ya existe una solicitud pendiente para este usuario');
+			} else {
+				showToast.error(message);
+			}
+		} finally {
+			setSendingRequestIds((prev) => {
+				const next = new Set(prev);
+				next.delete(usuarioDestinoId);
+				return next;
+			});
+		}
+	};
 
 	useFocusEffect(
 		React.useCallback(() => {
@@ -220,6 +291,8 @@ export default function PrincipalScreen({
 				}
 			});
 
+			void cargarContactos();
+
 			const unsubscribe = subscribeUnreadNotificationsCount((count) => {
 				if (mounted) {
 					setUnreadNotifications(count);
@@ -230,7 +303,7 @@ export default function PrincipalScreen({
 				mounted = false;
 				unsubscribe();
 			};
-		}, [])
+		}, [cargarContactos])
 	);
 
 	const handleCloseOnboarding = async () => {
@@ -278,11 +351,7 @@ export default function PrincipalScreen({
 							{currentOnboardingStep + 1}/{onboardingSteps.length}
 						</Text>
 						<View style={styles.onboardingIconWrap}>
-							<Ionicons
-								name={currentStep.icon}
-								size={34}
-								color="#007AFF"
-							/>
+							<Ionicons name={currentStep.icon} size={34} color="#007AFF" />
 						</View>
 						<Text style={styles.onboardingTitle}>{currentStep.title}</Text>
 						<Text style={styles.onboardingDescription}>{currentStep.description}</Text>
@@ -396,11 +465,55 @@ export default function PrincipalScreen({
 						<>
 							<Text style={styles.resultsTitle}>Usuarios</Text>
 							{results.map((item) => (
-								<View key={item.id || item._id} style={{ paddingVertical: 6 }}>
-									<Text style={{ fontWeight: 'bold' }}>
-										{item.nombre} {item.apellido}
-									</Text>
-									<Text>{item.correo}</Text>
+								<View key={item.id || item._id} style={styles.userResultCard}>
+									<View style={styles.userResultInfo}>
+										<Text style={styles.userResultName}>
+											{item.nombre} {item.apellido}
+										</Text>
+										<Text style={styles.userResultEmail}>{item.correo}</Text>
+									</View>
+									{(() => {
+										const usuarioId = String(item.id || item._id || '');
+										const esUsuarioActual =
+											!!currentUserId && usuarioId === currentUserId;
+										const esContacto = contactIds.has(usuarioId);
+										const solicitudEnviada = solicitudesEnviadasIds.has(usuarioId);
+										const solicitudEnProceso = sendingRequestIds.has(usuarioId);
+										const puedeEnviar =
+											usuarioId.length > 0 && !esUsuarioActual && !esContacto;
+
+										if (esContacto) {
+											return (
+												<View style={styles.userStatusBadge}>
+													<Text style={styles.userStatusBadgeText}>Agregado</Text>
+												</View>
+											);
+										}
+
+										if (!puedeEnviar) {
+											return null;
+										}
+
+										return (
+											<Pressable
+												style={[
+													styles.sendRequestButton,
+													(solicitudEnviada || solicitudEnProceso) &&
+														styles.sendRequestButtonDisabled,
+												]}
+												disabled={solicitudEnviada || solicitudEnProceso}
+												onPress={() => void handleEnviarSolicitud(usuarioId, item.nombre)}
+											>
+												<Text style={styles.sendRequestButtonText}>
+													{solicitudEnProceso
+														? 'Enviando...'
+														: solicitudEnviada
+															? 'Enviada'
+															: 'Enviar solicitud'}
+												</Text>
+											</Pressable>
+										);
+									})()}
 								</View>
 							))}
 						</>
@@ -444,10 +557,7 @@ export default function PrincipalScreen({
 
 			{/* FOOTER */}
 			<View
-				style={[
-					styles.bottomBar,
-					isBottomBarStep && styles.onboardingHighlightedBar,
-				]}
+				style={[styles.bottomBar, isBottomBarStep && styles.onboardingHighlightedBar]}
 			>
 				<Pressable onPress={() => navigation.navigate('Grupos')}>
 					<Text style={styles.navButtonText}>Grupos</Text>

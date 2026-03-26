@@ -132,6 +132,59 @@ export const styles = StyleSheet.create({
     color: '#888',
     marginBottom: 10,
   },
+  userResultCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEF1F4',
+  },
+  userResultInfo: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  userResultName: {
+    fontWeight: '700',
+    fontSize: 15,
+    color: '#0F172A',
+  },
+  userResultEmail: {
+    marginTop: 2,
+    color: '#475569',
+    fontSize: 13,
+  },
+  sendRequestButton: {
+    backgroundColor: '#003d70',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    minWidth: 110,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendRequestButtonDisabled: {
+    opacity: 0.6,
+  },
+  sendRequestButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  userStatusBadge: {
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 8,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    backgroundColor: '#F8FAFC',
+  },
+  userStatusBadgeText: {
+    color: '#475569',
+    fontSize: 12,
+    fontWeight: '700',
+  },
 
   onboardingBackdrop: {
     flex: 1,
