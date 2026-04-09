@@ -46,6 +46,7 @@ export type RootStackParamList = {
 		grupoId: string;
 		nombreGrupo: string;
 		creadorId: string;
+		administradorId: string;
 		materiaNombre: string;
 		miembrosIds: string[];
 	};

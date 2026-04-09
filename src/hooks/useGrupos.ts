@@ -12,6 +12,7 @@ export type Grupo = {
   nombre: string;
   materia: { id: string; nombre: string };
   creadorId: string;
+  administradorId: string;
   cantidadMiembros: number;
   miembros: Array<{ id: string; nombre: string; apellido: string }>;
   createdAt: string;

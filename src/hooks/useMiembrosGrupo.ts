@@ -4,7 +4,7 @@ import { showToast } from "../utils/toast";
 
 export function useMiembrosGrupo(
   grupoId: string,
-  creadorId: string,
+  administradorId: string,
   materiaNombre: string,
   miembrosInicialesIds: string[],
 ) {
@@ -20,7 +20,7 @@ export function useMiembrosGrupo(
     const verificarRolAdministrador = async () => {
       try {
         const perfil = await usuariosService.getPerfil();
-        if (perfil.id === creadorId) {
+        if (perfil.id === administradorId) {
           setIsAdmin(true);
         }
       } catch (error) {
@@ -28,7 +28,7 @@ export function useMiembrosGrupo(
       }
     };
     verificarRolAdministrador();
-  }, [creadorId]);
+  }, [administradorId]);
 
   const cargarCandidatos = useCallback(async () => {
     setCargandoCandidatos(true);

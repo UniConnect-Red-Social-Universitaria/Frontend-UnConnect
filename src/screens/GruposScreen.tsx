@@ -1,194 +1,177 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
-  ActivityIndicator,
-  Image,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from "react-native";
-import { StackNavigationProp } from "@react-navigation/stack";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+	ActivityIndicator,
+	Image,
+	Pressable,
+	ScrollView,
+	Text,
+	View,
+} from 'react-native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import theme from "../styles/theme";
-import { styles } from "../styles/GruposScreen.styles";
-import { useGrupos } from "../hooks/useGrupos";
-import { CrearGrupoModal } from "../components/CrearGrupoModal";
+import theme from '../styles/theme';
+import { styles } from '../styles/GruposScreen.styles';
+import { useGrupos } from '../hooks/useGrupos';
+import { CrearGrupoModal } from '../components/CrearGrupoModal';
 
 type RootStackParamList = {
-  Eventos: undefined;
-  Grupos: undefined;
-  Login: undefined;
-  DetalleGrupo: {
-    grupoId: string;
-    nombreGrupo: string;
-    creadorId: string;
-    materiaNombre: string;
-    miembrosIds: string[];
-  };
+	Eventos: undefined;
+	Grupos: undefined;
+	Login: undefined;
+	DetalleGrupo: {
+		grupoId: string;
+		nombreGrupo: string;
+		creadorId: string;
+		administradorId: string;
+		materiaNombre: string;
+		miembrosIds: string[];
+	};
 };
 
-type GruposScreenNavigationProp = StackNavigationProp<
-  RootStackParamList,
-  "Grupos"
->;
+type GruposScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Grupos'>;
 
 type GruposScreenProps = {
-  navigation: GruposScreenNavigationProp;
+	navigation: GruposScreenNavigationProp;
 };
 
 export function GruposScreen({ navigation }: GruposScreenProps) {
-  const [modalVisible, setModalVisible] = useState(false);
+	const [modalVisible, setModalVisible] = useState(false);
 
-  const {
-    grupos,
-    gruposDisponibles,
-    materiasUsuario,
-    loading,
-    error,
-    processingGrupoId,
-    unirseAGrupo,
-    cargarGrupos,
-  } = useGrupos(navigation);
+	const {
+		grupos,
+		gruposDisponibles,
+		materiasUsuario,
+		loading,
+		error,
+		processingGrupoId,
+		unirseAGrupo,
+		cargarGrupos,
+	} = useGrupos(navigation);
 
-  const handleModalSuccess = async () => {
-    const token = await AsyncStorage.getItem("userToken");
-    if (token) await cargarGrupos();
-  };
+	const handleModalSuccess = async () => {
+		const token = await AsyncStorage.getItem('userToken');
+		if (token) await cargarGrupos();
+	};
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.contentWrapper}>
-        <View style={styles.header}>
-          <Image
-            source={require("../../assets/images/logo-caldas.png")}
-            style={styles.logoImage}
-            resizeMode="contain"
-          />
-          <View style={styles.headerText}>
-            <Text style={styles.title}>UniConnect</Text>
-            <Text style={styles.subtitle}>Mis Grupos</Text>
-            <Text style={styles.caption}>Comunidad Universidad de Caldas</Text>
-          </View>
-        </View>
+	return (
+		<View style={styles.container}>
+			<View style={styles.contentWrapper}>
+				<View style={styles.header}>
+					<Image
+						source={require('../../assets/images/logo-caldas.png')}
+						style={styles.logoImage}
+						resizeMode="contain"
+					/>
+					<View style={styles.headerText}>
+						<Text style={styles.title}>UniConnect</Text>
+						<Text style={styles.subtitle}>Mis Grupos</Text>
+						<Text style={styles.caption}>Comunidad Universidad de Caldas</Text>
+					</View>
+				</View>
 
-        {loading && (
-          <ActivityIndicator color={theme.colors.primary} size="large" />
-        )}
-        {error && <Text style={styles.error}>{error}</Text>}
+				{loading && <ActivityIndicator color={theme.colors.primary} size="large" />}
+				{error && <Text style={styles.error}>{error}</Text>}
 
-        {!loading && !error && (
-          <View style={[styles.scrollView, { flex: 1 }]}>
-            <View style={[styles.sectionCard, { flex: 1 }]}>
-              <Text style={styles.sectionTitle}>Mis grupos</Text>
-              <ScrollView
-                style={{ flex: 1 }}
-                showsVerticalScrollIndicator={true}
-              >
-                {grupos.map((grupo) => (
-                  <Pressable
-                    key={grupo.id}
-                    style={styles.card}
-                    onPress={() =>
-                      navigation.navigate("DetalleGrupo", {
-                        grupoId: grupo.id,
-                        nombreGrupo: grupo.nombre,
-                        creadorId: grupo.creadorId,
-                        materiaNombre: grupo.materia.nombre,
-                        miembrosIds: grupo.miembros.map((m: any) => m.id),
-                      })
-                    }
-                  >
-                    <Text style={styles.groupTitle}>{grupo.nombre}</Text>
-                    <Text style={styles.groupMateria}>
-                      Materia: {grupo.materia.nombre}
-                    </Text>
-                    <Text style={styles.groupMembers}>
-                      {grupo.cantidadMiembros}{" "}
-                      {grupo.cantidadMiembros === 1 ? "miembro" : "miembros"}
-                    </Text>
-                  </Pressable>
-                ))}
-                {grupos.length === 0 && (
-                  <Text style={styles.empty}>
-                    No perteneces a ningún grupo todavía.
-                  </Text>
-                )}
-              </ScrollView>
-            </View>
+				{!loading && !error && (
+					<View style={[styles.scrollView, { flex: 1 }]}>
+						<View style={[styles.sectionCard, { flex: 1 }]}>
+							<Text style={styles.sectionTitle}>Mis grupos</Text>
+							<ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={true}>
+								{grupos.map((grupo) => (
+									<Pressable
+										key={grupo.id}
+										style={styles.card}
+										onPress={() =>
+											navigation.navigate('DetalleGrupo', {
+												grupoId: grupo.id,
+												nombreGrupo: grupo.nombre,
+												creadorId: grupo.creadorId,
+												administradorId: grupo.administradorId,
+												materiaNombre: grupo.materia.nombre,
+												miembrosIds: grupo.miembros.map((m: any) => m.id),
+											})
+										}
+									>
+										<Text style={styles.groupTitle}>{grupo.nombre}</Text>
+										<Text style={styles.groupMateria}>
+											Materia: {grupo.materia.nombre}
+										</Text>
+										<Text style={styles.groupMembers}>
+											{grupo.cantidadMiembros}{' '}
+											{grupo.cantidadMiembros === 1 ? 'miembro' : 'miembros'}
+										</Text>
+									</Pressable>
+								))}
+								{grupos.length === 0 && (
+									<Text style={styles.empty}>No perteneces a ningún grupo todavía.</Text>
+								)}
+							</ScrollView>
+						</View>
 
-            <View style={[styles.sectionCard, { flex: 1 }]}>
-              <View style={styles.sectionHeaderContainer}>
-                <Text style={styles.sectionTitle}>Grupos disponibles</Text>
-                <Pressable
-                  style={styles.createButton}
-                  onPress={() => setModalVisible(true)}
-                >
-                  <Text style={styles.createButtonText}>+ Crear Grupo</Text>
-                </Pressable>
-              </View>
+						<View style={[styles.sectionCard, { flex: 1 }]}>
+							<View style={styles.sectionHeaderContainer}>
+								<Text style={styles.sectionTitle}>Grupos disponibles</Text>
+								<Pressable
+									style={styles.createButton}
+									onPress={() => setModalVisible(true)}
+								>
+									<Text style={styles.createButtonText}>+ Crear Grupo</Text>
+								</Pressable>
+							</View>
 
-              <ScrollView
-                style={{ flex: 1 }}
-                showsVerticalScrollIndicator={true}
-              >
-                {gruposDisponibles.map((grupo) => {
-                  const botonDeshabilitado =
-                    grupo.yaPertenece ||
-                    grupo.estaLleno ||
-                    processingGrupoId === grupo.id;
-                  let textoBoton = "Unirme";
-                  if (grupo.yaPertenece) textoBoton = "Ya eres miembro";
-                  else if (grupo.estaLleno) textoBoton = "Grupo lleno";
-                  else if (processingGrupoId === grupo.id)
-                    textoBoton = "Uniendome...";
+							<ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={true}>
+								{gruposDisponibles.map((grupo) => {
+									const botonDeshabilitado =
+										grupo.yaPertenece ||
+										grupo.estaLleno ||
+										processingGrupoId === grupo.id;
+									let textoBoton = 'Unirme';
+									if (grupo.yaPertenece) textoBoton = 'Ya eres miembro';
+									else if (grupo.estaLleno) textoBoton = 'Grupo lleno';
+									else if (processingGrupoId === grupo.id) textoBoton = 'Uniendome...';
 
-                  return (
-                    <View key={grupo.id} style={styles.card}>
-                      <Text style={styles.groupTitle}>{grupo.nombre}</Text>
-                      <Text style={styles.groupMateria}>
-                        Materia: {grupo.materia.nombre}
-                      </Text>
-                      <Text style={styles.groupMembers}>
-                        {grupo.cantidadMiembros}/{grupo.maxMiembros} integrantes
-                      </Text>
-                      <Pressable
-                        onPress={() => unirseAGrupo(grupo.id)}
-                        disabled={botonDeshabilitado}
-                        style={[
-                          styles.joinButton,
-                          botonDeshabilitado ? styles.joinButtonDisabled : null,
-                        ]}
-                      >
-                        <Text style={styles.joinButtonText}>{textoBoton}</Text>
-                      </Pressable>
-                    </View>
-                  );
-                })}
-                {gruposDisponibles.length === 0 && (
-                  <Text style={styles.empty}>
-                    No hay grupos disponibles por ahora.
-                  </Text>
-                )}
-              </ScrollView>
-            </View>
-          </View>
-        )}
-      </View>
+									return (
+										<View key={grupo.id} style={styles.card}>
+											<Text style={styles.groupTitle}>{grupo.nombre}</Text>
+											<Text style={styles.groupMateria}>
+												Materia: {grupo.materia.nombre}
+											</Text>
+											<Text style={styles.groupMembers}>
+												{grupo.cantidadMiembros}/{grupo.maxMiembros} integrantes
+											</Text>
+											<Pressable
+												onPress={() => unirseAGrupo(grupo.id)}
+												disabled={botonDeshabilitado}
+												style={[
+													styles.joinButton,
+													botonDeshabilitado ? styles.joinButtonDisabled : null,
+												]}
+											>
+												<Text style={styles.joinButtonText}>{textoBoton}</Text>
+											</Pressable>
+										</View>
+									);
+								})}
+								{gruposDisponibles.length === 0 && (
+									<Text style={styles.empty}>No hay grupos disponibles por ahora.</Text>
+								)}
+							</ScrollView>
+						</View>
+					</View>
+				)}
+			</View>
 
-      <Pressable
-        style={styles.navButton}
-        onPress={() => navigation.navigate("Eventos")}
-      >
-        <Text style={styles.navButtonText}>Ver Eventos</Text>
-      </Pressable>
+			<Pressable style={styles.navButton} onPress={() => navigation.navigate('Eventos')}>
+				<Text style={styles.navButtonText}>Ver Eventos</Text>
+			</Pressable>
 
-      <CrearGrupoModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onSuccess={handleModalSuccess}
-        materiasUsuario={materiasUsuario}
-      />
-    </View>
-  );
+			<CrearGrupoModal
+				visible={modalVisible}
+				onClose={() => setModalVisible(false)}
+				onSuccess={handleModalSuccess}
+				materiasUsuario={materiasUsuario}
+			/>
+		</View>
+	);
 }
