@@ -52,16 +52,42 @@ export default function ContactScreen() {
 		setError(null);
 
 		try {
-			const [contactosData, solicitudesData] = await Promise.all([
+			const [contactosResult, solicitudesResult] = await Promise.allSettled([
 				usuariosService.getCompaneros(),
 				usuariosService.getSolicitudesRecibidas(),
 			]);
 
-			setContactos(contactosData);
-			setSolicitudesPendientes(solicitudesData);
+			let errorCompaneros: string | null = null;
+			let errorSolicitudes: string | null = null;
+
+			if (contactosResult.status === 'fulfilled') {
+				setContactos(contactosResult.value);
+			} else {
+				setContactos([]);
+				errorCompaneros =
+					contactosResult.reason instanceof Error
+						? contactosResult.reason.message
+						: 'No fue posible cargar compañeros';
+			}
+
+			if (solicitudesResult.status === 'fulfilled') {
+				setSolicitudesPendientes(solicitudesResult.value);
+			} else {
+				setSolicitudesPendientes([]);
+				errorSolicitudes =
+					solicitudesResult.reason instanceof Error
+						? solicitudesResult.reason.message
+						: 'No fue posible cargar solicitudes';
+			}
+
+			if (errorCompaneros || errorSolicitudes) {
+				const mensaje = [errorCompaneros, errorSolicitudes]
+					.filter((m): m is string => Boolean(m))
+					.join(' | ');
+				setError(mensaje || 'Error al cargar contactos');
+			}
 		} catch (e) {
-			setError('Error de red al cargar datos');
-			setSolicitudesPendientes([]);
+			setError(e instanceof Error ? e.message : 'Error al cargar contactos');
 		}
 
 		setLoading(false);

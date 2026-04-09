@@ -97,9 +97,9 @@ class ApiClient {
             return data;
         } catch (error) {
             if (error instanceof Error) {
-                throw error;
+                throw new Error(`[API ${options.method || 'GET'} ${endpoint}] ${error.message} (baseUrl: ${this.baseUrl})`);
             }
-            throw new Error('Error de conexión con el servidor');
+            throw new Error(`[API ${options.method || 'GET'} ${endpoint}] Error de conexión con el servidor (baseUrl: ${this.baseUrl})`);
         }
     }
 
@@ -177,9 +177,9 @@ class ApiClient {
             return data;
         } catch (error) {
             if (error instanceof Error) {
-                throw error;
+                throw new Error(`[API PUBLIC ${options.method || 'GET'} ${endpoint}] ${error.message} (baseUrl: ${this.baseUrl})`);
             }
-            throw new Error('Error de conexión con el servidor');
+            throw new Error(`[API PUBLIC ${options.method || 'GET'} ${endpoint}] Error de conexión con el servidor (baseUrl: ${this.baseUrl})`);
         }
     }
 }
