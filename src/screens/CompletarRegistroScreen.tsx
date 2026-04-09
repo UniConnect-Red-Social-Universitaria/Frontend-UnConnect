@@ -108,6 +108,17 @@ export default function CompletarRegistroScreen({ navigation, route }: any) {
 	const handleFinalizarRegistro = async () => {
 		if (!validarFormulario()) return;
 
+		const materiasSeleccionadas = selectedMateriasIds
+			.map((materiaId) =>
+				materiasList.find((materia) => String(materia.id) === String(materiaId))?.nombre ?? null
+			)
+			.filter((materia): materia is string => Boolean(materia));
+
+		if (materiasSeleccionadas.length !== selectedMateriasIds.length) {
+			showToast.error('No fue posible resolver todas las materias seleccionadas.');
+			return;
+		}
+
 		const datosCompletos = {
 			nombre: googleData?.nombre || '',
 			apellido: googleData?.apellido || '',
@@ -116,7 +127,7 @@ export default function CompletarRegistroScreen({ navigation, route }: any) {
 			contrasena: contrasena,
 			carrera: selectedCarreraId!, // Enviar como string
 			semestre: parseInt(semestre),
-			materiasCursando: selectedMateriasIds, // Enviar como array de strings
+			materiasCursando: materiasSeleccionadas,
 		};
 
 		console.log('Datos a enviar:', datosCompletos);
