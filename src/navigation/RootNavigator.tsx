@@ -28,6 +28,7 @@ import {
 	upsertUnreadGroupChatNotification,
 } from '../services/notificaciones-chat.service';
 import { upsertUnreadContactRequestNotification } from '../services/notificaciones-solicitudes.service';
+import { publishContactRequestRejected } from '../services/contacto-events.service';
 
 export type RootStackParamList = {
 	Home: undefined;
@@ -286,6 +287,20 @@ export default function RootNavigator() {
 						solicitudId: String(payload?.solicitudId ?? ''),
 						solicitanteId: String(payload?.solicitanteId ?? ''),
 					},
+				});
+			});
+
+			socket.on('contacto:solicitud:rechazada', (payload: any) => {
+				if (!isMounted) {
+					return;
+				}
+
+				publishContactRequestRejected({
+					solicitudId: String(payload?.solicitudId ?? ''),
+					solicitanteId: String(payload?.solicitanteId ?? ''),
+					receptorId: String(payload?.receptorId ?? ''),
+					updatedAt:
+						typeof payload?.updatedAt === 'string' ? payload.updatedAt : undefined,
 				});
 			});
 		};
