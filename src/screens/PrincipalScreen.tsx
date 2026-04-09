@@ -127,64 +127,38 @@ export default function PrincipalScreen({
 	}, []);
 
 	useEffect(() => {
-		void authService.obtenerIdUsuarioActual().then((id) => {
-			setCurrentUserId(id);
-		});
-	}, []);
-
-	useEffect(() => {
-		let isMounted = true;
-
-		const loadOnboardingState = async () => {
-			try {
-				const shouldShow = await onboardingService.shouldShowPrincipalOnboarding();
-				if (isMounted) {
-					setShowOnboarding(shouldShow);
-				}
-			} catch (error) {
-				console.warn(
-					'[PrincipalScreen] Error verificando onboarding:',
-					error instanceof Error ? error.message : error
-				);
-			}
-		};
-
-		void loadOnboardingState();
-
-		return () => {
-			isMounted = false;
-		};
-	}, []);
-
-	useEffect(() => {
-		let ignore = false;
-
 		const buscarEnBackend = async () => {
 			try {
+				const apiBaseUrl = resolverApiBaseUrl();
+				const token = await AsyncStorage.getItem('userToken');
 				const query = encodeURIComponent(search.trim());
 
-				const [usuariosMateriasResult, gruposResult] = await Promise.allSettled([
-					apiClient.get<any>(`/api/usuarios/buscar?q=${query}`),
-					apiClient.get<any>(`/api/grupos/buscar?q=${query}`),
+				const [usuariosMateriasRes, gruposRes] = await Promise.all([
+					fetch(`${apiBaseUrl}/api/usuarios/buscar?q=${query}`, {
+						headers: { Authorization: `Bearer ${token}` },
+					}),
+					fetch(`${apiBaseUrl}/api/grupos/buscar?q=${query}`, {
+						headers: { Authorization: `Bearer ${token}` },
+					}),
 				]);
 
-				if (ignore) {
-					return;
+				const [usuariosMateriasData, gruposData] = await Promise.all([
+					usuariosMateriasRes.json(),
+					gruposRes.json(),
+				]);
+
+				if (usuariosMateriasData.success) {
+					setResults(Array.isArray(usuariosMateriasData.data?.estudiantes) ? usuariosMateriasData.data.estudiantes : []);
+					setMateriaResults(Array.isArray(usuariosMateriasData.data?.materias) ? usuariosMateriasData.data.materias : []);
+				} else {
+					setResults([]);
+					setMateriaResults([]);
 				}
 
-				const usuariosMateriasData =
-					usuariosMateriasResult.status === 'fulfilled'
-						? usuariosMateriasResult.value.data
-						: null;
-				const gruposData =
-					gruposResult.status === 'fulfilled' ? gruposResult.value.data : null;
-
-				if (usuariosMateriasResult.status === 'rejected') {
-					console.log('Error buscando usuarios/materias:', usuariosMateriasResult.reason);
-				}
-
-				if (gruposResult.status === 'rejected') {
-					console.log('Error buscando grupos:', gruposResult.reason);
+				if (gruposData.success) {
+					setGrupoResults(Array.isArray(gruposData.data) ? gruposData.data : []);
+				} else {
+					setGrupoResults([]);
 				}
 
 				setResults(
@@ -199,10 +173,6 @@ export default function PrincipalScreen({
 				);
 				setGrupoResults(Array.isArray(gruposData) ? gruposData : []);
 			} catch (error) {
-				if (ignore) {
-					return;
-				}
-
 				console.log('Error buscando en backend:', error);
 				setResults([]);
 				setGrupoResults([]);
@@ -221,112 +191,8 @@ export default function PrincipalScreen({
 			buscarEnBackend();
 		}, 300);
 
-		return () => {
-			ignore = true;
-			clearTimeout(timeoutId);
-		};
+		return () => clearTimeout(timeoutId);
 	}, [search]);
-	// ...existing code...
-
-	const cargarContactos = React.useCallback(async () => {
-		try {
-			const contactos = await usuariosService.getCompaneros();
-			setContactIds(new Set(contactos.map((contacto) => String(contacto.id))));
-		} catch {
-			setContactIds(new Set());
-		}
-	}, []);
-
-	const handleEnviarSolicitud = async (usuarioDestinoId: string, nombre?: string) => {
-		if (!usuarioDestinoId) {
-			return;
-		}
-
-		setSendingRequestIds((prev) => {
-			const next = new Set(prev);
-			next.add(usuarioDestinoId);
-			return next;
-		});
-
-		try {
-			await usuariosService.enviarSolicitud(usuarioDestinoId);
-			setSolicitudesEnviadasIds((prev) => {
-				const next = new Set(prev);
-				next.add(usuarioDestinoId);
-				return next;
-			});
-			showToast.success(
-				nombre ? `Solicitud enviada a ${nombre}` : 'Solicitud enviada correctamente'
-			);
-		} catch (error) {
-			const message =
-				error instanceof Error ? error.message : 'No se pudo enviar la solicitud';
-
-			if (message.toLowerCase().includes('ya existe')) {
-				setSolicitudesEnviadasIds((prev) => {
-					const next = new Set(prev);
-					next.add(usuarioDestinoId);
-					return next;
-				});
-				showToast.info('Ya existe una solicitud pendiente para este usuario');
-			} else {
-				showToast.error(message);
-			}
-		} finally {
-			setSendingRequestIds((prev) => {
-				const next = new Set(prev);
-				next.delete(usuarioDestinoId);
-				return next;
-			});
-		}
-	};
-
-	useFocusEffect(
-		React.useCallback(() => {
-			let mounted = true;
-
-			void getUnreadNotificationsCount().then((count) => {
-				if (mounted) {
-					setUnreadNotifications(count);
-				}
-			});
-
-			void cargarContactos();
-
-			const unsubscribe = subscribeUnreadNotificationsCount((count) => {
-				if (mounted) {
-					setUnreadNotifications(count);
-				}
-			});
-
-			return () => {
-				mounted = false;
-				unsubscribe();
-			};
-		}, [cargarContactos])
-	);
-
-	const handleCloseOnboarding = async () => {
-		setShowOnboarding(false);
-		setCurrentOnboardingStep(0);
-		try {
-			await onboardingService.completePrincipalOnboarding();
-		} catch (error) {
-			console.warn(
-				'[PrincipalScreen] Error cerrando onboarding:',
-				error instanceof Error ? error.message : error
-			);
-		}
-	};
-
-	const handleNextOnboardingStep = async () => {
-		if (currentOnboardingStep >= onboardingSteps.length - 1) {
-			await handleCloseOnboarding();
-			return;
-		}
-
-		setCurrentOnboardingStep((prev) => prev + 1);
-	};
 
 	if (loading) {
 		return (
