@@ -1,6 +1,4 @@
-import Constants from 'expo-constants';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useEffect, useState } from 'react';
+import React, { useState } from "react";
 import {
 	ActivityIndicator,
 	Alert,
@@ -17,9 +15,10 @@ import * as DocumentPicker from 'expo-document-picker';
 import theme from '../styles/theme';
 
 type RootStackParamList = {
-	Eventos: undefined;
-	Grupos: undefined;
-	Login: undefined;
+  Eventos: undefined;
+  Grupos: undefined;
+  Login: undefined;
+  DetalleGrupo: { grupoId: string; nombreGrupo: string; creadorId: string; materiaNombre: string; miembrosIds: string[] };
 };
 
 type GruposScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Grupos'>;
@@ -202,7 +201,7 @@ function resolverApiBaseUrl(): string {
 }
 
 type GruposScreenProps = {
-	navigation: GruposScreenNavigationProp;
+  navigation: GruposScreenNavigationProp;
 };
 
 export function GruposScreen({ navigation }: GruposScreenProps) {

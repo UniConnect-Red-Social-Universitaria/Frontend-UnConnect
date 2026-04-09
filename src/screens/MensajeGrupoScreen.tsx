@@ -8,26 +8,26 @@ import {
 	KeyboardAvoidingView,
 	Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useFocusEffect, useRoute } from '@react-navigation/native';
 import type { RootStackParamList } from '../navigation/RootNavigator';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useChatDirecto } from '../hooks/useChatDirecto';
-import { clearUnreadDirectChatNotification } from '../services/notificaciones-chat.service';
+import { useChatGrupo } from '../hooks/useChatGrupo';
+import { clearUnreadGroupChatNotification } from '../services/notificaciones-chat.service';
 
 import { styles } from '../styles/MensajeDirectoScreen.Styles';
 
-type MensajeDirectoScreenRouteProp = RouteProp<RootStackParamList, 'MensajeDirecto'>;
+type MensajeGrupoScreenRouteProp = RouteProp<RootStackParamList, 'MensajeGrupo'>;
 
-export default function MensajeDirectoScreen() {
-	const route = useRoute<MensajeDirectoScreenRouteProp>();
-	const { contactoId, nombre, correo, userId: userIdParam } = route.params;
+export default function MensajeGrupoScreen() {
+	const route = useRoute<MensajeGrupoScreenRouteProp>();
+	const { grupoId, nombreGrupo, userId: userIdParam } = route.params;
 
 	useFocusEffect(
 		React.useCallback(() => {
-			void clearUnreadDirectChatNotification(contactoId);
+			void clearUnreadGroupChatNotification(grupoId);
 			return undefined;
-		}, [contactoId])
+		}, [grupoId])
 	);
 
 	const {
@@ -39,37 +39,49 @@ export default function MensajeDirectoScreen() {
 		userId,
 		flatListRef,
 		handleEnviarMensaje,
-	} = useChatDirecto({ contactoId, userIdParam });
+	} = useChatGrupo({ grupoId, userIdParam });
 
-	const renderItem = ({ item }: { item: any }) => (
-		<View
-			style={[
-				styles.msgBubble,
-				item.emisorId === userId ? styles.msgBubbleYo : styles.msgBubbleOtro,
-			]}
-		>
-			<Text style={[styles.msgText, item.emisorId === userId && { color: '#fff' }]}>
-				{item.contenido}
-			</Text>
-			<Text style={styles.msgDate}>
-				{new Date(item.createdAt).toLocaleTimeString([], {
-					hour: '2-digit',
-					minute: '2-digit',
-				})}
-			</Text>
-		</View>
-	);
+	const renderItem = ({ item }: { item: any }) => {
+		const esMio = item.emisorId === userId;
+
+		return (
+			<View style={[styles.msgBubble, esMio ? styles.msgBubbleYo : styles.msgBubbleOtro]}>
+				{!esMio && item.emisor && (
+					<Text
+						style={{
+							fontSize: 12,
+							fontWeight: 'bold',
+							color: '#002855',
+							marginBottom: 2,
+						}}
+					>
+						{item.emisor.nombre} {item.emisor.apellido}
+					</Text>
+				)}
+
+				<Text style={[styles.msgText, esMio && { color: '#fff' }]}>{item.contenido}</Text>
+				<Text style={styles.msgDate}>
+					{new Date(item.createdAt).toLocaleTimeString([], {
+						hour: '2-digit',
+						minute: '2-digit',
+					})}
+				</Text>
+			</View>
+		);
+	};
 
 	return (
-		<SafeAreaView style={styles.container} edges={['top']}>
-			<View style={styles.header}>
-				<Text style={styles.title}>Chat con {nombre}</Text>
-				<Text style={styles.subtitle}>{correo}</Text>
-			</View>
+		<View style={styles.container}>
+			<SafeAreaView style={styles.safeHeader} edges={['top']}>
+				<View style={styles.header}>
+					<Text style={styles.title}>{nombreGrupo}</Text>
+					<Text style={styles.subtitle}>Chat de Grupo</Text>
+				</View>
+			</SafeAreaView>
 
 			<KeyboardAvoidingView
 				style={{ flex: 1 }}
-				behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+				behavior={Platform.OS === 'ios' ? 'padding' : undefined}
 				keyboardVerticalOffset={0}
 			>
 				<View style={styles.chatWrapper}>
@@ -100,7 +112,7 @@ export default function MensajeDirectoScreen() {
 									style={styles.input}
 									value={nuevoMensaje}
 									onChangeText={setNuevoMensaje}
-									placeholder="Escribe un mensaje..."
+									placeholder="Escribe al grupo..."
 									placeholderTextColor="#94a3b8"
 									editable={!enviando}
 									onSubmitEditing={handleEnviarMensaje}
@@ -119,6 +131,6 @@ export default function MensajeDirectoScreen() {
 					</View>
 				</View>
 			</KeyboardAvoidingView>
-		</SafeAreaView>
+		</View>
 	);
 }

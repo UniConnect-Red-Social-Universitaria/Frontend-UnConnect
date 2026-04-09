@@ -1,45 +1,33 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { LogBox } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
-import HomeScreen from './src/screens/HomeScreen';
+import Toast from 'react-native-toast-message';
+import Constants from 'expo-constants';
 
-import PrincipalScreen from './src/screens/PrincipalScreen';
-import { GruposScreen } from './src/screens/GruposScreen';
-import { EventosScreen } from './src/screens/EventosScreen';
-import RegistroScreen from './src/screens/RegistroScreen';
-import CompletarRegistroScreen from './src/screens/CompletarRegistroScreen';
-import LoginScreen from './src/screens/LoginScreen';
-import ContactScreen from './src/screens/ContactScreen';
-import MensajeDirectoScreen from './src/screens/MensajeDirectoScreen';
-import theme from './src/styles/theme';
-import type { RootStackParamList } from './src/navigation/RootNavigator';
-
-const Stack = createStackNavigator<RootStackParamList>();
+import RootNavigator from './src/navigation/RootNavigator';
+import { initializeNotifications } from './src/services/notificaciones.service';
 
 export default function App() {
+	useEffect(() => {
+		if (Constants.appOwnership === 'expo') {
+			LogBox.ignoreLogs([
+				'expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go',
+				'`expo-notifications` functionality is not fully supported in Expo Go',
+			]);
+		}
+
+		initializeNotifications().catch((error: unknown) => {
+			console.error('[App] Error initializing notifications:', error);
+		});
+	}, []);
+
 	return (
-		<NavigationContainer>
+		<>
 			<StatusBar style="dark" />
-			<Stack.Navigator
-				initialRouteName="Home"
-				screenOptions={{
-					headerShown: false,
-					cardStyle: {
-						backgroundColor: theme.colors.white,
-					},
-				}}
-			>
-				<Stack.Screen name="Home" component={HomeScreen} />
-				<Stack.Screen name="Grupos" component={GruposScreen} />
-				<Stack.Screen name="Eventos" component={EventosScreen} />
-				<Stack.Screen name="Registro" component={RegistroScreen} />
-				<Stack.Screen name="CompletarRegistro" component={CompletarRegistroScreen} />
-				<Stack.Screen name="Principal" component={PrincipalScreen} />
-				<Stack.Screen name="Login" component={LoginScreen} />
-				<Stack.Screen name="Contactos" component={ContactScreen} />
-				<Stack.Screen name="MensajeDirecto" component={MensajeDirectoScreen} />
-			</Stack.Navigator>
-		</NavigationContainer>
+
+			<RootNavigator />
+
+			<Toast />
+		</>
 	);
 }
