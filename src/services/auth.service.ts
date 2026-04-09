@@ -4,6 +4,7 @@ import {
   RegistroRequest,
   LoginResponse,
   ApiResponse,
+  Usuario,
 } from "../types/api.types";
 import { jwtDecode, JwtPayload } from "jwt-decode"; // <-- Importamos jwt-decode
 
@@ -41,20 +42,23 @@ class AuthService {
   /**
    * Registrar nuevo usuario
    */
-  async registro(datos: RegistroRequest): Promise<ApiResponse> {
-    const response = await apiClient.publicRequest("/api/usuarios/registro", {
-      method: "POST",
-      body: JSON.stringify(datos),
-    });
+  async registro(datos: RegistroRequest): Promise<ApiResponse<Usuario>> {
+    const response = await apiClient.publicRequest<Usuario>(
+      "/api/usuarios/registro",
+      {
+        method: "POST",
+        body: JSON.stringify(datos),
+      },
+    );
 
-    // Guardar el token si el backend lo retorna al registrarse
-    if (response.data?.token) {
-      await apiClient.setToken(response.data.token);
+    // Si el registro fue exitoso (asumiendo que tu API usa un flag de success o status 200)
+    // Forzamos el login automáticamente con las credenciales que acaba de ingresar
+    if (response) {
+      await this.login(datos.correo, datos.contrasena);
     }
 
     return response;
   }
-
   /**
    * Cerrar sesión
    */
