@@ -18,10 +18,8 @@ import { styles } from '../styles/PrincipalScreenStyles';
 import {
 	authService,
 	usuariosService,
-	gruposService,
 	materiasService,
 	onboardingService,
-	apiClient,
 } from '../services';
 // ...existing code...
 import { showToast } from '../utils/toast';
@@ -95,9 +93,10 @@ export default function PrincipalScreen({
 	const logoWidth = width < 380 ? 150 : width < 480 ? 180 : 220;
 
 	const [search, setSearch] = useState('');
-	const [results, setResults] = useState<any[]>([]);
-	const [grupoResults, setGrupoResults] = useState<any[]>([]);
 	const [materiaResults, setMateriaResults] = useState<any[]>([]);
+	const [selectedMateria, setSelectedMateria] = useState<string | null>(null);
+	const [companerosResults, setCompanerosResults] = useState<any[]>([]);
+	const [loadingCompaneros, setLoadingCompaneros] = useState(false);
 	const [contactIds, setContactIds] = useState<Set<string>>(new Set());
 	const [solicitudesEnviadasIds, setSolicitudesEnviadasIds] = useState<Set<string>>(
 		new Set()
@@ -191,73 +190,53 @@ export default function PrincipalScreen({
 	useEffect(() => {
 		let ignore = false;
 
-		const buscarEnBackend = async () => {
+		const buscarMaterias = async () => {
 			try {
-				const query = encodeURIComponent(search.trim());
-
-				const [usuariosMateriasResult, gruposResult] = await Promise.allSettled([
-					apiClient.get<any>(`/api/usuarios/buscar?q=${query}`),
-					apiClient.get<any>(`/api/grupos/buscar?q=${query}`),
-				]);
-
-				if (ignore) {
-					return;
+				const materias = await materiasService.buscarMaterias(search);
+				if (!ignore) {
+					setMateriaResults(materias);
 				}
-
-				const usuariosMateriasData =
-					usuariosMateriasResult.status === 'fulfilled'
-						? usuariosMateriasResult.value.data
-						: null;
-				const gruposData =
-					gruposResult.status === 'fulfilled' ? gruposResult.value.data : null;
-
-				if (usuariosMateriasResult.status === 'rejected') {
-					console.log('Error buscando usuarios/materias:', usuariosMateriasResult.reason);
+			} catch {
+				if (!ignore) {
+					setMateriaResults([]);
 				}
-
-				if (gruposResult.status === 'rejected') {
-					console.log('Error buscando grupos:', gruposResult.reason);
-				}
-
-				setResults(
-					Array.isArray(usuariosMateriasData?.estudiantes)
-						? usuariosMateriasData.estudiantes
-						: []
-				);
-				setMateriaResults(
-					Array.isArray(usuariosMateriasData?.materias)
-						? usuariosMateriasData.materias
-						: []
-				);
-				setGrupoResults(Array.isArray(gruposData) ? gruposData : []);
-			} catch (error) {
-				if (ignore) {
-					return;
-				}
-
-				console.log('Error buscando en backend:', error);
-				setResults([]);
-				setGrupoResults([]);
-				setMateriaResults([]);
 			}
 		};
 
-		if (!search.trim()) {
-			setResults([]);
-			setGrupoResults([]);
+		if (!search.trim() || selectedMateria) {
 			setMateriaResults([]);
 			return;
 		}
 
 		const timeoutId = setTimeout(() => {
-			buscarEnBackend();
+			buscarMaterias();
 		}, 300);
 
 		return () => {
 			ignore = true;
 			clearTimeout(timeoutId);
 		};
-	}, [search]);
+	}, [search, selectedMateria]);
+
+	const handleSeleccionarMateria = async (nombre: string) => {
+		setSelectedMateria(nombre);
+		setSearch('');
+		setMateriaResults([]);
+		setLoadingCompaneros(true);
+		try {
+			const companeros = await usuariosService.buscarPorMateria(nombre);
+			setCompanerosResults(Array.isArray(companeros) ? companeros : []);
+		} catch {
+			setCompanerosResults([]);
+		} finally {
+			setLoadingCompaneros(false);
+		}
+	};
+
+	const handleVolverAMaterias = () => {
+		setSelectedMateria(null);
+		setCompanerosResults([]);
+	};
 	// ...existing code...
 
 	const cargarContactos = React.useCallback(async () => {
@@ -476,115 +455,126 @@ export default function PrincipalScreen({
 				<Text style={styles.greeting}>¡Hola!</Text>
 				<Text style={styles.subtitle}>Encuentra tu comunidad en la universidad</Text>
 
-				<View
-					style={[
-						styles.searchContainer,
-						isSearchStep && styles.onboardingHighlightedPrimaryElement,
-					]}
-				>
-					<TextInput
-						placeholder="Buscar usuarios, grupos o materias..."
-						placeholderTextColor="#999"
-						style={styles.searchInput}
-						value={search}
-						onChangeText={setSearch}
-					/>
-				</View>
+				{!selectedMateria ? (
+					<>
+						<View
+							style={[
+								styles.searchContainer,
+								isSearchStep && styles.onboardingHighlightedPrimaryElement,
+							]}
+						>
+							<TextInput
+								placeholder="Buscar materia..."
+								placeholderTextColor="#999"
+								style={styles.searchInput}
+								value={search}
+								onChangeText={setSearch}
+							/>
+						</View>
 
-				<ScrollView style={{ marginTop: 10 }}>
-					{/* Usuarios */}
-					{results.length > 0 && (
-						<>
-							<Text style={styles.resultsTitle}>Usuarios</Text>
-							{results.map((item) => (
-								<View key={item.id || item._id} style={styles.userResultCard}>
-									<View style={styles.userResultInfo}>
-										<Text style={styles.userResultName}>
-											{item.nombre} {item.apellido}
-										</Text>
-										<Text style={styles.userResultEmail}>{item.correo}</Text>
-									</View>
-									{(() => {
-										const usuarioId = String(item.id || item._id || '');
-										const esUsuarioActual =
-											!!currentUserId && usuarioId === currentUserId;
-										const esContacto = contactIds.has(usuarioId);
-										const solicitudEnviada = solicitudesEnviadasIds.has(usuarioId);
-										const solicitudEnProceso = sendingRequestIds.has(usuarioId);
-										const puedeEnviar =
-											usuarioId.length > 0 && !esUsuarioActual && !esContacto;
+						<ScrollView style={{ marginTop: 10 }}>
+							{materiaResults.length > 0 && (
+								<>
+									<Text style={styles.resultsTitle}>Materias</Text>
+									{materiaResults.map((item) => (
+										<Pressable
+											key={item.id || item._id}
+											style={styles.userResultCard}
+											onPress={() => void handleSeleccionarMateria(item.nombre)}
+										>
+											<View style={styles.userResultInfo}>
+												<Text style={styles.userResultName}>{item.nombre}</Text>
+											</View>
+											<Ionicons name="chevron-forward" size={20} color="#007AFF" />
+										</Pressable>
+									))}
+								</>
+							)}
 
-										if (esContacto) {
-											return (
-												<View style={styles.userStatusBadge}>
-													<Text style={styles.userStatusBadgeText}>Agregado</Text>
-												</View>
-											);
-										}
+							{materiaResults.length === 0 && search.trim() !== '' && (
+								<Text style={{ color: '#CCC', marginTop: 10 }}>
+									No se encontraron materias.
+								</Text>
+							)}
+						</ScrollView>
+					</>
+				) : (
+					<>
+						<View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+							<Pressable onPress={handleVolverAMaterias} style={{ marginRight: 8 }}>
+								<Ionicons name="arrow-back" size={24} color="#007AFF" />
+							</Pressable>
+							<Text style={styles.resultsTitle}>{selectedMateria}</Text>
+						</View>
 
-										if (!puedeEnviar) {
-											return null;
-										}
-
-										return (
-											<Pressable
-												style={[
-													styles.sendRequestButton,
-													(solicitudEnviada || solicitudEnProceso) &&
-														styles.sendRequestButtonDisabled,
-												]}
-												disabled={solicitudEnviada || solicitudEnProceso}
-												onPress={() => void handleEnviarSolicitud(usuarioId, item.nombre)}
-											>
-												<Text style={styles.sendRequestButtonText}>
-													{solicitudEnProceso
-														? 'Enviando...'
-														: solicitudEnviada
-															? 'Enviada'
-															: 'Enviar solicitud'}
+						{loadingCompaneros ? (
+							<ActivityIndicator size="small" color="#007AFF" style={{ marginTop: 20 }} />
+						) : (
+							<ScrollView style={{ marginTop: 4 }}>
+								{companerosResults.length > 0 ? (
+									companerosResults.map((item) => (
+										<View key={item.id || item._id} style={styles.userResultCard}>
+											<View style={styles.userResultInfo}>
+												<Text style={styles.userResultName}>
+													{item.nombre} {item.apellido}
 												</Text>
-											</Pressable>
-										);
-									})()}
-								</View>
-							))}
-						</>
-					)}
+												<Text style={styles.userResultEmail}>{item.correo}</Text>
+											</View>
+											{(() => {
+												const usuarioId = String(item.id || item._id || '');
+												const esUsuarioActual =
+													!!currentUserId && usuarioId === currentUserId;
+												const esContacto = contactIds.has(usuarioId);
+												const solicitudEnviada = solicitudesEnviadasIds.has(usuarioId);
+												const solicitudEnProceso = sendingRequestIds.has(usuarioId);
+												const puedeEnviar =
+													usuarioId.length > 0 && !esUsuarioActual && !esContacto;
 
-					{/* Grupos */}
-					{grupoResults.length > 0 && (
-						<>
-							<Text style={styles.resultsTitle}>Grupos</Text>
-							{grupoResults.map((item) => (
-								<View key={item.id || item._id} style={{ paddingVertical: 6 }}>
-									<Text style={{ fontWeight: 'bold' }}>{item.nombre}</Text>
-									<Text>Materia: {item.materia?.nombre}</Text>
-								</View>
-							))}
-						</>
-					)}
+												if (esContacto) {
+													return (
+														<View style={styles.userStatusBadge}>
+															<Text style={styles.userStatusBadgeText}>Agregado</Text>
+														</View>
+													);
+												}
 
-					{/* Materias */}
-					{materiaResults.length > 0 && (
-						<>
-							<Text style={styles.resultsTitle}>Materias</Text>
-							{materiaResults.map((item) => (
-								<View key={item.id || item._id} style={{ paddingVertical: 6 }}>
-									<Text style={{ fontWeight: 'bold' }}>{item.nombre}</Text>
-								</View>
-							))}
-						</>
-					)}
+												if (!puedeEnviar) {
+													return null;
+												}
 
-					{results.length === 0 &&
-						grupoResults.length === 0 &&
-						materiaResults.length === 0 &&
-						search.trim() !== '' && (
-							<Text style={{ color: '#CCC', marginTop: 10 }}>
-								No se encontraron resultados.
-							</Text>
+												return (
+													<Pressable
+														style={[
+															styles.sendRequestButton,
+															(solicitudEnviada || solicitudEnProceso) &&
+																styles.sendRequestButtonDisabled,
+														]}
+														disabled={solicitudEnviada || solicitudEnProceso}
+														onPress={() =>
+															void handleEnviarSolicitud(usuarioId, item.nombre)
+														}
+													>
+														<Text style={styles.sendRequestButtonText}>
+															{solicitudEnProceso
+																? 'Enviando...'
+																: solicitudEnviada
+																	? 'Enviada'
+																	: 'Enviar solicitud'}
+														</Text>
+													</Pressable>
+												);
+											})()}
+										</View>
+									))
+								) : (
+									<Text style={{ color: '#CCC', marginTop: 10 }}>
+										No hay compañeros en esta materia.
+									</Text>
+								)}
+							</ScrollView>
 						)}
-				</ScrollView>
+					</>
+				)}
 			</View>
 
 			{/* FOOTER */}
