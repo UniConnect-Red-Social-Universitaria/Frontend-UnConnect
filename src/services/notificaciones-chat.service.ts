@@ -1,4 +1,38 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+    NotificacionDTO,
+    tieneNivel,
+    tieneAccion,
+} from '../types/notificacion.types';
+
+export function procesarNotificacionSocket(raw: unknown): NotificacionDTO | null {
+    if (!raw || typeof raw !== 'object') {
+        return null;
+    }
+
+    const data = raw as Record<string, unknown>;
+
+    if (
+        typeof data.mensaje !== 'string' ||
+        typeof data.destinatario !== 'string' ||
+        !data.timestamp
+    ) {
+        return null;
+    }
+
+    const base: NotificacionDTO = {
+        mensaje: data.mensaje,
+        destinatario: data.destinatario,
+        timestamp: String(data.timestamp),
+    };
+
+    const asDTO = data as unknown as NotificacionDTO;
+
+    const conNivel = tieneNivel(asDTO) ? { nivel: asDTO.nivel } : {};
+    const conAccion = tieneAccion(asDTO) ? { accion: asDTO.accion } : {};
+
+    return { ...base, ...conNivel, ...conAccion } as NotificacionDTO;
+}
 
 const UNREAD_DIRECT_CHATS_KEY = 'unreadDirectChatNotifications';
 const UNREAD_GROUP_CHATS_KEY = 'unreadGroupChatNotifications';
