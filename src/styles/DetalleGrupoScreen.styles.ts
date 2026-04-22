@@ -135,8 +135,4 @@ export const styles = StyleSheet.create({
     backgroundColor: "#142688",
     marginLeft: 10,
   },
-  actionButtonDanger: {
-    backgroundColor: "#dc3545",
-    borderColor: "#dc3545",
-  },
 });

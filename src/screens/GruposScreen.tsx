@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
 	ActivityIndicator,
 	Image,
@@ -14,7 +14,6 @@ import theme from '../styles/theme';
 import { styles } from '../styles/GruposScreen.styles';
 import { useGrupos } from '../hooks/useGrupos';
 import { CrearGrupoModal } from '../components/CrearGrupoModal';
-import { GruposDisponiblesModal } from '../components/GruposDisponiblesModal';
 
 type RootStackParamList = {
 	Eventos: undefined;
@@ -37,8 +36,7 @@ type GruposScreenProps = {
 };
 
 export function GruposScreen({ navigation }: GruposScreenProps) {
-	const [crearGrupoModalVisible, setCrearGrupoModalVisible] = useState(false);
-	const [gruposDisponiblesModalVisible, setGruposDisponiblesModalVisible] = useState(false);
+	const [modalVisible, setModalVisible] = useState(false);
 
 	const {
 		grupos,
@@ -50,13 +48,6 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 		unirseAGrupo,
 		cargarGrupos,
 	} = useGrupos(navigation);
-
-	useEffect(() => {
-		const unsubscribe = navigation.addListener('focus', () => {
-			cargarGrupos();
-		});
-		return unsubscribe;
-	}, [navigation, cargarGrupos]);
 
 	const handleModalSuccess = async () => {
 		const token = await AsyncStorage.getItem('userToken');
@@ -85,23 +76,7 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 				{!loading && !error && (
 					<View style={[styles.scrollView, { flex: 1 }]}>
 						<View style={[styles.sectionCard, { flex: 1 }]}>
-							<View style={styles.sectionHeaderContainer}>
-								<Text style={styles.sectionTitle}>Mis grupos</Text>
-								<View style={{ flexDirection: 'row', gap: 8 }}>
-									<Pressable
-										style={styles.createButton}
-										onPress={() => setGruposDisponiblesModalVisible(true)}
-									>
-										<Text style={styles.createButtonText}>+ Explorar</Text>
-									</Pressable>
-									<Pressable
-										style={styles.createButton}
-										onPress={() => setCrearGrupoModalVisible(true)}
-									>
-										<Text style={styles.createButtonText}>+ Crear</Text>
-									</Pressable>
-								</View>
-							</View>
+							<Text style={styles.sectionTitle}>Mis grupos</Text>
 							<ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={true}>
 								{grupos.map((grupo) => (
 									<Pressable
@@ -133,29 +108,70 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 								)}
 							</ScrollView>
 						</View>
+
+						<View style={[styles.sectionCard, { flex: 1 }]}>
+							<View style={styles.sectionHeaderContainer}>
+								<Text style={styles.sectionTitle}>Grupos disponibles</Text>
+								<Pressable
+									style={styles.createButton}
+									onPress={() => setModalVisible(true)}
+								>
+									<Text style={styles.createButtonText}>+ Crear Grupo</Text>
+								</Pressable>
+							</View>
+
+							<ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={true}>
+								{gruposDisponibles.map((grupo) => {
+									const botonDeshabilitado =
+										grupo.yaPertenece ||
+										grupo.estaLleno ||
+										processingGrupoId === grupo.id;
+									let textoBoton = 'Unirme';
+									if (grupo.yaPertenece) textoBoton = 'Ya eres miembro';
+									else if (grupo.estaLleno) textoBoton = 'Grupo lleno';
+									else if (processingGrupoId === grupo.id) textoBoton = 'Uniendome...';
+
+									return (
+										<View key={grupo.id} style={styles.card}>
+											<Text style={styles.groupTitle}>{grupo.nombre}</Text>
+											<Text style={styles.groupMateria}>
+												Materia: {grupo.materia.nombre}
+											</Text>
+											<Text style={styles.groupMembers}>
+												{grupo.cantidadMiembros}/{grupo.maxMiembros} integrantes
+											</Text>
+											<Pressable
+												onPress={() => unirseAGrupo(grupo.id)}
+												disabled={botonDeshabilitado}
+												style={[
+													styles.joinButton,
+													botonDeshabilitado ? styles.joinButtonDisabled : null,
+												]}
+											>
+												<Text style={styles.joinButtonText}>{textoBoton}</Text>
+											</Pressable>
+										</View>
+									);
+								})}
+								{gruposDisponibles.length === 0 && (
+									<Text style={styles.empty}>No hay grupos disponibles por ahora.</Text>
+								)}
+							</ScrollView>
+						</View>
 					</View>
 				)}
 			</View>
 
-		<Pressable style={styles.navButton} onPress={() => navigation.navigate('Eventos')}>
-			<Text style={styles.navButtonText}>Ver Eventos</Text>
-		</Pressable>
+			<Pressable style={styles.navButton} onPress={() => navigation.navigate('Eventos')}>
+				<Text style={styles.navButtonText}>Ver Eventos</Text>
+			</Pressable>
 
-		<GruposDisponiblesModal
-			visible={gruposDisponiblesModalVisible}
-			onClose={() => setGruposDisponiblesModalVisible(false)}
-			gruposDisponibles={gruposDisponibles}
-			processingGrupoId={processingGrupoId}
-			onUnirse={unirseAGrupo}
-			loading={loading}
-		/>
-
-		<CrearGrupoModal
-			visible={crearGrupoModalVisible}
-			onClose={() => setCrearGrupoModalVisible(false)}
-			onSuccess={handleModalSuccess}
-			materiasUsuario={materiasUsuario}
-		/>
-	</View>
+			<CrearGrupoModal
+				visible={modalVisible}
+				onClose={() => setModalVisible(false)}
+				onSuccess={handleModalSuccess}
+				materiasUsuario={materiasUsuario}
+			/>
+		</View>
 	);
 }

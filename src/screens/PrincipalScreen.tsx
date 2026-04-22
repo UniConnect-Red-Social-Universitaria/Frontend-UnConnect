@@ -192,45 +192,6 @@ export default function PrincipalScreen({
 
 		const buscarMaterias = async () => {
 			try {
-				const query = encodeURIComponent(search.trim());
-
-				const [usuariosMateriasResult] = await Promise.allSettled([
-					apiClient.get<any>(`/api/usuarios/buscar?q=${query}`),
-				]);
-
-				if (ignore) {
-					return;
-				}
-
-				const usuariosMateriasData =
-					usuariosMateriasResult.status === 'fulfilled'
-						? usuariosMateriasResult.value.data
-						: null;
-
-				if (usuariosMateriasResult.status === 'rejected') {
-					console.log('Error buscando usuarios/materias:', usuariosMateriasResult.reason);
-				}
-
-				setResults(
-					Array.isArray(usuariosMateriasData?.estudiantes)
-						? usuariosMateriasData.estudiantes
-						: []
-				);
-				setMateriaResults(
-					Array.isArray(usuariosMateriasData?.materias)
-						? usuariosMateriasData.materias
-						: []
-				);
-				setGrupoResults([]);
-			} catch (error) {
-				if (ignore) {
-					return;
-				}
-
-				console.log('Error buscando en backend:', error);
-				setResults([]);
-				setGrupoResults([]);
-				setMateriaResults([]);
 				const materias = await materiasService.buscarMaterias(search);
 				if (!ignore) {
 					setMateriaResults(materias);

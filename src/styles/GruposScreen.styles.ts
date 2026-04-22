@@ -329,18 +329,4 @@ export const styles = StyleSheet.create({
     color: "#FFF",
     fontWeight: "bold",
   },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  closeButton: {
-    padding: 8,
-  },
-  closeButtonText: {
-    fontSize: 24,
-    color: theme.colors.primary,
-    fontWeight: "bold",
-  },
 });
