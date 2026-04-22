@@ -110,32 +110,6 @@ class UsuariosService {
 
     return contactos;
   }
-
-  /**
-   * Buscar usuarios por nombre o correo
-   */
-  async buscarUsuarios(query: string): Promise<Usuario[]> {
-    if (!query.trim()) {
-      return [];
-    }
-
-    try {
-      const usuarios = await this.getUsuarios();
-      const queryLower = query.toLowerCase();
-      
-      return usuarios.filter((usuario) => {
-        const nombreCompleto = `${usuario.nombre} ${usuario.apellido}`.toLowerCase();
-        const correo = usuario.correo.toLowerCase();
-        
-        return (
-          nombreCompleto.includes(queryLower) || 
-          correo.includes(queryLower)
-        );
-      });
-    } catch {
-      return [];
-    }
-  }
 }
 
 export const usuariosService = new UsuariosService();
