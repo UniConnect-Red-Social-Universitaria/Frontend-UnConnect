@@ -52,6 +52,13 @@ class GruposService {
   }
 
   /**
+   * Abandonar un grupo
+   */
+  async abandonarGrupo(grupoId: string): Promise<ApiResponse> {
+    return await apiClient.delete(`/api/grupos/${grupoId}/abandonar`);
+  }
+
+  /**
    * Eliminar un grupo (solo creador)
    */
   async eliminarGrupo(grupoId: string): Promise<ApiResponse> {
@@ -62,10 +69,11 @@ class GruposService {
    * Obtener miembros de un grupo
    */
   async getMiembros(grupoId: string): Promise<any[]> {
-    const response = await apiClient.get<any[]>(
+    const response = await apiClient.get<any>(
       `/api/grupos/${grupoId}/miembros`,
     );
-    return response.data || [];
+    // El endpoint retorna { success, data: { miembros: [...], ... } }
+    return response.data?.miembros || [];
   }
   /**
    * Agregar un miembro al grupo (solo administrador)

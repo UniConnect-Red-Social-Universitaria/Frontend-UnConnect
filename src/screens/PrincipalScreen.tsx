@@ -195,9 +195,8 @@ export default function PrincipalScreen({
 			try {
 				const query = encodeURIComponent(search.trim());
 
-				const [usuariosMateriasResult, gruposResult] = await Promise.allSettled([
+				const [usuariosMateriasResult] = await Promise.allSettled([
 					apiClient.get<any>(`/api/usuarios/buscar?q=${query}`),
-					apiClient.get<any>(`/api/grupos/buscar?q=${query}`),
 				]);
 
 				if (ignore) {
@@ -208,15 +207,9 @@ export default function PrincipalScreen({
 					usuariosMateriasResult.status === 'fulfilled'
 						? usuariosMateriasResult.value.data
 						: null;
-				const gruposData =
-					gruposResult.status === 'fulfilled' ? gruposResult.value.data : null;
 
 				if (usuariosMateriasResult.status === 'rejected') {
 					console.log('Error buscando usuarios/materias:', usuariosMateriasResult.reason);
-				}
-
-				if (gruposResult.status === 'rejected') {
-					console.log('Error buscando grupos:', gruposResult.reason);
 				}
 
 				setResults(
@@ -229,7 +222,7 @@ export default function PrincipalScreen({
 						? usuariosMateriasData.materias
 						: []
 				);
-				setGrupoResults(Array.isArray(gruposData) ? gruposData : []);
+				setGrupoResults([]);
 			} catch (error) {
 				if (ignore) {
 					return;

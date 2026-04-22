@@ -1,34 +1,25 @@
-import Constants from "expo-constants";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useState } from "react";
-import DateTimePickerModal from "react-native-modal-datetime-picker";
 import {
   ActivityIndicator,
-  Alert,
   Image,
-  Platform,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import theme from "../styles/theme";
+import { styles } from "../styles/EventosScreen.styles";
+import { apiClient } from "../services";
+import { CrearEventoModal } from "../components/CrearEventoModal";
 
+// --- Tipos ---
 type RootStackParamList = {
   Eventos: undefined;
   Grupos: undefined;
 };
 
-type EventosScreenNavigationProp = StackNavigationProp<
-  RootStackParamList,
-  "Eventos"
->;
-
-const REQUEST_TIMEOUT_MS = 10000;
-const AUTH_TOKEN_STORAGE_KEY = "userToken";
+type EventosScreenNavigationProp = StackNavigationProp<RootStackParamList, "Eventos">;
 
 type Evento = {
   id: string;
@@ -44,124 +35,14 @@ type Evento = {
   };
 };
 
-function extraerHostDesdeHostUri(hostUri: string): string | null {
-  const valor = hostUri.trim();
+type EventosScreenProps = {
+  navigation: EventosScreenNavigationProp;
+};
 
-  if (!valor) {
-    return null;
-  }
-
-  if (/^[a-z]+:\/\//i.test(valor)) {
-    try {
-      const url = new URL(valor);
-      return url.hostname || null;
-    } catch {
-      return null;
-    }
-  }
-
-  if (valor.startsWith("[")) {
-    const fin = valor.indexOf("]");
-    return fin > 1 ? valor.slice(1, fin) : null;
-  }
-
-  const partes = valor.split(":");
-  if (partes.length >= 2) {
-    return partes[0] || null;
-  }
-
-  return valor;
-}
-
-function esHostLanValido(host: string): boolean {
-  const hostNormalizado = host.replace(/^\[|\]$/g, "").toLowerCase();
-
-  if (hostNormalizado === "localhost" || hostNormalizado.endsWith(".local")) {
-    return true;
-  }
-
-  const matchIpv4 = hostNormalizado.match(
-    /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/,
-  );
-  if (!matchIpv4) {
-    return false;
-  }
-
-  const octetos = matchIpv4.slice(1).map(Number);
-  if (
-    octetos.some((octeto) => Number.isNaN(octeto) || octeto < 0 || octeto > 255)
-  ) {
-    return false;
-  }
-
-  const [a, b] = octetos;
-  if (a === 10) {
-    return true;
-  }
-  if (a === 172 && b >= 16 && b <= 31) {
-    return true;
-  }
-  if (a === 192 && b === 168) {
-    return true;
-  }
-
-  return false;
-}
-
-function obtenerHostExpo(): string | null {
-  const configExpo = Constants.expoConfig as { hostUri?: string } | null;
-
-  if (configExpo?.hostUri) {
-    return configExpo.hostUri;
-  }
-
-  const constantsConManifest = Constants as unknown as {
-    manifest2?: {
-      extra?: {
-        expoClient?: {
-          hostUri?: string;
-        };
-      };
-    };
-  };
-
-  return constantsConManifest.manifest2?.extra?.expoClient?.hostUri ?? null;
-}
-
-function resolverApiBaseUrl(): string {
-  const apiUrlConfiguradaRaw = process.env.EXPO_PUBLIC_API_URL;
-  const apiUrlConfigurada =
-    apiUrlConfiguradaRaw?.trim().replace(/\/+$/, "") ?? "";
-
-  if (apiUrlConfigurada) {
-    return apiUrlConfigurada;
-  }
-
-  const hostUriExpo = obtenerHostExpo();
-
-  if (hostUriExpo) {
-    const hostDetectado = extraerHostDesdeHostUri(hostUriExpo);
-    if (hostDetectado && esHostLanValido(hostDetectado)) {
-      const hostNormalizado = hostDetectado.includes(":")
-        ? `[${hostDetectado}]`
-        : hostDetectado;
-      return `http://${hostNormalizado}:3000`;
-    }
-  }
-
-  if (Platform.OS === "android") {
-    return "http://10.0.2.2:3000";
-  }
-
-  return "http://localhost:3000";
-}
-
+// --- Utilidades ---
 function formatearFechaEvento(fechaIso: string): string {
   const fecha = new Date(fechaIso);
-
-  if (Number.isNaN(fecha.getTime())) {
-    return "Fecha inválida";
-  }
+  if (Number.isNaN(fecha.getTime())) return "Fecha inválida";
 
   return new Intl.DateTimeFormat("es-CO", {
     dateStyle: "full",
@@ -169,564 +50,104 @@ function formatearFechaEvento(fechaIso: string): string {
   }).format(fecha);
 }
 
-type EventosScreenProps = {
-  navigation: EventosScreenNavigationProp;
-};
-
+// --- Componente Principal ---
 export function EventosScreen({ navigation }: EventosScreenProps) {
+  // Estado general
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [loadingEventos, setLoadingEventos] = useState(true);
-  const [publicando, setPublicando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mensajePublicacion, setMensajePublicacion] = useState<string | null>(
-    null,
-  );
-  const [titulo, setTitulo] = useState("");
-  const [descripcion, setDescripcion] = useState("");
-  const [lugar, setLugar] = useState("");
-  const [fechaEventoInput, setFechaEventoInput] = useState("");
-  const [isDatePickerVisible, setDatePickerVisible] = useState(false);
-  const showDatePicker = () => setDatePickerVisible(true);
-  const hideDatePicker = () => setDatePickerVisible(false);
-  const handleConfirmDate = (date: Date) => {
-    setFechaEventoInput(date.toISOString());
-    hideDatePicker();
-  };
-  const [token, setToken] = useState("");
+  const [crearEventoModalVisible, setCrearEventoModalVisible] = useState(false);
 
-  const apiBaseUrl = resolverApiBaseUrl();
-
-  const cargarEventos = useCallback(
-    async (jwt: string) => {
-      if (!apiBaseUrl.trim()) {
-        setError(
-          "No se pudo resolver la URL del backend. Define EXPO_PUBLIC_API_URL (ej: http://192.168.x.x:3000).",
-        );
-        setLoadingEventos(false);
-        return;
-      }
-
-      if (!jwt.trim()) {
-        setError("No hay sesion activa. Inicia sesion nuevamente.");
-        setLoadingEventos(false);
-        return;
-      }
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        controller.abort();
-      }, REQUEST_TIMEOUT_MS);
-
-      try {
-        const response = await fetch(`${apiBaseUrl}/api/eventos`, {
-          signal: controller.signal,
-          headers: {
-            Authorization: `Bearer ${jwt.trim()}`,
-          },
-        });
-        if (!response.ok) {
-          const payload = await response.json().catch(() => ({}));
-
-          if (response.status === 401) {
-            throw new Error(
-              typeof payload?.message === "string"
-                ? payload.message
-                : "Sesion expirada. Inicia sesion nuevamente.",
-            );
-          }
-
-          throw new Error(
-            typeof payload?.message === "string"
-              ? payload.message
-              : `HTTP ${response.status}`,
-          );
-        }
-
-        const payload = await response.json();
-        setEventos(payload.data ?? []);
-        setError(null);
-      } catch (err) {
-        if (err instanceof Error && err.name === "AbortError") {
-          setError(
-            `Tiempo de espera agotado conectando a ${apiBaseUrl || "(URL no definida)"}`,
-          );
-        } else {
-          setError(err instanceof Error ? err.message : "Error desconocido");
-        }
-      } finally {
-        clearTimeout(timeoutId);
-        setLoadingEventos(false);
-      }
-    },
-    [apiBaseUrl],
-  );
+  const cargarEventos = useCallback(async () => {
+    try {
+      const response = await apiClient.get<Evento[]>("/api/eventos");
+      setEventos(response.data ?? []);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error desconocido");
+    } finally {
+      setLoadingEventos(false);
+    }
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
 
-    const cargarTokenGuardado = async () => {
+    const inicializar = async () => {
       try {
-        const tokenGuardado = await AsyncStorage.getItem(
-          AUTH_TOKEN_STORAGE_KEY,
-        );
-        if (isMounted && tokenGuardado?.trim()) {
-          const tokenNormalizado = tokenGuardado.trim();
-          setToken(tokenNormalizado);
+        const tokenActivo = await apiClient.getToken();
+        if (isMounted && tokenActivo) {
           setLoadingEventos(true);
-          await cargarEventos(tokenNormalizado);
+          await cargarEventos();
         } else if (isMounted) {
-          setError("No hay sesion activa. Inicia sesion para ver eventos.");
+          setError("No hay sesión activa. Inicia sesión para ver eventos.");
           setLoadingEventos(false);
         }
       } catch {
         if (isMounted) {
-          setMensajePublicacion(
-            "No se pudo leer el token guardado localmente.",
-          );
+          setError("Error al leer la sesión local.");
           setLoadingEventos(false);
         }
       }
     };
 
-    cargarTokenGuardado();
-
-    return () => {
-      isMounted = false;
-    };
+    inicializar();
+    return () => { isMounted = false; };
   }, [cargarEventos]);
 
-  const publicarEvento = async () => {
-    if (!titulo.trim()) {
-      setMensajePublicacion("Debes escribir un título.");
-      return;
-    }
-
-    if (!descripcion.trim()) {
-      setMensajePublicacion("Debes escribir una descripción.");
-      return;
-    }
-
-    if (!lugar.trim()) {
-      setMensajePublicacion("Debes escribir el lugar del evento.");
-      return;
-    }
-
-    if (!fechaEventoInput.trim()) {
-      setMensajePublicacion(
-        "Debes escribir la fecha del evento en formato YYYY-MM-DDTHH:mm.",
-      );
-      return;
-    }
-
-    if (!token.trim()) {
-      setMensajePublicacion(
-        "No hay sesión activa. Inicia sesión para publicar eventos.",
-      );
-      return;
-    }
-
-    const fecha = new Date(fechaEventoInput.trim());
-    if (Number.isNaN(fecha.getTime())) {
-      setMensajePublicacion(
-        "La fecha tiene formato inválido. Usa YYYY-MM-DDTHH:mm.",
-      );
-      return;
-    }
-
-    if (fecha <= new Date()) {
-      Alert.alert("Fecha invalida", "La fecha del evento debe ser futura.");
-      return;
-    }
-
-    setPublicando(true);
-    setMensajePublicacion(null);
-
-    try {
-      await AsyncStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token.trim());
-
-      const response = await fetch(`${apiBaseUrl}/api/eventos`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token.trim()}`,
-        },
-        body: JSON.stringify({
-          titulo: titulo.trim(),
-          descripcion: descripcion.trim(),
-          lugar: lugar.trim(),
-          fechaEvento: fecha.toISOString(),
-        }),
-      });
-
-      const payload = await response.json();
-
-      if (!response.ok) {
-        const mensaje =
-          typeof payload?.message === "string"
-            ? payload.message
-            : `HTTP ${response.status}`;
-        throw new Error(mensaje);
-      }
-
-      setTitulo("");
-      setDescripcion("");
-      setLugar("");
-      setFechaEventoInput("");
-      setMensajePublicacion("Evento publicado correctamente.");
-      await cargarEventos(token.trim());
-    } catch (err) {
-      setMensajePublicacion(
-        err instanceof Error ? err.message : "No se pudo publicar el evento.",
-      );
-    } finally {
-      setPublicando(false);
-    }
+  const handleEventoSuccess = async () => {
+    await cargarEventos();
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.contentWrapper}>
-        <View style={styles.header}>
-          <Image
-            source={require("../../assets/images/logo-caldas.png")}
-            style={styles.logoImage}
-            resizeMode="contain"
-          />
+        <View style={styles.headerWithButton}>
           <View style={styles.headerText}>
             <Text style={styles.title}>UniConnect</Text>
             <Text style={styles.subtitle}>Eventos</Text>
             <Text style={styles.caption}>Comunidad Universidad de Caldas</Text>
           </View>
-        </View>
-
-        <View style={styles.formCard}>
-          <Text style={styles.formTitle}>Publicar evento</Text>
-
-          <TextInput
-            value={titulo}
-            onChangeText={setTitulo}
-            placeholder="Título"
-            placeholderTextColor={theme.colors.primaryMid}
-            style={styles.input}
-          />
-
-          <TextInput
-            value={descripcion}
-            onChangeText={setDescripcion}
-            placeholder="Descripción"
-            placeholderTextColor={theme.colors.primaryMid}
-            style={[styles.input, styles.inputMultiline]}
-            multiline
-          />
-
-          <TextInput
-            value={lugar}
-            onChangeText={setLugar}
-            placeholder="Lugar"
-            placeholderTextColor={theme.colors.primaryMid}
-            style={styles.input}
-          />
-
-          {Platform.OS === "web" ? (
-            <input
-              type="datetime-local"
-              value={
-                fechaEventoInput
-                  ? new Date(fechaEventoInput).toISOString().slice(0, 16)
-                  : ""
-              }
-              onChange={(e) => {
-                // Mantener la hora local sin desfase
-                const value = e.target.value;
-                // value es 'YYYY-MM-DDTHH:mm', sin zona horaria
-                // Convertir a ISO conservando la hora local
-                const [date, time] = value.split("T");
-                const [year, month, day] = date.split("-");
-                const [hour, minute] = time.split(":");
-                const localDate = new Date(
-                  Number(year),
-                  Number(month) - 1,
-                  Number(day),
-                  Number(hour),
-                  Number(minute),
-                );
-                setFechaEventoInput(localDate.toISOString());
-              }}
-              style={{
-                width: "100%",
-                padding: 10,
-                borderRadius: 8,
-                border: "1px solid #ccc",
-                marginBottom: 12,
-              }}
-            />
-          ) : (
-            <View>
-              <Pressable onPress={showDatePicker} style={styles.input}>
-                <Text
-                  style={{
-                    color: fechaEventoInput
-                      ? theme.colors.primary
-                      : theme.colors.primaryMid,
-                  }}
-                >
-                  {fechaEventoInput
-                    ? formatearFechaEvento(fechaEventoInput)
-                    : "Selecciona la fecha y hora"}
-                </Text>
-              </Pressable>
-              <DateTimePickerModal
-                isVisible={isDatePickerVisible}
-                mode="datetime"
-                display={Platform.OS === "ios" ? "spinner" : "default"}
-                onConfirm={handleConfirmDate}
-                onCancel={hideDatePicker}
-                locale="es-CO"
-                minimumDate={new Date()}
-                pickerContainerStyleIOS={{
-                  backgroundColor: theme.colors.white,
-                }}
-                pickerStyleIOS={{ backgroundColor: theme.colors.white }}
-                textColor={theme.colors.primary} // <-- Agrega esta línea (o usa "#000000")
-              />
-            </View>
-          )}
-
-          {mensajePublicacion && (
-            <Text style={styles.formMessage}>{mensajePublicacion}</Text>
-          )}
-
           <Pressable
-            onPress={publicarEvento}
-            disabled={publicando}
-            style={({ pressed }) => [
-              styles.button,
-              pressed && !publicando ? styles.buttonPressed : null,
-              publicando ? styles.buttonDisabled : null,
-            ]}
+            style={styles.createButton}
+            onPress={() => setCrearEventoModalVisible(true)}
           >
-            <Text style={styles.buttonText}>
-              {publicando ? "Publicando..." : "Publicar evento"}
-            </Text>
+            <Text style={styles.createButtonText}>+ Crear</Text>
           </Pressable>
         </View>
 
-        {loadingEventos && (
-          <ActivityIndicator color={theme.colors.primary} size="large" />
-        )}
+        {loadingEventos && <ActivityIndicator color={theme.colors.primary} size="large" />}
         {error && <Text style={styles.error}>Error: {error}</Text>}
 
         {!loadingEventos && !error && (
-          <ScrollView
-            contentContainerStyle={styles.list}
-            style={styles.scrollView}
-          >
+          <ScrollView contentContainerStyle={styles.list} style={styles.scrollView}>
             {eventos.map((evento) => (
               <View key={evento.id} style={styles.card}>
                 <Text style={styles.eventTitle}>{evento.titulo}</Text>
-                <Text style={styles.eventDate}>
-                  {formatearFechaEvento(evento.fechaEvento)}
-                </Text>
-                <Text style={styles.eventDescription}>
-                  {evento.descripcion}
-                </Text>
-                <Text style={styles.eventLocation}>
-                  Lugar: {evento.lugar?.trim() || "Por definir"}
-                </Text>
+                <Text style={styles.eventDate}>{formatearFechaEvento(evento.fechaEvento)}</Text>
+                <Text style={styles.eventDescription}>{evento.descripcion}</Text>
+                <Text style={styles.eventLocation}>Lugar: {evento.lugar?.trim() || "Por definir"}</Text>
                 <Text style={styles.eventAuthor}>
                   Organiza: {evento.creador.nombre} {evento.creador.apellido}
                 </Text>
               </View>
             ))}
             {eventos.length === 0 && (
-              <Text style={styles.empty}>
-                No hay eventos próximos en este momento.
-              </Text>
+              <Text style={styles.empty}>No hay eventos próximos en este momento.</Text>
             )}
           </ScrollView>
         )}
       </View>
 
-      <Pressable
-        style={styles.navButton}
-        onPress={() => navigation.navigate("Grupos")}
-      >
+      <Pressable style={styles.navButton} onPress={() => navigation.navigate("Grupos")}>
         <Text style={styles.navButtonText}>Ver Mis Grupos</Text>
       </Pressable>
+
+      <CrearEventoModal
+        visible={crearEventoModalVisible}
+        onClose={() => setCrearEventoModalVisible(false)}
+        onSuccess={handleEventoSuccess}
+      />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.white,
-  },
-  contentWrapper: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "flex-start",
-    paddingTop: 56,
-    paddingHorizontal: 20,
-  },
-  scrollView: {
-    width: "100%",
-  },
-  header: {
-    width: "100%",
-    backgroundColor: theme.colors.white,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 18,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  logoImage: {
-    width: 50,
-    height: 50,
-  },
-  headerText: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: "700",
-    color: theme.colors.primary,
-  },
-  subtitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    marginTop: 2,
-    color: theme.colors.primary,
-  },
-  caption: {
-    fontSize: 13,
-    marginTop: 4,
-    color: theme.colors.primaryMid,
-  },
-  formCard: {
-    width: "100%",
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 12,
-    padding: 14,
-    backgroundColor: "#F5F5F5",
-    marginBottom: 16,
-  },
-  formTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.primary,
-    marginBottom: 10,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: theme.colors.primary,
-    backgroundColor: theme.colors.white,
-    marginBottom: 10,
-  },
-  inputMultiline: {
-    minHeight: 84,
-    textAlignVertical: "top",
-  },
-  formMessage: {
-    fontSize: 13,
-    color: theme.colors.primaryMid,
-    marginBottom: 8,
-  },
-  button: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  buttonPressed: {
-    opacity: 0.9,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: theme.colors.white,
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  list: {
-    gap: 12,
-    paddingBottom: 24,
-    alignItems: "stretch",
-    width: "100%",
-  },
-  card: {
-    width: "100%",
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 12,
-    padding: 14,
-    backgroundColor: "#F5F5F5",
-  },
-  eventTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.primary,
-  },
-  eventDate: {
-    fontSize: 14,
-    color: theme.colors.primaryMid,
-    marginTop: 4,
-  },
-  eventDescription: {
-    fontSize: 14,
-    color: theme.colors.primary,
-    marginTop: 8,
-    lineHeight: 20,
-  },
-  eventLocation: {
-    fontSize: 13,
-    color: theme.colors.primaryMid,
-    marginTop: 8,
-    fontWeight: "600",
-  },
-  eventAuthor: {
-    fontSize: 13,
-    color: theme.colors.primaryMid,
-    marginTop: 10,
-    fontWeight: "500",
-  },
-  empty: {
-    marginTop: 16,
-    color: theme.colors.primaryMid,
-    textAlign: "center",
-  },
-  error: {
-    color: "#b00020",
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  navButton: {
-    width: "100%",
-    backgroundColor: theme.colors.primary,
-    borderRadius: 0,
-    paddingVertical: 24,
-    paddingHorizontal: 20,
-    alignItems: "center",
-    marginTop: 0,
-    paddingBottom: 44,
-    paddingTop: 24,
-    minHeight: 80,
-  },
-  navButtonText: {
-    color: "#ffffff",
-    fontSize: 20,
-    fontWeight: "700",
-  },
-});
