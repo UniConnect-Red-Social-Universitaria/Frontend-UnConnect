@@ -32,6 +32,15 @@ class MateriasService {
     }
 
     /**
+     * Buscar materias por texto
+     */
+    async buscarMaterias(q: string): Promise<Materia[]> {
+        const query = encodeURIComponent(q.trim());
+        const response = await apiClient.get<Materia[]>(`/api/materias/buscar?q=${query}`);
+        return response.data || [];
+    }
+
+    /**
      * Poblar catálogo (para desarrollo/pruebas)
      */
     async poblarCatalogo(): Promise<ApiResponse> {
