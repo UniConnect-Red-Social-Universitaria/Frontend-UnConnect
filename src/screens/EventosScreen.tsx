@@ -1,35 +1,30 @@
+import { useCallback, useEffect, useState } from "react";
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useRef, useState } from "react";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import {
   ActivityIndicator,
-  Alert,
   Image,
-  Platform,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import io, { Socket } from "socket.io-client";
 import theme from "../styles/theme";
+import { styles } from "../styles/EventosScreen.styles";
+import { apiClient } from "../services";
+import { CrearEventoModal } from "../components/CrearEventoModal";
 
+// --- Tipos ---
 type RootStackParamList = {
   Eventos: undefined;
   Grupos: undefined;
 };
 
-type EventosScreenNavigationProp = StackNavigationProp<
-  RootStackParamList,
-  "Eventos"
->;
-
-const REQUEST_TIMEOUT_MS = 10000;
-const AUTH_TOKEN_STORAGE_KEY = "userToken";
+type EventosScreenNavigationProp = StackNavigationProp<RootStackParamList, "Eventos">;
 
 type CategoriaEvento = "academico" | "cultural" | "deportivo" | "otro";
 const CATEGORIAS: { value: CategoriaEvento | "todas"; label: string }[] = [
@@ -55,6 +50,9 @@ type Evento = {
   };
 };
 
+type EventosScreenProps = {
+  navigation: EventosScreenNavigationProp;
+};
 function extraerHostDesdeHostUri(hostUri: string): string | null {
   const valor = hostUri.trim();
   if (!valor) return null;
@@ -112,15 +110,18 @@ function resolverApiBaseUrl(): string {
   return "http://localhost:3000";
 }
 
+// --- Utilidades ---
 function formatearFechaEvento(fechaIso: string): string {
   const fecha = new Date(fechaIso);
   if (Number.isNaN(fecha.getTime())) return "Fecha inválida";
+
   return new Intl.DateTimeFormat("es-CO", {
     dateStyle: "full",
     timeStyle: "short",
   }).format(fecha);
 }
 
+// --- Componente Principal ---
 function badgeCategoria(cat: CategoriaEvento): string {
   const map: Record<CategoriaEvento, string> = {
     academico: "Académico",
@@ -136,10 +137,33 @@ type EventosScreenProps = {
 };
 
 export function EventosScreen({ navigation }: EventosScreenProps) {
+  // Estado general
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [loadingEventos, setLoadingEventos] = useState(true);
-  const [publicando, setPublicando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [crearEventoModalVisible, setCrearEventoModalVisible] = useState(false);
+
+  const cargarEventos = useCallback(async () => {
+    try {
+      const response = await apiClient.get<Evento[]>("/api/eventos");
+      setEventos(response.data ?? []);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error desconocido");
+    } finally {
+      setLoadingEventos(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const inicializar = async () => {
+      try {
+        const tokenActivo = await apiClient.getToken();
+        if (isMounted && tokenActivo) {
+          setLoadingEventos(true);
+          await cargarEventos();
   const [mensajePublicacion, setMensajePublicacion] = useState<string | null>(null);
   const [titulo, setTitulo] = useState("");
   const [descripcion, setDescripcion] = useState("");
@@ -237,16 +261,23 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 
           await cargarEventos(jwt);
         } else if (isMounted) {
-          setError("No hay sesion activa. Inicia sesion para ver eventos.");
+          setError("No hay sesión activa. Inicia sesión para ver eventos.");
           setLoadingEventos(false);
         }
       } catch {
         if (isMounted) {
+          setError("Error al leer la sesión local.");
           setLoadingEventos(false);
         }
       }
     };
 
+    inicializar();
+    return () => { isMounted = false; };
+  }, [cargarEventos]);
+
+  const handleEventoSuccess = async () => {
+    await cargarEventos();
     cargarTokenGuardado();
     return () => {
       isMounted = false;
@@ -342,12 +373,7 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
   return (
     <View style={styles.container}>
       <View style={styles.contentWrapper}>
-        <View style={styles.header}>
-          <Image
-            source={require("../../assets/images/logo-caldas.png")}
-            style={styles.logoImage}
-            resizeMode="contain"
-          />
+        <View style={styles.headerWithButton}>
           <View style={styles.headerText}>
             <Text style={styles.title}>UniConnect</Text>
             <Text style={styles.subtitle}>Eventos</Text>
@@ -452,17 +478,10 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
           )}
 
           <Pressable
-            onPress={publicarEvento}
-            disabled={publicando}
-            style={({ pressed }) => [
-              styles.button,
-              pressed && !publicando ? styles.buttonPressed : null,
-              publicando ? styles.buttonDisabled : null,
-            ]}
+            style={styles.createButton}
+            onPress={() => setCrearEventoModalVisible(true)}
           >
-            <Text style={styles.buttonText}>
-              {publicando ? "Publicando..." : "Publicar evento"}
-            </Text>
+            <Text style={styles.createButtonText}>+ Crear</Text>
           </Pressable>
         </View>
 
@@ -511,6 +530,10 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
           <ScrollView contentContainerStyle={styles.list} style={styles.scrollView}>
             {eventos.map((evento) => (
               <View key={evento.id} style={styles.card}>
+                <Text style={styles.eventTitle}>{evento.titulo}</Text>
+                <Text style={styles.eventDate}>{formatearFechaEvento(evento.fechaEvento)}</Text>
+                <Text style={styles.eventDescription}>{evento.descripcion}</Text>
+                <Text style={styles.eventLocation}>Lugar: {evento.lugar?.trim() || "Por definir"}</Text>
                 <View style={styles.cardHeader}>
                   <Text style={styles.eventTitle}>{evento.titulo}</Text>
                   <View style={styles.categoriaBadge}>
@@ -539,8 +562,15 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
       <Pressable style={styles.navButton} onPress={() => navigation.navigate("Grupos")}>
         <Text style={styles.navButtonText}>Ver Mis Grupos</Text>
       </Pressable>
+
+      <CrearEventoModal
+        visible={crearEventoModalVisible}
+        onClose={() => setCrearEventoModalVisible(false)}
+        onSuccess={handleEventoSuccess}
+      />
     </View>
   );
+}
 }
 
 const styles = StyleSheet.create({
