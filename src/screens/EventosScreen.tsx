@@ -3,12 +3,10 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   ScrollView,
   Text,
   View,
-  Platform,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import io, { Socket } from "socket.io-client";
@@ -16,6 +14,7 @@ import theme from "../styles/theme";
 import { styles } from "../styles/EventosScreen.styles";
 import { apiClient } from "../services";
 import { CrearEventoModal } from "../components/CrearEventoModal";
+import { resolverApiBaseUrl } from "../utils/apiConfig";
 
 // --- Tipos ---
 type RootStackParamList = {
@@ -25,7 +24,9 @@ type RootStackParamList = {
 
 type EventosScreenNavigationProp = StackNavigationProp<RootStackParamList, "Eventos">;
 
-type CategoriaEvento = "academico" | "cultural" | "deportivo" | "otro";
+// Exportamos el tipo para poder usarlo en el Modal
+export type CategoriaEvento = "academico" | "cultural" | "deportivo" | "otro";
+
 const CATEGORIAS: { value: CategoriaEvento | "todas"; label: string }[] = [
   { value: "todas", label: "Todas" },
   { value: "academico", label: "Académico" },
@@ -53,64 +54,7 @@ type EventosScreenProps = {
   navigation: EventosScreenNavigationProp;
 };
 
-// --- Utilidades (Añadidas por tu compañero) ---
-function extraerHostDesdeHostUri(hostUri: string): string | null {
-  const valor = hostUri.trim();
-  if (!valor) return null;
-  if (/^[a-z]+:\/\//i.test(valor)) {
-    try {
-      const url = new URL(valor);
-      return url.hostname || null;
-    } catch {
-      return null;
-    }
-  }
-  if (valor.startsWith("[")) {
-    const fin = valor.indexOf("]");
-    return fin > 1 ? valor.slice(1, fin) : null;
-  }
-  const partes = valor.split(":");
-  if (partes.length >= 2) return partes[0] || null;
-  return valor;
-}
-
-function esHostLanValido(host: string): boolean {
-  const h = host.replace(/^\[|\]$/g, "").toLowerCase();
-  if (h === "localhost" || h.endsWith(".local")) return true;
-  const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-  if (!m) return false;
-  const [a, b] = m.slice(1).map(Number);
-  if (a === 10) return true;
-  if (a === 172 && b >= 16 && b <= 31) return true;
-  if (a === 192 && b === 168) return true;
-  return false;
-}
-
-function obtenerHostExpo(): string | null {
-  const cfg = Constants.expoConfig as { hostUri?: string } | null;
-  if (cfg?.hostUri) return cfg.hostUri;
-  const c = Constants as unknown as {
-    manifest2?: { extra?: { expoClient?: { hostUri?: string } } };
-  };
-  return c.manifest2?.extra?.expoClient?.hostUri ?? null;
-}
-
-function resolverApiBaseUrl(): string {
-  const raw = process.env.EXPO_PUBLIC_API_URL;
-  const configured = raw?.trim().replace(/\/+$/, "") ?? "";
-  if (configured) return configured;
-  const hostUri = obtenerHostExpo();
-  if (hostUri) {
-    const host = extraerHostDesdeHostUri(hostUri);
-    if (host && esHostLanValido(host)) {
-      const norm = host.includes(":") ? `[${host}]` : host;
-      return `http://${norm}:3000`;
-    }
-  }
-  if (Platform.OS === "android") return "http://10.0.2.2:3000";
-  return "http://localhost:3000";
-}
-
+// --- Utilidades ---
 function formatearFechaEvento(fechaIso: string): string {
   const fecha = new Date(fechaIso);
   if (Number.isNaN(fecha.getTime())) return "Fecha inválida";
@@ -133,7 +77,6 @@ function badgeCategoria(cat: CategoriaEvento): string {
 
 // --- Componente Principal ---
 export function EventosScreen({ navigation }: EventosScreenProps) {
-  // Estados combinados (Tus modales + Los filtros/sockets de tu compañero)
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [loadingEventos, setLoadingEventos] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -143,7 +86,7 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
   const [notificacionObserver, setNotificacionObserver] = useState<string | null>(null);
 
   const socketRef = useRef<Socket | null>(null);
-  const apiBaseUrl = resolverApiBaseUrl();
+  const apiBaseUrl = resolverApiBaseUrl(); // <-- ¡Usando la función importada!
 
   const cargarEventos = useCallback(async (categoria?: CategoriaEvento | "todas") => {
     try {
@@ -170,7 +113,6 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
         if (isMounted && tokenActivo) {
           setLoadingEventos(true);
 
-          // Configuración de WebSockets (Añadido por tu compañero)
           socketRef.current = io(apiBaseUrl, {
             auth: { token: tokenActivo },
             transports: ["websocket"],
@@ -212,7 +154,6 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
   const toggleSuscripcion = async (categoria: CategoriaEvento) => {
     const estaSuscrito = categoriasSuscritas.has(categoria);
     try {
-      // Adaptado para usar tu apiClient
       if (estaSuscrito) {
         await apiClient.delete(`/api/eventos/suscripciones/${categoria}`);
       } else {
@@ -225,7 +166,7 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
         return next;
       });
     } catch {
-      // silencioso — no crítico para la navegación
+      // silencioso
     }
   };
 
@@ -252,7 +193,6 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 
         <View style={styles.formCard}>
           <Text style={styles.formTitle}>Publicar evento</Text>
-          {/* Botón limpio y modal que tú creaste */}
           <Pressable
             style={styles.createButton}
             onPress={() => setCrearEventoModalVisible(true)}
@@ -261,7 +201,6 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
           </Pressable>
         </View>
 
-        {/* Sección de Filtros de tu compañero */}
         <View style={styles.filtroSection}>
           <Text style={styles.filtroLabel}>Filtrar por categoría</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>

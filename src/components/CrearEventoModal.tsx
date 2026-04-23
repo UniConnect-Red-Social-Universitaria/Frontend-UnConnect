@@ -6,7 +6,6 @@ import {
 	Text,
 	TextInput,
 	Pressable,
-	ActivityIndicator,
 	Alert,
 	Keyboard,
 	Platform,
@@ -14,12 +13,20 @@ import {
 import { styles } from '../styles/EventosScreen.styles';
 import theme from '../styles/theme';
 import { apiClient } from '../services';
+import { CategoriaEvento } from '../screens/EventosScreen';
 
 type CrearEventoModalProps = {
 	visible: boolean;
 	onClose: () => void;
 	onSuccess: () => void;
 };
+
+const CATEGORIAS_CREACION: { value: CategoriaEvento; label: string }[] = [
+	{ value: 'academico', label: 'Académico' },
+	{ value: 'cultural', label: 'Cultural' },
+	{ value: 'deportivo', label: 'Deportivo' },
+	{ value: 'otro', label: 'Otro' },
+];
 
 function formatearFechaEvento(fechaIso: string): string {
 	const fecha = new Date(fechaIso);
@@ -34,12 +41,16 @@ function formatearFechaEvento(fechaIso: string): string {
 export function CrearEventoModal({ visible, onClose, onSuccess }: CrearEventoModalProps) {
 	const [publicando, setPublicando] = useState(false);
 	const [mensajePublicacion, setMensajePublicacion] = useState<string | null>(null);
+	
+	// Añadimos 'categoria' al estado inicial
 	const [formulario, setFormulario] = useState({
 		titulo: '',
 		descripcion: '',
 		lugar: '',
 		fechaEventoInput: '',
+		categoria: 'academico' as CategoriaEvento, 
 	});
+	
 	const [isDatePickerVisible, setDatePickerVisible] = useState(false);
 
 	const showDatePicker = () => setDatePickerVisible(true);
@@ -68,18 +79,17 @@ export function CrearEventoModal({ visible, onClose, onSuccess }: CrearEventoMod
 		setFormulario((prev) => ({ ...prev, fechaEventoInput: localDate.toISOString() }));
 	};
 
-	const actualizarCampo = (campo: keyof typeof formulario, valor: string) => {
+	const actualizarCampo = (campo: keyof typeof formulario, valor: string | CategoriaEvento) => {
 		setFormulario((prev) => ({ ...prev, [campo]: valor }));
 	};
 
 	const publicarEvento = async () => {
-		const { titulo, descripcion, lugar, fechaEventoInput } = formulario;
+		const { titulo, descripcion, lugar, fechaEventoInput, categoria } = formulario;
 
 		if (!titulo.trim()) return setMensajePublicacion('Debes escribir un título.');
 		if (!descripcion.trim()) return setMensajePublicacion('Debes escribir una descripción.');
 		if (!lugar.trim()) return setMensajePublicacion('Debes escribir el lugar del evento.');
-		if (!fechaEventoInput.trim())
-			return setMensajePublicacion('Debes seleccionar la fecha del evento.');
+		if (!fechaEventoInput.trim()) return setMensajePublicacion('Debes seleccionar la fecha del evento.');
 
 		const fecha = new Date(fechaEventoInput.trim());
 		if (Number.isNaN(fecha.getTime())) {
@@ -95,23 +105,40 @@ export function CrearEventoModal({ visible, onClose, onSuccess }: CrearEventoMod
 		setMensajePublicacion(null);
 
 		try {
-			await apiClient.post('/api/eventos', {
+			// Enviando los campos que espera el backend
+			const payload = {
 				titulo: titulo.trim(),
 				descripcion: descripcion.trim(),
 				lugar: lugar.trim(),
 				fechaEvento: fecha.toISOString(),
+				categoria: categoria, 
+			};
+			console.log('[CrearEventoModal] Publicando evento con payload:', {
+				...payload,
+				tipos: {
+					titulo: typeof payload.titulo,
+					descripcion: typeof payload.descripcion,
+					lugar: typeof payload.lugar,
+					fechaEvento: typeof payload.fechaEvento,
+					categoria: typeof payload.categoria,
+				}
 			});
+			
+			const response = await apiClient.post('/api/eventos', payload);
+			console.log('[CrearEventoModal] Evento publicado exitosamente:', response);
 
 			limpiarYProcesarExito();
 		} catch (err) {
-			setMensajePublicacion(err instanceof Error ? err.message : 'No se pudo publicar el evento.');
+			const mensaje = err instanceof Error ? err.message : 'No se pudo publicar el evento.';
+			console.error('[CrearEventoModal] Error al publicar evento:', err);
+			setMensajePublicacion(mensaje);
 		} finally {
 			setPublicando(false);
 		}
 	};
 
 	const limpiarYProcesarExito = () => {
-		setFormulario({ titulo: '', descripcion: '', lugar: '', fechaEventoInput: '' });
+		setFormulario({ titulo: '', descripcion: '', lugar: '', fechaEventoInput: '', categoria: 'academico' });
 		setMensajePublicacion(null);
 		onClose();
 		onSuccess();
@@ -119,7 +146,7 @@ export function CrearEventoModal({ visible, onClose, onSuccess }: CrearEventoMod
 	};
 
 	const cancelar = () => {
-		setFormulario({ titulo: '', descripcion: '', lugar: '', fechaEventoInput: '' });
+		setFormulario({ titulo: '', descripcion: '', lugar: '', fechaEventoInput: '', categoria: 'academico' });
 		setMensajePublicacion(null);
 		onClose();
 	};
@@ -166,6 +193,30 @@ export function CrearEventoModal({ visible, onClose, onSuccess }: CrearEventoMod
 						placeholderTextColor={theme.colors.primaryMid}
 						style={styles.input}
 					/>
+
+					{/* --- Selector de Categoría (usando tus estilos de chip) --- */}
+					<Text style={styles.labelCategoria}>Categoría del evento:</Text>
+					<View style={styles.chipRow}>
+						{CATEGORIAS_CREACION.map((cat) => (
+							<Pressable
+								key={cat.value}
+								onPress={() => actualizarCampo('categoria', cat.value)}
+								style={[
+									styles.chip,
+									formulario.categoria === cat.value && styles.chipActivo,
+								]}
+							>
+								<Text
+									style={[
+										styles.chipText,
+										formulario.categoria === cat.value && styles.chipTextoActivo,
+									]}
+								>
+									{cat.label}
+								</Text>
+							</Pressable>
+						))}
+					</View>
 
 					{Platform.OS === 'web' ? (
 						<input
