@@ -12,6 +12,9 @@ import { styles } from '../styles/DetalleGrupoScreen.styles';
 import { useGrupoArchivos } from '../hooks/useGrupoArchivos';
 import { useMiembrosGrupo } from '../hooks/useMiembrosGrupo';
 import { AgregarMiembroModal } from '../components/AgregarMiembroModal';
+import { authService } from '../services/auth.service';
+import { gruposService } from '../services/grupos.service';
+import { showToast } from '../utils/toast';
 
 type DetalleGrupoParamList = {
 	DetalleGrupo: {
@@ -37,6 +40,8 @@ export function DetalleGrupoScreen({ route, navigation }: Props) {
 
 	const [busqueda, setBusqueda] = useState('');
 	const [modalVisible, setModalVisible] = useState(false);
+	const [userId, setUserId] = useState<string | null>(null);
+	const [abandonando, setAbandonando] = useState(false);
 
 	const {
 		archivos,
@@ -61,12 +66,34 @@ export function DetalleGrupoScreen({ route, navigation }: Props) {
 		cargarArchivos();
 	}, [cargarArchivos]);
 
+	useEffect(() => {
+		const getUserId = async () => {
+			const id = await authService.obtenerIdUsuarioActual();
+			setUserId(id);
+		};
+		getUserId();
+	}, []);
+
 	const archivosFiltrados = archivos.filter((a) =>
 		a.nombre.toLowerCase().includes(busqueda.toLowerCase())
 	);
 
 	const formatSize = (bytes: number) => {
 		return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+	};
+
+	const abandonarGrupo = async () => {
+		setAbandonando(true);
+		try {
+			await gruposService.abandonarGrupo(grupoId);
+			// On success, navigate back or show message
+			navigation.goBack();
+		} catch (error) {
+			console.error('Error al abandonar el grupo:', error);
+			showToast.error('No se pudo abandonar el grupo. Verifica que puedas hacerlo.');
+		} finally {
+			setAbandonando(false);
+		}
 	};
 
 	return (
@@ -108,6 +135,22 @@ export function DetalleGrupoScreen({ route, navigation }: Props) {
 					</Pressable>
 				)}
 			</View>
+
+			{userId && (
+				<View style={styles.actionsRow}>
+					<Pressable
+						style={[styles.actionButton, styles.actionButtonDanger]}
+						onPress={abandonarGrupo}
+						disabled={abandonando}
+					>
+						{abandonando ? (
+							<ActivityIndicator color="#FFF" size="small" />
+						) : (
+							<Text style={styles.actionButtonSolidText}>Salir del Grupo</Text>
+						)}
+					</Pressable>
+				</View>
+			)}
 
 			<AgregarMiembroModal
 				visible={modalVisible}
