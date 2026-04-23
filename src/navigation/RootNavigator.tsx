@@ -29,6 +29,7 @@ import {
 } from '../services/notificaciones-chat.service';
 import { upsertUnreadContactRequestNotification } from '../services/notificaciones-solicitudes.service';
 import { publishContactRequestRejected } from '../services/contacto-events.service';
+import { upsertUnreadRejectedRequestNotification } from '../services/notificaciones-rechazos.service';
 
 export type RootStackParamList = {
 	Home: undefined;
@@ -295,6 +296,38 @@ export default function RootNavigator() {
 				if (!isMounted) {
 					return;
 				}
+
+				const receptorNombreCompleto = [
+					payload?.receptorNombre,
+					payload?.receptorApellido,
+				]
+					.filter(Boolean)
+					.join(' ')
+					.trim();
+
+				void upsertUnreadRejectedRequestNotification({
+					solicitudId: String(payload?.solicitudId ?? ''),
+					solicitanteId: String(payload?.solicitanteId ?? ''),
+					receptorId: String(payload?.receptorId ?? ''),
+					receptorNombre: receptorNombreCompleto,
+					tipo: 'contacto',
+					updatedAt:
+						typeof payload?.updatedAt === 'string'
+							? payload.updatedAt
+							: new Date().toISOString(),
+				});
+				void incrementUnreadNotificationsCount();
+				void notifyIncomingMessage({
+					title: 'Solicitud rechazada',
+					body:
+						receptorNombreCompleto.length > 0
+							? `${receptorNombreCompleto} rechazo tu solicitud de contacto.`
+							: 'Una solicitud de contacto enviada por ti fue rechazada.',
+					data: {
+						type: 'contact-request-rejected',
+						solicitudId: String(payload?.solicitudId ?? ''),
+					},
+				});
 
 				publishContactRequestRejected({
 					solicitudId: String(payload?.solicitudId ?? ''),

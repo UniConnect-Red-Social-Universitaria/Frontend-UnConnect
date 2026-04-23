@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 
 import theme from '../styles/theme';
 import { styles } from '../styles/GruposScreen.styles';
@@ -17,8 +18,10 @@ import { CrearGrupoModal } from '../components/CrearGrupoModal';
 import { GruposDisponiblesModal } from '../components/GruposDisponiblesModal';
 
 type RootStackParamList = {
+	Principal: undefined;
 	Eventos: undefined;
 	Grupos: undefined;
+	Contactos: undefined;
 	Login: undefined;
 	DetalleGrupo: {
 		grupoId: string;
@@ -38,7 +41,8 @@ type GruposScreenProps = {
 
 export function GruposScreen({ navigation }: GruposScreenProps) {
 	const [crearGrupoModalVisible, setCrearGrupoModalVisible] = useState(false);
-	const [gruposDisponiblesModalVisible, setGruposDisponiblesModalVisible] = useState(false);
+	const [gruposDisponiblesModalVisible, setGruposDisponiblesModalVisible] =
+		useState(false);
 
 	const {
 		grupos,
@@ -137,25 +141,55 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 				)}
 			</View>
 
-		<Pressable style={styles.navButton} onPress={() => navigation.navigate('Eventos')}>
-			<Text style={styles.navButtonText}>Ver Eventos</Text>
-		</Pressable>
+			<View style={styles.bottomBar}>
+				<Pressable
+					style={styles.footerTab}
+					onPress={() => navigation.navigate('Principal')}
+					accessibilityLabel="Inicio"
+				>
+					<Ionicons name="home-outline" size={24} style={styles.footerIcon} />
+				</Pressable>
 
-		<GruposDisponiblesModal
-			visible={gruposDisponiblesModalVisible}
-			onClose={() => setGruposDisponiblesModalVisible(false)}
-			gruposDisponibles={gruposDisponibles}
-			processingGrupoId={processingGrupoId}
-			onUnirse={unirseAGrupo}
-			loading={loading}
-		/>
+				<Pressable
+					style={[styles.footerTab, styles.footerTabActive]}
+					onPress={() => navigation.navigate('Grupos')}
+					accessibilityLabel="Grupos"
+				>
+					<Ionicons name="people" size={24} style={styles.footerIcon} />
+				</Pressable>
 
-		<CrearGrupoModal
-			visible={crearGrupoModalVisible}
-			onClose={() => setCrearGrupoModalVisible(false)}
-			onSuccess={handleModalSuccess}
-			materiasUsuario={materiasUsuario}
-		/>
-	</View>
+				<Pressable
+					style={styles.footerTab}
+					onPress={() => navigation.navigate('Eventos')}
+					accessibilityLabel="Eventos"
+				>
+					<Ionicons name="calendar-outline" size={24} style={styles.footerIcon} />
+				</Pressable>
+
+				<Pressable
+					style={styles.footerTab}
+					onPress={() => navigation.navigate('Contactos')}
+					accessibilityLabel="Contactos"
+				>
+					<Ionicons name="chatbubbles-outline" size={24} style={styles.footerIcon} />
+				</Pressable>
+			</View>
+
+			<GruposDisponiblesModal
+				visible={gruposDisponiblesModalVisible}
+				onClose={() => setGruposDisponiblesModalVisible(false)}
+				gruposDisponibles={gruposDisponibles}
+				processingGrupoId={processingGrupoId}
+				onUnirse={unirseAGrupo}
+				loading={loading}
+			/>
+
+			<CrearGrupoModal
+				visible={crearGrupoModalVisible}
+				onClose={() => setCrearGrupoModalVisible(false)}
+				onSuccess={handleModalSuccess}
+				materiasUsuario={materiasUsuario}
+			/>
+		</View>
 	);
 }

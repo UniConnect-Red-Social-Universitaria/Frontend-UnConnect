@@ -335,7 +335,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: theme.colors?.primary,
     paddingVertical: 24,
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
     borderTopWidth: 1,
     borderTopColor: '#E0E0E0',
     paddingBottom: 48,
@@ -355,5 +355,21 @@ export const styles = StyleSheet.create({
     color: theme.colors?.white || '#FFFFFF',
     fontWeight: '600',
     fontSize: 20,
+  },
+  footerTab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+  footerTabActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+  },
+  footerIcon: {
+    color: theme.colors?.white || '#FFFFFF',
+  },
+  navButtonTextActive: {
+    fontWeight: '700',
   }
 });
