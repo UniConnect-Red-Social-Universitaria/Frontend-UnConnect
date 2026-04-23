@@ -430,7 +430,13 @@ export default function PrincipalScreen({
 					>
 						<View style={styles.iconWithBadgeContainer}>
 							<Ionicons name="notifications-outline" size={32} color="#007AFF" />
-							{unreadNotifications > 0 && <View style={styles.notificationBadgeDot} />}
+							{unreadNotifications > 0 && (
+								<View style={styles.notificationBadgeDot}>
+									<Text style={styles.notificationBadgeText}>
+										{unreadNotifications > 99 ? '99+' : unreadNotifications}
+									</Text>
+								</View>
+							)}
 						</View>
 					</Pressable>
 				</View>
