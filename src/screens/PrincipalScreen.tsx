@@ -27,7 +27,7 @@ import {
 	getUnreadNotificationsCount,
 	subscribeUnreadNotificationsCount,
 } from '../services/notificaciones-badge.service';
-import { subscribeContactRequestRejected } from '../services/contacto-events.service';
+import { subscribeContactRequestRejectionSeen } from '../services/contacto-events.service';
 
 type RootStackParamList = {
 	Principal: undefined;
@@ -157,7 +157,7 @@ export default function PrincipalScreen({
 	}, []);
 
 	useEffect(() => {
-		const unsubscribe = subscribeContactRequestRejected((payload) => {
+		const unsubscribe = subscribeContactRequestRejectionSeen((payload) => {
 			const receptorId = String(payload?.receptorId ?? '').trim();
 			if (!receptorId) {
 				return;
@@ -500,7 +500,9 @@ export default function PrincipalScreen({
 					</>
 				) : (
 					<>
-						<View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+						<View
+							style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}
+						>
 							<Pressable onPress={handleVolverAMaterias} style={{ marginRight: 8 }}>
 								<Ionicons name="arrow-back" size={24} color="#007AFF" />
 							</Pressable>
@@ -581,16 +583,36 @@ export default function PrincipalScreen({
 			<View
 				style={[styles.bottomBar, isBottomBarStep && styles.onboardingHighlightedBar]}
 			>
-				<Pressable onPress={() => navigation.navigate('Grupos')}>
-					<Text style={styles.navButtonText}>Grupos</Text>
+				<Pressable
+					style={[styles.footerTab, styles.footerTabActive]}
+					onPress={() => navigation.navigate('Principal')}
+					accessibilityLabel="Inicio"
+				>
+					<Ionicons name="home" size={24} style={styles.footerIcon} />
 				</Pressable>
 
-				<Pressable onPress={() => navigation.navigate('Eventos')}>
-					<Text style={styles.navButtonText}>Eventos</Text>
+				<Pressable
+					style={styles.footerTab}
+					onPress={() => navigation.navigate('Grupos')}
+					accessibilityLabel="Grupos"
+				>
+					<Ionicons name="people-outline" size={24} style={styles.footerIcon} />
 				</Pressable>
 
-				<Pressable onPress={() => navigation.navigate('Contactos')}>
-					<Text style={styles.navButtonText}>Contactos</Text>
+				<Pressable
+					style={styles.footerTab}
+					onPress={() => navigation.navigate('Eventos')}
+					accessibilityLabel="Eventos"
+				>
+					<Ionicons name="calendar-outline" size={24} style={styles.footerIcon} />
+				</Pressable>
+
+				<Pressable
+					style={styles.footerTab}
+					onPress={() => navigation.navigate('Contactos')}
+					accessibilityLabel="Contactos"
+				>
+					<Ionicons name="chatbubbles-outline" size={24} style={styles.footerIcon} />
 				</Pressable>
 			</View>
 		</View>

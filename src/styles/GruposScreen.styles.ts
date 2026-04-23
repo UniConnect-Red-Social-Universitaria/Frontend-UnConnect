@@ -216,22 +216,41 @@ export const styles = StyleSheet.create({
     textAlign: "center",
     paddingHorizontal: 20,
   },
-  navButton: {
-    width: "100%",
-    backgroundColor: theme.colors.primary,
-    borderRadius: 0,
-    paddingVertical: 24,
-    paddingHorizontal: 20,
+  bottomBar: {
+    flexDirection: "row",
+    justifyContent: "space-around",
     alignItems: "center",
-    marginTop: 0,
-    paddingBottom: 46,
+    backgroundColor: theme.colors.primary,
+    paddingVertical: 24,
+    paddingHorizontal: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#E0E0E0",
+    paddingBottom: 48,
     paddingTop: 24,
+    width: "100%",
+    alignSelf: "stretch",
     minHeight: 80,
   },
   navButtonText: {
     color: "#ffffff",
     fontSize: 20,
+    fontWeight: "600",
+  },
+  footerTab: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+  footerTabActive: {
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
+  },
+  navButtonTextActive: {
     fontWeight: "700",
+  },
+  footerIcon: {
+    color: "#ffffff",
   },
   // Estilos del Modal de Crear Grupo
   modalOverlay: {
