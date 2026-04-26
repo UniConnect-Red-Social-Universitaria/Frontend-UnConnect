@@ -1,11 +1,6 @@
-# Stage 1: build Expo web assets
-FROM alpine:3.20 AS builder
-
-RUN apk add --no-cache nodejs npm
+FROM node:20-alpine AS builder
 
 WORKDIR /app
-
-RUN apk upgrade --no-cache
 
 ARG EXPO_PUBLIC_API_URL
 ARG EXPO_PUBLIC_ALLOWED_DOMAIN
@@ -33,14 +28,10 @@ RUN npm ci --no-audit --no-fund
 COPY . .
 RUN npm run build:web
 
-# Stage 2: serve static files with Nginx
-FROM alpine:3.20 AS runner
-
-RUN apk add --no-cache nginx
+FROM nginx:alpine AS runner
 
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
-
 CMD ["nginx", "-g", "daemon off;"]

@@ -1,6 +1,3 @@
-# Fly.io app config for Frontend-UnConnect (Expo Web + Nginx)
-# Docs: https://fly.io/docs/reference/configuration/
-
 app = "uniconnect-frontend"
 primary_region = "gru"
 
@@ -8,10 +5,7 @@ primary_region = "gru"
   dockerfile = "Dockerfile"
 
   [build.args]
-    # URL publica del backend que consumira el frontend en build-time.
     EXPO_PUBLIC_API_URL = "https://uniconnect-backend.fly.dev"
-
-    # Variables EXPO_PUBLIC_* utilizadas por el frontend.
     EXPO_PUBLIC_ALLOWED_DOMAIN = "ucaldas.edu.co"
     EXPO_PUBLIC_GOOGLE_CLIENT_ID_EXPO = "tu_client_id_expo.apps.googleusercontent.com"
     EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB = "tu_client_id_web.apps.googleusercontent.com"
@@ -25,7 +19,7 @@ primary_region = "gru"
   internal_port = 80
   force_https = true
   auto_start_machines = true
-  auto_stop_machines = "stop"
+  auto_stop_machines = true
   min_machines_running = 1
   processes = ["app"]
 
@@ -33,7 +27,7 @@ primary_region = "gru"
     grace_period = "15s"
     interval = "30s"
     method = "get"
-    path = "/health"
+    path = "/"
     protocol = "http"
     timeout = "5s"
 
