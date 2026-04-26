@@ -1,0 +1,42 @@
+# Fly.io app config for Frontend-UnConnect (Expo Web + Nginx)
+# Docs: https://fly.io/docs/reference/configuration/
+
+app = "uniconnect-frontend"
+primary_region = "gru"
+
+[build]
+  dockerfile = "Dockerfile"
+
+  [build.args]
+    # URL publica del backend que consumira el frontend en build-time.
+    EXPO_PUBLIC_API_URL = "https://uniconnect-backend.fly.dev"
+
+    # Variables EXPO_PUBLIC_* utilizadas por el frontend.
+    EXPO_PUBLIC_ALLOWED_DOMAIN = "ucaldas.edu.co"
+    EXPO_PUBLIC_GOOGLE_CLIENT_ID_EXPO = "tu_client_id_expo.apps.googleusercontent.com"
+    EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB = "tu_client_id_web.apps.googleusercontent.com"
+    EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID = "tu_client_id_android.apps.googleusercontent.com"
+    EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS = "tu_client_id_ios.apps.googleusercontent.com"
+    EXPO_PUBLIC_AUTH0_DOMAIN = "dev-tu-tenant.us.auth0.com"
+    EXPO_PUBLIC_AUTH0_CLIENT_ID = "tu_client_id_auth0"
+    EXPO_PUBLIC_AUTH0_CONNECTION = "google-oauth2"
+
+[http_service]
+  internal_port = 80
+  force_https = true
+  auto_start_machines = true
+  auto_stop_machines = "stop"
+  min_machines_running = 1
+  processes = ["app"]
+
+  [[http_service.checks]]
+    grace_period = "15s"
+    interval = "30s"
+    method = "get"
+    path = "/health"
+    protocol = "http"
+    timeout = "5s"
+
+[[vm]]
+  cpus = 1
+  memory = "512mb"

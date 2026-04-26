@@ -1,9 +1,12 @@
-# ── Stage 1: builder ──────────────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+# Stage 1: build Expo web assets
+FROM alpine:3.20 AS builder
+
+RUN apk add --no-cache nodejs npm
 
 WORKDIR /app
 
-# Variables de entorno del frontend inyectadas en tiempo de build
+RUN apk upgrade --no-cache
+
 ARG EXPO_PUBLIC_API_URL
 ARG EXPO_PUBLIC_ALLOWED_DOMAIN
 ARG EXPO_PUBLIC_GOOGLE_CLIENT_ID_EXPO
@@ -25,14 +28,15 @@ ENV EXPO_PUBLIC_AUTH0_CLIENT_ID=$EXPO_PUBLIC_AUTH0_CLIENT_ID
 ENV EXPO_PUBLIC_AUTH0_CONNECTION=$EXPO_PUBLIC_AUTH0_CONNECTION
 
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --no-audit --no-fund
 
 COPY . .
-
 RUN npm run build:web
 
-# ── Stage 2: runner ───────────────────────────────────────────────────────────
-FROM nginx:alpine AS runner
+# Stage 2: serve static files with Nginx
+FROM alpine:3.20 AS runner
+
+RUN apk add --no-cache nginx
 
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf

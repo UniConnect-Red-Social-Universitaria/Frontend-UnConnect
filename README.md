@@ -54,9 +54,42 @@ Otros scripts disponibles:
 - `npm run ios`
 - `npm run web`
 
+## Despliegue en Fly.io (web)
+
+El proyecto ya incluye una configuracion productiva para Fly en `fly.toml` y un contenedor con Nginx.
+
+1. Inicia sesion y crea la app (una sola vez):
+
+```bash
+fly auth login
+fly launch --no-deploy
+```
+
+2. Edita `fly.toml` con tus valores reales de Google/Auth0 y la URL de backend.
+
+3. Despliega:
+
+```bash
+fly deploy
+```
+
+4. Verifica salud y URL publica:
+
+```bash
+fly status
+fly checks list
+fly open
+```
+
+Notas:
+
+- El servicio escucha en el puerto interno `80` (Nginx), alineado con `http_service.internal_port`.
+- El build web se genera con `npm run build:web` (Expo export).
+- `nginx.conf` ya incluye fallback SPA (`/index.html`) para evitar errores en rutas directas.
+- Los assets estaticos se sirven con cache agresiva y `index.html` sin cache para evitar versiones inconsistentes.
+
 ## Estructura base
 
 - `App.tsx`: punto de entrada principal de la interfaz.
 - `assets/`: recursos estáticos.
 - `index.ts`: registro de la app.
-
