@@ -490,9 +490,33 @@ export default function RootNavigator() {
 		);
 	}
 
+	const linking = {
+		prefixes: ['https://uniconnect-frontend.fly.dev', 'http://localhost'],
+		config: {
+			screens: {
+				Home: '',
+				Login: 'login',
+				Registro: 'registro',
+				CompletarRegistro: 'completar-registro',
+				Principal: 'principal',
+				Grupos: 'grupos',
+				Eventos: 'eventos',
+				Contactos: 'contactos',
+				Solicitudes: 'solicitudes',
+				EditarPerfil: 'editar-perfil',
+				Notificaciones: 'notificaciones',
+				SolicitudesGrupo: 'solicitudes-grupo',
+				DetalleGrupo: 'grupos/:grupoId',
+				MensajeDirecto: 'mensajes/directo/:contactoId',
+				MensajeGrupo: 'mensajes/grupo/:grupoId',
+			},
+		},
+	};
+
 	return (
 		<NavigationContainer
 			ref={navigationRef}
+			linking={linking}
 			onReady={() => {
 				const state = navigationRef.current?.getRootState?.();
 				activeRouteRef.current = getDeepestRouteName(state as NavigationState);
