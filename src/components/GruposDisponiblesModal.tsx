@@ -64,10 +64,10 @@ export function GruposDisponiblesModal({
 										grupo.yaPertenece ||
 										grupo.estaLleno ||
 										processingGrupoId === grupo.id;
-									let textoBoton = 'Unirme';
+									let textoBoton = 'Solicitar ingreso';
 									if (grupo.yaPertenece) textoBoton = 'Ya eres miembro';
 									else if (grupo.estaLleno) textoBoton = 'Grupo lleno';
-									else if (processingGrupoId === grupo.id) textoBoton = 'Uniendome...';
+									else if (processingGrupoId === grupo.id) textoBoton = 'Solicitando...';
 
 									return (
 										<View key={grupo.id} style={styles.card}>

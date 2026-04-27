@@ -12,6 +12,7 @@ import { styles } from '../styles/DetalleGrupoScreen.styles';
 import { useGrupoArchivos } from '../hooks/useGrupoArchivos';
 import { useMiembrosGrupo } from '../hooks/useMiembrosGrupo';
 import { AgregarMiembroModal } from '../components/AgregarMiembroModal';
+import { TransferirAdminModal } from '../components/TransferirAdminModal';
 import { authService } from '../services/auth.service';
 import { gruposService } from '../services/grupos.service';
 import { showToast } from '../utils/toast';
@@ -40,6 +41,7 @@ export function DetalleGrupoScreen({ route, navigation }: Props) {
 
 	const [busqueda, setBusqueda] = useState('');
 	const [modalVisible, setModalVisible] = useState(false);
+	const [transferirModalVisible, setTransferirModalVisible] = useState(false);
 	const [userId, setUserId] = useState<string | null>(null);
 	const [abandonando, setAbandonando] = useState(false);
 
@@ -134,6 +136,15 @@ export function DetalleGrupoScreen({ route, navigation }: Props) {
 						<Text style={styles.actionButtonSolidText}>+ Miembro</Text>
 					</Pressable>
 				)}
+
+				{isAdmin && (
+					<Pressable
+						style={[styles.actionButton, { backgroundColor: '#D97706', borderColor: '#D97706' }]}
+						onPress={() => setTransferirModalVisible(true)}
+					>
+						<Text style={styles.actionButtonSolidText}>Transferir</Text>
+					</Pressable>
+				)}
 			</View>
 
 			{userId && (
@@ -159,6 +170,14 @@ export function DetalleGrupoScreen({ route, navigation }: Props) {
 				cargandoCandidatos={cargandoCandidatos}
 				agregando={agregando}
 				onAgregar={(id) => agregarMiembro(id, () => setModalVisible(false))}
+			/>
+
+			<TransferirAdminModal
+				visible={transferirModalVisible}
+				onClose={() => setTransferirModalVisible(false)}
+				grupoId={grupoId}
+				nombreGrupo={nombreGrupo}
+				onTransferido={() => navigation.goBack()}
 			/>
 
 			<View style={styles.searchContainer}>

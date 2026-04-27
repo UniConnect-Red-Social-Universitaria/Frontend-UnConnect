@@ -85,15 +85,18 @@ export function useGrupos(navigation: any) {
     }
   }, [navigation]);
 
-  const unirseAGrupo = useCallback(
+  const solicitarIngreso = useCallback(
     async (grupoId: string) => {
       setProcessingGrupoId(grupoId);
       try {
-        await gruposService.unirseAGrupo(grupoId);
+        await gruposService.solicitarIngreso(grupoId);
+        showToast.success("Solicitud de ingreso enviada correctamente");
         setError(null);
         await cargarGrupos();
       } catch (err: any) {
-        setError(err.message || "Error al unirse al grupo");
+        const msg = err.message || "Error al solicitar ingreso";
+        showToast.error(msg);
+        setError(msg);
       } finally {
         setProcessingGrupoId(null);
       }
@@ -125,7 +128,7 @@ export function useGrupos(navigation: any) {
     loading,
     error,
     processingGrupoId,
-    unirseAGrupo,
+    solicitarIngreso,
     cargarGrupos,
   };
 }

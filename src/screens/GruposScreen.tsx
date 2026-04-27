@@ -51,7 +51,7 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 		loading,
 		error,
 		processingGrupoId,
-		unirseAGrupo,
+		solicitarIngreso,
 		cargarGrupos,
 	} = useGrupos(navigation);
 
@@ -180,7 +180,7 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 				onClose={() => setGruposDisponiblesModalVisible(false)}
 				gruposDisponibles={gruposDisponibles}
 				processingGrupoId={processingGrupoId}
-				onUnirse={unirseAGrupo}
+				onUnirse={solicitarIngreso}
 				loading={loading}
 			/>
 
