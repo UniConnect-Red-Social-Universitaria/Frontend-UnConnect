@@ -36,9 +36,15 @@ import {
 	type UnreadRejectedRequestNotification,
 } from '../services/notificaciones-rechazos.service';
 import { publishContactRequestRejectionSeen } from '../services/contacto-events.service';
-import { authService } from '../services';
+import { authService, gruposService } from '../services';
 import { showToast } from '../utils/toast';
 import type { RootStackParamList } from '../navigation/RootNavigator';
+import {
+	clearUnreadGroupEventNotification,
+	getUnreadGroupEventNotifications,
+	subscribeUnreadGroupEventNotifications,
+	type UnreadGroupEventNotification,
+} from '../services/notificaciones-grupo.service';
 
 type NotificacionesNavigationProp = StackNavigationProp<
 	RootStackParamList,
@@ -62,6 +68,8 @@ export default function NotificacionesScreen({
 	const [unreadRejectedRequests, setUnreadRejectedRequests] = useState<
 		UnreadRejectedRequestNotification[]
 	>([]);
+	const [unreadGroupEvents, setUnreadGroupEvents] = useState<UnreadGroupEventNotification[]>([]);
+	const [esAdminDeGrupos, setEsAdminDeGrupos] = useState(false);
 	const { width } = useWindowDimensions();
 	const logoWidth = width < 380 ? 150 : width < 480 ? 180 : 220;
 
@@ -69,7 +77,8 @@ export default function NotificacionesScreen({
 		| (UnreadDirectChatNotification & { kind: 'direct'; key: string })
 		| (UnreadGroupChatNotification & { kind: 'group'; key: string })
 		| (UnreadContactRequestNotification & { kind: 'request'; key: string })
-		| (UnreadRejectedRequestNotification & { kind: 'request-rejected'; key: string });
+		| (UnreadRejectedRequestNotification & { kind: 'request-rejected'; key: string })
+		| (UnreadGroupEventNotification & { kind: 'grupo-event'; key: string });
 
 	const unreadChats = useMemo<NotificationItem[]>(() => {
 		const directItems: NotificationItem[] = unreadDirectChats.map((item) => ({
@@ -96,20 +105,30 @@ export default function NotificacionesScreen({
 			key: `request-rejected-${item.solicitudId}`,
 		}));
 
-		return [...directItems, ...groupItems, ...requestItems, ...rejectedItems].sort(
+		const grupoEventItems: NotificationItem[] = unreadGroupEvents.map((item) => ({
+			...item,
+			kind: 'grupo-event',
+			key: `grupo-event-${item.id}`,
+		}));
+
+		return [...directItems, ...groupItems, ...requestItems, ...rejectedItems, ...grupoEventItems].sort(
 			(a, b) => {
 				const dateA =
 					a.kind === 'request'
 						? new Date(a.createdAt).getTime()
 						: a.kind === 'request-rejected'
 							? new Date(a.updatedAt).getTime()
-							: new Date(a.updatedAt).getTime();
+							: a.kind === 'grupo-event'
+								? new Date(a.createdAt).getTime()
+								: new Date(a.updatedAt).getTime();
 				const dateB =
 					b.kind === 'request'
 						? new Date(b.createdAt).getTime()
 						: b.kind === 'request-rejected'
 							? new Date(b.updatedAt).getTime()
-							: new Date(b.updatedAt).getTime();
+							: b.kind === 'grupo-event'
+								? new Date(b.createdAt).getTime()
+								: new Date(b.updatedAt).getTime();
 				return dateB - dateA;
 			}
 		);
@@ -118,6 +137,7 @@ export default function NotificacionesScreen({
 		unreadGroupChats,
 		unreadContactRequests,
 		unreadRejectedRequests,
+		unreadGroupEvents,
 	]);
 
 	useEffect(() => {
@@ -137,6 +157,10 @@ export default function NotificacionesScreen({
 			setUnreadRejectedRequests(items);
 		});
 
+		const unsubscribeGroupEvents = subscribeUnreadGroupEventNotifications((items) => {
+			setUnreadGroupEvents(items);
+		});
+
 		void getUnreadDirectChatNotifications().then((items) => {
 			setUnreadDirectChats(items);
 		});
@@ -153,12 +177,33 @@ export default function NotificacionesScreen({
 			setUnreadRejectedRequests(items);
 		});
 
+		void getUnreadGroupEventNotifications().then((items) => {
+			setUnreadGroupEvents(items);
+		});
+
 		return () => {
 			unsubscribeDirect();
 			unsubscribeGroup();
 			unsubscribeRequests();
 			unsubscribeRejected();
+			unsubscribeGroupEvents();
 		};
+	}, []);
+
+	useEffect(() => {
+		const verificarAdminGrupos = async () => {
+			try {
+				const userId = await authService.obtenerIdUsuarioActual();
+				const misGrupos = await gruposService.getGrupos();
+				const tieneGrupos = (misGrupos as any[]).some(
+					(g) => g.creadorId === userId || g.administradorId === userId,
+				);
+				setEsAdminDeGrupos(tieneGrupos);
+			} catch {
+				setEsAdminDeGrupos(false);
+			}
+		};
+		verificarAdminGrupos();
 	}, []);
 
 	useFocusEffect(
@@ -193,6 +238,16 @@ export default function NotificacionesScreen({
 			return;
 		}
 
+		if (item.kind === 'grupo-event') {
+			await clearUnreadGroupEventNotification(item.id);
+			if (item.tipo === 'solicitud-ingreso') {
+				navigation.navigate('SolicitudesGrupo');
+			} else {
+				navigation.navigate('Grupos');
+			}
+			return;
+		}
+
 		if (item.kind === 'direct') {
 			await clearUnreadDirectChatNotification(item.contactoId);
 			navigation.navigate('MensajeDirecto', {
@@ -220,9 +275,11 @@ export default function NotificacionesScreen({
 							? item.nombreGrupo
 							: item.kind === 'request'
 								? item.nombre
-								: 'Solicitud rechazada'}
+								: item.kind === 'grupo-event'
+									? item.grupoNombre
+									: 'Solicitud rechazada'}
 				</Text>
-				{item.kind !== 'request' && item.mensajesNoLeidos > 1 ? (
+				{(item.kind === 'direct' || item.kind === 'group') && item.mensajesNoLeidos > 1 ? (
 					<Text style={localStyles.counter}>{item.mensajesNoLeidos} nuevos</Text>
 				) : null}
 			</View>
@@ -233,14 +290,24 @@ export default function NotificacionesScreen({
 						? 'Mensaje de grupo'
 						: item.kind === 'request'
 							? 'Solicitud de contacto'
-							: 'Solicitud rechazada'}
+							: item.kind === 'grupo-event'
+								? item.tipo === 'solicitud-ingreso'
+									? 'Solicitud de grupo'
+									: item.tipo === 'solicitud-aprobada'
+										? 'Solicitud aprobada'
+										: item.tipo === 'solicitud-rechazada'
+											? 'Solicitud rechazada'
+											: 'Cambio de administrador'
+								: 'Solicitud rechazada'}
 			</Text>
 			<Text style={localStyles.cardMessage} numberOfLines={2}>
 				{item.kind === 'request'
 					? 'Te envio una solicitud de contacto.'
 					: item.kind === 'request-rejected'
 						? `Tu solicitud a ${item.receptorNombre || 'usuario'} fue rechazada. Puedes volver a enviarla.`
-						: item.ultimoMensaje || 'Te envio un mensaje nuevo'}
+						: item.kind === 'grupo-event'
+							? item.mensaje
+							: item.ultimoMensaje || 'Te envio un mensaje nuevo'}
 			</Text>
 
 			<Pressable
@@ -254,7 +321,11 @@ export default function NotificacionesScreen({
 						? 'Ver solicitud'
 						: item.kind === 'request-rejected'
 							? 'Visto'
-							: 'Ver mensaje'}
+							: item.kind === 'grupo-event'
+								? item.tipo === 'solicitud-ingreso'
+									? 'Ver solicitudes'
+									: 'Ver grupo'
+								: 'Ver mensaje'}
 				</Text>
 			</Pressable>
 		</View>
@@ -299,6 +370,45 @@ export default function NotificacionesScreen({
 				<Text style={styles.subtitle}>
 					Aqui veras chats y solicitudes pendientes por revisar.
 				</Text>
+
+				{esAdminDeGrupos ? (
+					<Pressable
+						style={{
+							backgroundColor: '#FFFFFF',
+							borderRadius: 12,
+							padding: 14,
+							marginBottom: 16,
+							borderWidth: 1,
+							borderColor: '#D8E3EE',
+							flexDirection: 'row',
+							alignItems: 'center',
+							gap: 12,
+						}}
+						onPress={() => navigation.navigate('SolicitudesGrupo')}
+					>
+						<View
+							style={{
+								width: 40,
+								height: 40,
+								borderRadius: 20,
+								backgroundColor: '#EAF3FF',
+								alignItems: 'center',
+								justifyContent: 'center',
+							}}
+						>
+							<Ionicons name="people-circle-outline" size={22} color="#003d70" />
+						</View>
+						<View style={{ flex: 1 }}>
+							<Text style={{ fontSize: 15, fontWeight: '700', color: '#0A4478' }}>
+								Solicitudes de ingreso a grupos
+							</Text>
+							<Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
+								Revisa quién quiere unirse a tus grupos
+							</Text>
+						</View>
+						<Ionicons name="chevron-forward" size={20} color="#94A3B8" />
+					</Pressable>
+				) : null}
 
 				<FlatList
 					data={unreadChats}
