@@ -1,0 +1,35 @@
+# fly.toml — configuración de despliegue del dashboard web en Fly.io
+app = 'uniconnect-frontend'
+primary_region = 'gru'
+
+[build]
+  [build.args]
+    EXPO_PUBLIC_API_URL            = "https://uniconnect-backend.fly.dev"
+    EXPO_PUBLIC_ALLOWED_DOMAIN     = "ucaldas.edu.co"
+    EXPO_PUBLIC_AUTH0_CONNECTION   = "google-oauth2"
+    # Las siguientes se pasan via `fly secrets set` antes del deploy
+    # para no exponerlas en el repositorio:
+    # EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB
+    # EXPO_PUBLIC_AUTH0_DOMAIN
+    # EXPO_PUBLIC_AUTH0_CLIENT_ID
+
+[http_service]
+  internal_port       = 80
+  force_https         = true
+  auto_stop_machines  = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes           = ['app']
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval     = "30s"
+    method       = "get"
+    path         = "/"
+    protocol     = "http"
+    timeout      = "5s"
+
+[[vm]]
+  memory   = '256mb'
+  cpus     = 1
+  memory_mb = 256
