@@ -1,0 +1,25 @@
+name: Deploy Frontend to Fly.io
+
+on:
+  push:
+    branches:
+      - developer
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io
+        run: |
+          flyctl deploy --remote-only \
+            --build-arg EXPO_PUBLIC_API_URL="https://uniconnect-backend.fly.dev" \
+            --build-arg EXPO_PUBLIC_ALLOWED_DOMAIN="ucaldas.edu.co" \
+            --build-arg EXPO_PUBLIC_AUTH0_CONNECTION="google-oauth2"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
