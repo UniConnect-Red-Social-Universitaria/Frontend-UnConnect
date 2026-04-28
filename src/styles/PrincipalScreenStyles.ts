@@ -379,5 +379,93 @@ export const styles = StyleSheet.create({
   },
   navButtonTextActive: {
     fontWeight: '700',
-  }
+  },
+
+  // --- LAYOUT DESKTOP ---
+  desktopContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: '#f0f4f8',
+  },
+  sidebar: {
+    width: 220,
+    backgroundColor: '#ffffff',
+    borderRightWidth: 1,
+    borderRightColor: '#e0e0e0',
+    paddingTop: 32,
+    paddingHorizontal: 16,
+    paddingBottom: 24,
+    justifyContent: 'space-between',
+  },
+  sidebarLogo: {
+    width: 120,
+    height: 48,
+    alignSelf: 'center',
+    marginBottom: 8,
+  },
+  sidebarBrand: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#003d70',
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  sidebarNav: {
+    flex: 1,
+    gap: 4,
+  },
+  sidebarItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+  },
+  sidebarItemActive: {
+    backgroundColor: '#EBF3FF',
+  },
+  sidebarItemText: {
+    fontSize: 15,
+    color: '#444',
+    fontWeight: '500',
+  },
+  sidebarItemTextActive: {
+    color: '#007AFF',
+    fontWeight: '700',
+  },
+  sidebarBadge: {
+    backgroundColor: '#E53935',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  sidebarBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  sidebarLogout: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#003d70',
+    borderRadius: 10,
+    paddingVertical: 12,
+    marginTop: 16,
+  },
+  sidebarLogoutText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  desktopMain: {
+    flex: 1,
+    padding: 32,
+    backgroundColor: '#f0f4f8',
+  },
 });

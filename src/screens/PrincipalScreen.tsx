@@ -13,6 +13,7 @@ import {
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 import globalStyles from '../styles/global';
 import { styles } from '../styles/PrincipalScreenStyles';
 import {
@@ -91,6 +92,7 @@ export default function PrincipalScreen({
 }) {
 	const { width } = useWindowDimensions();
 	const logoWidth = width < 380 ? 150 : width < 480 ? 180 : 220;
+	const isDesktop = useIsDesktop();
 
 	const [search, setSearch] = useState('');
 	const [materiaResults, setMateriaResults] = useState<any[]>([]);
@@ -347,6 +349,234 @@ export default function PrincipalScreen({
 		);
 	}
 
+	const mainContent = (
+		<>
+			<Text style={styles.greeting}>¡Hola!</Text>
+			<Text style={styles.subtitle}>Encuentra tu comunidad en la universidad</Text>
+
+			{!selectedMateria ? (
+				<>
+					<View
+						style={[
+							styles.searchContainer,
+							isSearchStep && styles.onboardingHighlightedPrimaryElement,
+						]}
+					>
+						<TextInput
+							placeholder="Buscar materia..."
+							placeholderTextColor="#999"
+							style={styles.searchInput}
+							value={search}
+							onChangeText={setSearch}
+						/>
+					</View>
+
+					<ScrollView style={{ marginTop: 10 }}>
+						{materiaResults.length > 0 && (
+							<>
+								<Text style={styles.resultsTitle}>Materias</Text>
+								{materiaResults.map((item) => (
+									<Pressable
+										key={item.id || item._id}
+										style={styles.userResultCard}
+										onPress={() => void handleSeleccionarMateria(item.nombre)}
+									>
+										<View style={styles.userResultInfo}>
+											<Text style={styles.userResultName}>{item.nombre}</Text>
+										</View>
+										<Ionicons name="chevron-forward" size={20} color="#007AFF" />
+									</Pressable>
+								))}
+							</>
+						)}
+
+						{materiaResults.length === 0 && search.trim() !== '' && (
+							<Text style={{ color: '#CCC', marginTop: 10 }}>
+								No se encontraron materias.
+							</Text>
+						)}
+					</ScrollView>
+				</>
+			) : (
+				<>
+					<View
+						style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}
+					>
+						<Pressable onPress={handleVolverAMaterias} style={{ marginRight: 8 }}>
+							<Ionicons name="arrow-back" size={24} color="#007AFF" />
+						</Pressable>
+						<Text style={styles.resultsTitle}>{selectedMateria}</Text>
+					</View>
+
+					{loadingCompaneros ? (
+						<ActivityIndicator size="small" color="#007AFF" style={{ marginTop: 20 }} />
+					) : (
+						<ScrollView style={{ marginTop: 4 }}>
+							{companerosResults.length > 0 ? (
+								companerosResults.map((item) => (
+									<View key={item.id || item._id} style={styles.userResultCard}>
+										<View style={styles.userResultInfo}>
+											<Text style={styles.userResultName}>
+												{item.nombre} {item.apellido}
+											</Text>
+											<Text style={styles.userResultEmail}>{item.correo}</Text>
+										</View>
+										{(() => {
+											const usuarioId = String(item.id || item._id || '');
+											const esUsuarioActual =
+												!!currentUserId && usuarioId === currentUserId;
+											const esContacto = contactIds.has(usuarioId);
+											const solicitudEnviada = solicitudesEnviadasIds.has(usuarioId);
+											const solicitudEnProceso = sendingRequestIds.has(usuarioId);
+											const puedeEnviar =
+												usuarioId.length > 0 && !esUsuarioActual && !esContacto;
+
+											if (esContacto) {
+												return (
+													<View style={styles.userStatusBadge}>
+														<Text style={styles.userStatusBadgeText}>Agregado</Text>
+													</View>
+												);
+											}
+
+											if (!puedeEnviar) {
+												return null;
+											}
+
+											return (
+												<Pressable
+													style={[
+														styles.sendRequestButton,
+														(solicitudEnviada || solicitudEnProceso) &&
+															styles.sendRequestButtonDisabled,
+													]}
+													disabled={solicitudEnviada || solicitudEnProceso}
+													onPress={() =>
+														void handleEnviarSolicitud(usuarioId, item.nombre)
+													}
+												>
+													<Text style={styles.sendRequestButtonText}>
+														{solicitudEnProceso
+															? 'Enviando...'
+															: solicitudEnviada
+																? 'Enviada'
+																: 'Enviar solicitud'}
+													</Text>
+												</Pressable>
+											);
+										})()}
+									</View>
+								))
+							) : (
+								<Text style={{ color: '#CCC', marginTop: 10 }}>
+									No hay compañeros en esta materia.
+								</Text>
+							)}
+						</ScrollView>
+					)}
+				</>
+			)}
+		</>
+	);
+
+	if (isDesktop) {
+		return (
+			<View style={styles.desktopContainer}>
+				<Modal visible={showOnboarding} transparent animationType="fade">
+					<View style={styles.onboardingBackdrop}>
+						<View style={styles.onboardingCard}>
+							<Text style={styles.onboardingStepCounter}>
+								{currentOnboardingStep + 1}/{onboardingSteps.length}
+							</Text>
+							<View style={styles.onboardingIconWrap}>
+								<Ionicons name={currentStep.icon} size={34} color="#007AFF" />
+							</View>
+							<Text style={styles.onboardingTitle}>{currentStep.title}</Text>
+							<Text style={styles.onboardingDescription}>{currentStep.description}</Text>
+							<View style={styles.onboardingDotsRow}>
+								{onboardingSteps.map((_, index) => (
+									<View
+										key={index}
+										style={[
+											styles.onboardingDot,
+											index === currentOnboardingStep && styles.onboardingDotActive,
+										]}
+									/>
+								))}
+							</View>
+							<View style={styles.onboardingActions}>
+								<Pressable style={styles.onboardingSecondaryButton} onPress={handleCloseOnboarding}>
+									<Text style={styles.onboardingSecondaryButtonText}>Omitir</Text>
+								</Pressable>
+								<Pressable style={styles.onboardingPrimaryButton} onPress={handleNextOnboardingStep}>
+									<Text style={styles.onboardingPrimaryButtonText}>
+										{currentOnboardingStep === onboardingSteps.length - 1 ? 'Comenzar' : 'Siguiente'}
+									</Text>
+								</Pressable>
+							</View>
+						</View>
+					</View>
+				</Modal>
+
+				{/* SIDEBAR */}
+				<View style={styles.sidebar}>
+					<Image
+						source={require('../../assets/images/logo-caldas.png')}
+						style={styles.sidebarLogo}
+						resizeMode="contain"
+					/>
+					<Text style={styles.sidebarBrand}>UniConnect</Text>
+
+					<View style={styles.sidebarNav}>
+						<Pressable style={[styles.sidebarItem, styles.sidebarItemActive]} onPress={() => navigation.navigate('Principal')}>
+							<Ionicons name="home" size={20} color="#007AFF" />
+							<Text style={[styles.sidebarItemText, styles.sidebarItemTextActive]}>Inicio</Text>
+						</Pressable>
+						<Pressable style={styles.sidebarItem} onPress={() => navigation.navigate('Grupos')}>
+							<Ionicons name="people-outline" size={20} color="#555" />
+							<Text style={styles.sidebarItemText}>Grupos</Text>
+						</Pressable>
+						<Pressable style={styles.sidebarItem} onPress={() => navigation.navigate('Eventos')}>
+							<Ionicons name="calendar-outline" size={20} color="#555" />
+							<Text style={styles.sidebarItemText}>Eventos</Text>
+						</Pressable>
+						<Pressable style={styles.sidebarItem} onPress={() => navigation.navigate('Contactos')}>
+							<Ionicons name="chatbubbles-outline" size={20} color="#555" />
+							<Text style={styles.sidebarItemText}>Contactos</Text>
+						</Pressable>
+						<Pressable style={styles.sidebarItem} onPress={() => navigation.navigate('Notificaciones')}>
+							<View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+								<Ionicons name="notifications-outline" size={20} color="#555" />
+								{unreadNotifications > 0 && (
+									<View style={styles.sidebarBadge}>
+										<Text style={styles.sidebarBadgeText}>
+											{unreadNotifications > 99 ? '99+' : unreadNotifications}
+										</Text>
+									</View>
+								)}
+							</View>
+							<Text style={styles.sidebarItemText}>Notificaciones</Text>
+						</Pressable>
+						<Pressable style={styles.sidebarItem} onPress={() => navigation.navigate('EditarPerfil')}>
+							<Ionicons name="person-circle-outline" size={20} color="#555" />
+							<Text style={styles.sidebarItemText}>Perfil</Text>
+						</Pressable>
+					</View>
+
+					<Pressable style={styles.sidebarLogout} onPress={handleLogout}>
+						<Ionicons name="log-out-outline" size={20} color="#fff" />
+						<Text style={styles.sidebarLogoutText}>Salir</Text>
+					</Pressable>
+				</View>
+
+				{/* CONTENIDO PRINCIPAL */}
+				<View style={styles.desktopMain}>
+					{mainContent}
+				</View>
+			</View>
+		);
+	}
+
 	return (
 		<View style={styles.container}>
 			<Modal visible={showOnboarding} transparent animationType="fade">
@@ -442,7 +672,6 @@ export default function PrincipalScreen({
 				</View>
 
 				<View style={styles.headerRight}>
-					{/* botón salir */}
 					<Pressable
 						style={[
 							styles.logoutButton,
@@ -458,131 +687,7 @@ export default function PrincipalScreen({
 
 			{/* MAIN */}
 			<View style={styles.mainContent}>
-				<Text style={styles.greeting}>¡Hola!</Text>
-				<Text style={styles.subtitle}>Encuentra tu comunidad en la universidad</Text>
-
-				{!selectedMateria ? (
-					<>
-						<View
-							style={[
-								styles.searchContainer,
-								isSearchStep && styles.onboardingHighlightedPrimaryElement,
-							]}
-						>
-							<TextInput
-								placeholder="Buscar materia..."
-								placeholderTextColor="#999"
-								style={styles.searchInput}
-								value={search}
-								onChangeText={setSearch}
-							/>
-						</View>
-
-						<ScrollView style={{ marginTop: 10 }}>
-							{materiaResults.length > 0 && (
-								<>
-									<Text style={styles.resultsTitle}>Materias</Text>
-									{materiaResults.map((item) => (
-										<Pressable
-											key={item.id || item._id}
-											style={styles.userResultCard}
-											onPress={() => void handleSeleccionarMateria(item.nombre)}
-										>
-											<View style={styles.userResultInfo}>
-												<Text style={styles.userResultName}>{item.nombre}</Text>
-											</View>
-											<Ionicons name="chevron-forward" size={20} color="#007AFF" />
-										</Pressable>
-									))}
-								</>
-							)}
-
-							{materiaResults.length === 0 && search.trim() !== '' && (
-								<Text style={{ color: '#CCC', marginTop: 10 }}>
-									No se encontraron materias.
-								</Text>
-							)}
-						</ScrollView>
-					</>
-				) : (
-					<>
-						<View
-							style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}
-						>
-							<Pressable onPress={handleVolverAMaterias} style={{ marginRight: 8 }}>
-								<Ionicons name="arrow-back" size={24} color="#007AFF" />
-							</Pressable>
-							<Text style={styles.resultsTitle}>{selectedMateria}</Text>
-						</View>
-
-						{loadingCompaneros ? (
-							<ActivityIndicator size="small" color="#007AFF" style={{ marginTop: 20 }} />
-						) : (
-							<ScrollView style={{ marginTop: 4 }}>
-								{companerosResults.length > 0 ? (
-									companerosResults.map((item) => (
-										<View key={item.id || item._id} style={styles.userResultCard}>
-											<View style={styles.userResultInfo}>
-												<Text style={styles.userResultName}>
-													{item.nombre} {item.apellido}
-												</Text>
-												<Text style={styles.userResultEmail}>{item.correo}</Text>
-											</View>
-											{(() => {
-												const usuarioId = String(item.id || item._id || '');
-												const esUsuarioActual =
-													!!currentUserId && usuarioId === currentUserId;
-												const esContacto = contactIds.has(usuarioId);
-												const solicitudEnviada = solicitudesEnviadasIds.has(usuarioId);
-												const solicitudEnProceso = sendingRequestIds.has(usuarioId);
-												const puedeEnviar =
-													usuarioId.length > 0 && !esUsuarioActual && !esContacto;
-
-												if (esContacto) {
-													return (
-														<View style={styles.userStatusBadge}>
-															<Text style={styles.userStatusBadgeText}>Agregado</Text>
-														</View>
-													);
-												}
-
-												if (!puedeEnviar) {
-													return null;
-												}
-
-												return (
-													<Pressable
-														style={[
-															styles.sendRequestButton,
-															(solicitudEnviada || solicitudEnProceso) &&
-																styles.sendRequestButtonDisabled,
-														]}
-														disabled={solicitudEnviada || solicitudEnProceso}
-														onPress={() =>
-															void handleEnviarSolicitud(usuarioId, item.nombre)
-														}
-													>
-														<Text style={styles.sendRequestButtonText}>
-															{solicitudEnProceso
-																? 'Enviando...'
-																: solicitudEnviada
-																	? 'Enviada'
-																	: 'Enviar solicitud'}
-														</Text>
-													</Pressable>
-												);
-											})()}
-										</View>
-									))
-								) : (
-									<Text style={{ color: '#CCC', marginTop: 10 }}>
-										No hay compañeros en esta materia.
-									</Text>
-								)}
-							</ScrollView>
-						)}
-					</>
-				)}
+				{mainContent}
 			</View>
 
 			{/* FOOTER */}
