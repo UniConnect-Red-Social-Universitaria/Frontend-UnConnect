@@ -22,6 +22,7 @@ import type { Usuario } from '../types/api.types';
 
 // Importamos los estilos separados
 import { styles } from '../styles/ContactScreen.styles';
+import { DesktopSidebar } from '../components/DesktopSidebar';
 
 type Contacto = {
 	id: string;
@@ -264,6 +265,7 @@ export default function ContactScreen() {
 	};
 
 	return (
+		<DesktopSidebar navigation={navigation} activeScreen="Contactos">
 		<View style={principalStyles.container}>
 			<View style={principalStyles.header}>
 				<View style={principalStyles.headerLeft}>
@@ -461,5 +463,6 @@ export default function ContactScreen() {
 				</Pressable>
 			</View>
 		</View>
+		</DesktopSidebar>
 	);
 }

@@ -45,6 +45,7 @@ import {
 	subscribeUnreadGroupEventNotifications,
 	type UnreadGroupEventNotification,
 } from '../services/notificaciones-grupo.service';
+import { DesktopSidebar } from '../components/DesktopSidebar';
 
 type NotificacionesNavigationProp = StackNavigationProp<
 	RootStackParamList,
@@ -332,6 +333,7 @@ export default function NotificacionesScreen({
 	);
 
 	return (
+		<DesktopSidebar navigation={navigation} activeScreen="Notificaciones">
 		<View style={styles.container}>
 			<View style={styles.header}>
 				<View style={styles.headerLeft}>
@@ -465,5 +467,6 @@ export default function NotificacionesScreen({
 				</Pressable>
 			</View>
 		</View>
+		</DesktopSidebar>
 	);
 }

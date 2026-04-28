@@ -10,6 +10,7 @@ import { styles } from '../styles/EventosScreen.styles';
 import { apiClient } from '../services';
 import { CrearEventoModal } from '../components/CrearEventoModal';
 import { resolverApiBaseUrl } from '../utils/apiConfig';
+import { DesktopSidebar } from '../components/DesktopSidebar';
 
 // --- Tipos ---
 type RootStackParamList = {
@@ -175,6 +176,7 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 	};
 
 	return (
+		<DesktopSidebar navigation={navigation} activeScreen="Eventos">
 		<View style={styles.container}>
 			<View style={styles.contentWrapper}>
 				<View style={styles.headerWithButton}>
@@ -327,5 +329,6 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 				onSuccess={handleEventoSuccess}
 			/>
 		</View>
+		</DesktopSidebar>
 	);
 }

@@ -16,6 +16,7 @@ import { styles } from '../styles/GruposScreen.styles';
 import { useGrupos } from '../hooks/useGrupos';
 import { CrearGrupoModal } from '../components/CrearGrupoModal';
 import { GruposDisponiblesModal } from '../components/GruposDisponiblesModal';
+import { DesktopSidebar } from '../components/DesktopSidebar';
 
 type RootStackParamList = {
 	Principal: undefined;
@@ -68,6 +69,7 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 	};
 
 	return (
+		<DesktopSidebar navigation={navigation} activeScreen="Grupos">
 		<View style={styles.container}>
 			<View style={styles.contentWrapper}>
 				<View style={styles.header}>
@@ -84,7 +86,17 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 				</View>
 
 				{loading && <ActivityIndicator color={theme.colors.primary} size="large" />}
-				{error && <Text style={styles.error}>{error}</Text>}
+				{error && (
+					<>
+						<Text style={styles.error}>{error}</Text>
+						<Pressable
+							onPress={() => cargarGrupos()}
+							style={{ alignSelf: 'center', marginTop: 8, paddingVertical: 8, paddingHorizontal: 20, backgroundColor: theme.colors.primary, borderRadius: 8 }}
+						>
+							<Text style={{ color: '#fff', fontWeight: '700' }}>Reintentar</Text>
+						</Pressable>
+					</>
+				)}
 
 				{!loading && !error && (
 					<View style={[styles.scrollView, { flex: 1 }]}>
@@ -191,5 +203,6 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 				materiasUsuario={materiasUsuario}
 			/>
 		</View>
+		</DesktopSidebar>
 	);
 }
