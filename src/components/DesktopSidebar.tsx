@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, Image, StyleSheet } from 'react-native';
+import { View, Text, Pressable, Image, StyleSheet, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { authService } from '../services';
@@ -25,6 +25,10 @@ const NAV_ITEMS = [
 
 export function DesktopSidebar({ navigation, activeScreen, unreadNotifications = 0, children }: Props) {
     const isDesktop = useIsDesktop();
+    // useWindowDimensions gives us real pixel viewport dimensions.
+    // We apply these explicitly so the layout does NOT depend on any
+    // flex:1 chain — React Navigation wrappers break that chain on web.
+    const { width, height } = useWindowDimensions();
 
     const handleLogout = async () => {
         try {
@@ -37,9 +41,12 @@ export function DesktopSidebar({ navigation, activeScreen, unreadNotifications =
 
     if (!isDesktop) return <>{children}</>;
 
+    const SIDEBAR_WIDTH = 220;
+    const contentWidth = width - SIDEBAR_WIDTH;
+
     return (
-        <View style={styles.container}>
-            <View style={styles.sidebar}>
+        <View style={[styles.container, { width, height }]}>
+            <View style={[styles.sidebar, { width: SIDEBAR_WIDTH, height }]}>
                 <Image
                     source={require('../../assets/images/logo-caldas.png')}
                     style={styles.logo}
@@ -85,7 +92,8 @@ export function DesktopSidebar({ navigation, activeScreen, unreadNotifications =
                 </Pressable>
             </View>
 
-            <View style={styles.content}>
+            {/* Content area: explicit pixel width AND height so ScrollView inside can scroll */}
+            <View style={[styles.content, { width: contentWidth, height }]}>
                 {children}
             </View>
         </View>
@@ -94,12 +102,11 @@ export function DesktopSidebar({ navigation, activeScreen, unreadNotifications =
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
         flexDirection: 'row',
         backgroundColor: '#f0f4f8',
+        overflow: 'hidden',
     },
     sidebar: {
-        width: 220,
         backgroundColor: '#ffffff',
         borderRightWidth: 1,
         borderRightColor: '#e0e0e0',
@@ -181,7 +188,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
     },
     content: {
-        flex: 1,
         backgroundColor: '#f0f4f8',
+        overflow: 'hidden',
     },
 });

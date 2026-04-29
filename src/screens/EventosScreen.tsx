@@ -180,7 +180,11 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 	return (
 		<DesktopSidebar navigation={navigation} activeScreen="Eventos">
 		<View style={styles.container}>
-			<View style={styles.contentWrapper}>
+			<ScrollView
+				style={styles.scrollView}
+				contentContainerStyle={styles.contentWrapper}
+				showsVerticalScrollIndicator={true}
+			>
 				<View style={styles.headerWithButton}>
 					<View style={styles.headerText}>
 						<Text style={styles.title}>UniConnect</Text>
@@ -261,7 +265,7 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 				{error && <Text style={styles.error}>Error: {error}</Text>}
 
 				{!loadingEventos && !error && (
-					<ScrollView contentContainerStyle={styles.list} style={styles.scrollView}>
+					<View style={styles.list}>
 						{eventos.map((evento) => (
 							<View key={evento.id} style={styles.card}>
 								<View style={styles.cardHeader}>
@@ -287,9 +291,9 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 						{eventos.length === 0 && (
 							<Text style={styles.empty}>No hay eventos próximos en este momento.</Text>
 						)}
-					</ScrollView>
+					</View>
 				)}
-			</View>
+			</ScrollView>
 
 			{!isDesktop && (
 			<View style={styles.bottomBar}>

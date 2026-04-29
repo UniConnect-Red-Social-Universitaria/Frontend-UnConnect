@@ -5,6 +5,7 @@ export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.white,
+    minHeight: 0,
   },
   contentWrapper: {
     flex: 1,
@@ -12,7 +13,9 @@ export const styles = StyleSheet.create({
     justifyContent: "flex-start",
     paddingTop: 56,
     paddingHorizontal: 20,
+    minHeight: 0,
   },
+
   scrollView: {
     width: "100%",
     flex: 1,
