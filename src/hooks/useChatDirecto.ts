@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { FlatList } from "react-native";
+import { FlatList, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import io from "socket.io-client";
 
@@ -48,13 +48,21 @@ export const useChatDirecto = ({
         }
 
         const token = await AsyncStorage.getItem("userToken");
+        
+        // Detectar plataforma: 'web' si Platform.OS es 'web', 'mobile' si es 'android' o 'ios'
+        const platform = Platform.OS === 'web' ? 'web' : 'mobile';
+        
         if (!socketRef.current) {
           socketRef.current = io(resolverApiBaseUrl(), {
-            auth: { token },
+            auth: { token, platform },
             transports: ["websocket"],
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            reconnectionAttempts: Infinity,
           });
         } else {
-          socketRef.current.auth = { token };
+          socketRef.current.auth = { token, platform };
           socketRef.current.connect();
         }
 
@@ -82,6 +90,20 @@ export const useChatDirecto = ({
 
         socketRef.current.on("mensaje:nuevo", manejarMensajeSocket);
         socketRef.current.on("mensaje:enviado", manejarMensajeSocket);
+        
+        // Log para debugging
+        socketRef.current.on("connect", () => {
+          console.log(`[Chat Directo] Socket conectado (${platform})`);
+        });
+        
+        socketRef.current.on("disconnect", () => {
+          console.log(`[Chat Directo] Socket desconectado`);
+        });
+        
+        socketRef.current.on("connect_error", (error: any) => {
+          console.error(`[Chat Directo] Error de conexión:`, error);
+        });
+        
       } catch (error: any) {
         showToast.error(error.message || "Error cargando los mensajes");
       }
