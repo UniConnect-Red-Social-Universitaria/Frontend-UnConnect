@@ -11,6 +11,7 @@ import { apiClient } from '../services';
 import { CrearEventoModal } from '../components/CrearEventoModal';
 import { resolverApiBaseUrl } from '../utils/apiConfig';
 import { DesktopSidebar } from '../components/DesktopSidebar';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 // --- Tipos ---
 type RootStackParamList = {
@@ -87,6 +88,7 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 
 	const socketRef = useRef<Socket | null>(null);
 	const apiBaseUrl = resolverApiBaseUrl(); // <-- ¡Usando la función importada!
+	const isDesktop = useIsDesktop();
 
 	const cargarEventos = useCallback(async (categoria?: CategoriaEvento | 'todas') => {
 		try {
@@ -289,6 +291,7 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 				)}
 			</View>
 
+			{!isDesktop && (
 			<View style={styles.bottomBar}>
 				<Pressable
 					style={styles.footerTab}
@@ -322,6 +325,7 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 					<Ionicons name="chatbubbles-outline" size={24} style={styles.footerIcon} />
 				</Pressable>
 			</View>
+			)}
 
 			<CrearEventoModal
 				visible={crearEventoModalVisible}

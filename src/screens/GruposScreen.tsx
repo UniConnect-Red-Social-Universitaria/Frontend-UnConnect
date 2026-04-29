@@ -17,6 +17,7 @@ import { useGrupos } from '../hooks/useGrupos';
 import { CrearGrupoModal } from '../components/CrearGrupoModal';
 import { GruposDisponiblesModal } from '../components/GruposDisponiblesModal';
 import { DesktopSidebar } from '../components/DesktopSidebar';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type RootStackParamList = {
 	Principal: undefined;
@@ -55,6 +56,7 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 		solicitarIngreso,
 		cargarGrupos,
 	} = useGrupos(navigation);
+	const isDesktop = useIsDesktop();
 
 	useEffect(() => {
 		const unsubscribe = navigation.addListener('focus', () => {
@@ -153,6 +155,7 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 				)}
 			</View>
 
+			{!isDesktop && (
 			<View style={styles.bottomBar}>
 				<Pressable
 					style={styles.footerTab}
@@ -186,6 +189,7 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 					<Ionicons name="chatbubbles-outline" size={24} style={styles.footerIcon} />
 				</Pressable>
 			</View>
+			)}
 
 			<GruposDisponiblesModal
 				visible={gruposDisponiblesModalVisible}

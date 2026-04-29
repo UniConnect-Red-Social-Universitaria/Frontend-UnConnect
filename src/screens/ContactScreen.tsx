@@ -23,6 +23,7 @@ import type { Usuario } from '../types/api.types';
 // Importamos los estilos separados
 import { styles } from '../styles/ContactScreen.styles';
 import { DesktopSidebar } from '../components/DesktopSidebar';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type Contacto = {
 	id: string;
@@ -57,6 +58,7 @@ export default function ContactScreen() {
 	const [sendingSolicitudTo, setSendingSolicitudTo] = useState<string | null>(null);
 	const [usuarioActualId, setUsuarioActualId] = useState<string | null>(null);
 	const [contactosIds, setContactosIds] = useState<Set<string>>(new Set());
+	const isDesktop = useIsDesktop();
 
 	const cargarDatos = async () => {
 		setLoading(true);
@@ -425,6 +427,7 @@ export default function ContactScreen() {
 				)}
 			</View>
 
+			{!isDesktop && (
 			<View style={principalStyles.bottomBar}>
 				<Pressable
 					style={principalStyles.footerTab}
@@ -462,6 +465,7 @@ export default function ContactScreen() {
 					<Ionicons name="chatbubbles" size={24} style={principalStyles.footerIcon} />
 				</Pressable>
 			</View>
+			)}
 		</View>
 		</DesktopSidebar>
 	);

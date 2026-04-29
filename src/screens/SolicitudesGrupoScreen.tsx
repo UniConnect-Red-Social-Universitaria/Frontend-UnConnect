@@ -17,6 +17,8 @@ import { gruposService, authService } from '../services';
 import type { SolicitudGrupo } from '../services/grupos.service';
 import { showToast } from '../utils/toast';
 import type { RootStackParamList } from '../navigation/RootNavigator';
+import { DesktopSidebar } from '../components/DesktopSidebar';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'SolicitudesGrupo'>;
 
@@ -37,6 +39,7 @@ export default function SolicitudesGrupoScreen({
 	const [processingId, setProcessingId] = useState<string | null>(null);
 	const { width } = useWindowDimensions();
 	const logoWidth = width < 380 ? 150 : width < 480 ? 180 : 220;
+	const isDesktop = useIsDesktop();
 
 	const cargarSolicitudes = useCallback(async () => {
 		try {
@@ -213,6 +216,7 @@ export default function SolicitudesGrupoScreen({
 	);
 
 	return (
+		<DesktopSidebar navigation={navigation} activeScreen="Notificaciones">
 		<View style={styles.container}>
 			<View style={styles.header}>
 				<View style={styles.headerLeft}>
@@ -287,6 +291,7 @@ export default function SolicitudesGrupoScreen({
 				)}
 			</View>
 
+			{!isDesktop && (
 			<View style={styles.bottomBar}>
 				<Pressable
 					style={styles.footerTab}
@@ -320,6 +325,8 @@ export default function SolicitudesGrupoScreen({
 					<Ionicons name="chatbubbles-outline" size={24} style={styles.footerIcon} />
 				</Pressable>
 			</View>
+			)}
 		</View>
+		</DesktopSidebar>
 	);
 }

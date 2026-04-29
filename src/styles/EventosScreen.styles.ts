@@ -17,6 +17,7 @@ export const styles = StyleSheet.create({
 
   scrollView: {
     width: "100%",
+    flex: 1,
   },
 
   // HEADER
