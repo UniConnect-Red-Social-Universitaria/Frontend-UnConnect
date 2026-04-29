@@ -39,7 +39,15 @@ export function DesktopSidebar({ navigation, activeScreen, unreadNotifications =
         }
     };
 
-    if (!isDesktop) return <>{children}</>;
+    // On mobile web (width < 768), render a bounded wrapper so ScrollView
+    // has explicit pixel dimensions and the bottom bar stays visible.
+    if (!isDesktop) {
+        return (
+            <View style={{ width, height, overflow: 'hidden' }}>
+                {children}
+            </View>
+        );
+    }
 
     const SIDEBAR_WIDTH = 220;
     const contentWidth = width - SIDEBAR_WIDTH;
