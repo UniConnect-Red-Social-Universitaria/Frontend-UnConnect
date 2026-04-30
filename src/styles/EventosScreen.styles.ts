@@ -221,8 +221,10 @@ export const styles = StyleSheet.create({
 
   formMessage: {
     fontSize: 13,
-    color: theme.colors.primaryMid,
-    marginBottom: 8,
+    color: "#E53935",
+    marginBottom: 12,
+    fontWeight: "bold",
+    textAlign: "center",
   },
 
   button: {

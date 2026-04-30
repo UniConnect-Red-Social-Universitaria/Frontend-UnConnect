@@ -63,7 +63,10 @@ export function CrearEventoModal({ visible, onClose, onSuccess }: CrearEventoMod
 
 	const handleWebDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const value = e.target.value;
-		if (!value) return;
+		if (!value) {
+			setFormulario((prev) => ({ ...prev, fechaEventoInput: '' }));
+			return;
+		}
 
 		const [date, time] = value.split('T');
 		const [year, month, day] = date.split('-');
@@ -86,18 +89,31 @@ export function CrearEventoModal({ visible, onClose, onSuccess }: CrearEventoMod
 	const publicarEvento = async () => {
 		const { titulo, descripcion, lugar, fechaEventoInput, categoria } = formulario;
 
-		if (!titulo.trim()) return setMensajePublicacion('Debes escribir un título.');
-		if (!descripcion.trim()) return setMensajePublicacion('Debes escribir una descripción.');
-		if (!lugar.trim()) return setMensajePublicacion('Debes escribir el lugar del evento.');
-		if (!fechaEventoInput.trim()) return setMensajePublicacion('Debes seleccionar la fecha del evento.');
+		if (!titulo.trim()) {
+			setMensajePublicacion('Debes escribir un título para el evento.');
+			return;
+		}
+		if (!descripcion.trim()) {
+			setMensajePublicacion('Debes escribir una descripción para el evento.');
+			return;
+		}
+		if (!lugar.trim()) {
+			setMensajePublicacion('Debes escribir el lugar del evento.');
+			return;
+		}
+		if (!fechaEventoInput.trim()) {
+			setMensajePublicacion('Falta la hora. Debes seleccionar una fecha y hora completa para el evento.');
+			return;
+		}
 
 		const fecha = new Date(fechaEventoInput.trim());
 		if (Number.isNaN(fecha.getTime())) {
-			return setMensajePublicacion('La fecha tiene un formato inválido.');
+			setMensajePublicacion('La fecha u hora ingresada tiene un formato inválido.');
+			return;
 		}
 
 		if (fecha <= new Date()) {
-			Alert.alert('Fecha inválida', 'La fecha del evento debe ser futura.');
+			setMensajePublicacion('La fecha y hora del evento deben ser en el futuro.');
 			return;
 		}
 
