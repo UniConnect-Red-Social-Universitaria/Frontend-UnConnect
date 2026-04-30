@@ -53,8 +53,10 @@ class ArchivosService {
    * Descargar un archivo (obtiene la URL para descarga)
    */
   async descargarArchivo(grupoId: string, archivoId: string): Promise<string> {
-    const baseUrl = apiClient["baseUrl"];
-    return `${baseUrl}/api/grupos/${grupoId}/archivos/${archivoId}/descargar`;
+    const response = await apiClient.get<{ url: string; nombre: string }>(
+      `/api/grupos/${grupoId}/archivos/${archivoId}/descargar`
+    );
+    return response.data!.url;
   }
 
   /**
