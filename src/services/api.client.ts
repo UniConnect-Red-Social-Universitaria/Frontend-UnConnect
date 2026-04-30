@@ -62,9 +62,17 @@ class ApiClient {
         const token = await this.getToken();
 
         const headers: Record<string, string> = {
-            'Content-Type': 'application/json',
             ...(options.headers as Record<string, string>),
         };
+
+        // Solo agregar Content-Type si hay un body o si es un método que espera datos
+        if (options.body || ['POST', 'PUT', 'PATCH'].includes(options.method || '')) {
+            headers['Content-Type'] = 'application/json';
+            // Asegurar que haya un body válido para JSON si se envió undefined
+            if (!options.body) {
+                options.body = '{}';
+            }
+        }
 
         // Agregar token si existe
         if (token) {
@@ -165,9 +173,15 @@ class ApiClient {
         const url = `${this.baseUrl}${endpoint}`;
 
         const headers: Record<string, string> = {
-            'Content-Type': 'application/json',
             ...(options.headers as Record<string, string>),
         };
+
+        if (options.body || ['POST', 'PUT', 'PATCH'].includes(options.method || '')) {
+            headers['Content-Type'] = 'application/json';
+            if (!options.body) {
+                options.body = '{}';
+            }
+        }
 
         try {
             const response = await fetch(url, {
