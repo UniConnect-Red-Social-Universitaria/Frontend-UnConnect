@@ -57,16 +57,16 @@ export function useGrupoArchivos(grupoId: string) {
       const fileData =
         Platform.OS === "web" && file.file
           ? {
-              uri: "",
-              name: file.name,
-              type: file.mimeType || "application/pdf",
-              file: file.file,
-            }
+            uri: "",
+            name: file.name,
+            type: file.mimeType || "application/pdf",
+            file: file.file,
+          }
           : {
-              uri: file.uri,
-              name: file.name,
-              type: file.mimeType || "application/pdf",
-            };
+            uri: file.uri,
+            name: file.name,
+            type: file.mimeType || "application/pdf",
+          };
 
       await archivosService.subirArchivo(grupoId, fileData as any);
 

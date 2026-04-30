@@ -6,6 +6,7 @@ import {
 	TextInput,
 	FlatList,
 	ActivityIndicator,
+	Alert,
 } from 'react-native';
 import { StackScreenProps } from '@react-navigation/stack';
 import { styles } from '../styles/DetalleGrupoScreen.styles';
@@ -84,15 +85,32 @@ export function DetalleGrupoScreen({ route, navigation }: Props) {
 		return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
 	};
 
+	const confirmarAbandono = () => {
+		Alert.alert('Abandonar grupo', '¿Estás seguro de que quieres abandonar este grupo?', [
+			{ text: 'Cancelar', style: 'cancel' },
+			{ text: 'Abandonar', style: 'destructive', onPress: abandonarGrupo },
+		]);
+	};
+
 	const abandonarGrupo = async () => {
 		setAbandonando(true);
 		try {
 			await gruposService.abandonarGrupo(grupoId);
-			// On success, navigate back or show message
-			navigation.goBack();
-		} catch (error) {
+			showToast.success('Has abandonado el grupo');
+			navigation.reset({
+				index: 0,
+				routes: [{ name: 'Principal' as never }],
+			});
+		} catch (error: any) {
 			console.error('Error al abandonar el grupo:', error);
-			showToast.error('No se pudo abandonar el grupo. Verifica que puedas hacerlo.');
+			if (error.message?.includes('transferir')) {
+				Alert.alert('Atención', error.message, [
+					{ text: 'Cancelar', style: 'cancel' },
+					{ text: 'Transferir admin', onPress: () => setTransferirModalVisible(true) },
+				]);
+			} else {
+				showToast.error(error.message || 'No se pudo abandonar el grupo.');
+			}
 		} finally {
 			setAbandonando(false);
 		}
@@ -139,7 +157,10 @@ export function DetalleGrupoScreen({ route, navigation }: Props) {
 
 				{isAdmin && (
 					<Pressable
-						style={[styles.actionButton, { backgroundColor: '#D97706', borderColor: '#D97706' }]}
+						style={[
+							styles.actionButton,
+							{ backgroundColor: '#D97706', borderColor: '#D97706' },
+						]}
 						onPress={() => setTransferirModalVisible(true)}
 					>
 						<Text style={styles.actionButtonSolidText}>Transferir</Text>
@@ -151,7 +172,7 @@ export function DetalleGrupoScreen({ route, navigation }: Props) {
 				<View style={styles.actionsRow}>
 					<Pressable
 						style={[styles.actionButton, styles.actionButtonDanger]}
-						onPress={abandonarGrupo}
+						onPress={confirmarAbandono}
 						disabled={abandonando}
 					>
 						{abandonando ? (
