@@ -53,14 +53,13 @@ export const enviarNuevoMensajeGrupo = async (
   const token = await getToken();
   if (!token) throw new Error("No autenticado.");
 
-  const res = await fetch(`${API_URL}/mensajes/grupos`, {
+  const res = await fetch(`${API_URL}/grupos/${grupoId}/mensajes`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({
-      grupoId,
       contenido,
     }),
   });

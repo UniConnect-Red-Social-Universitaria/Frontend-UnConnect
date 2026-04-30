@@ -6,7 +6,9 @@ export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.white,
+    minHeight: 0,
   },
+
 
   header: {
     flexDirection: 'row',
@@ -63,14 +65,22 @@ export const styles = StyleSheet.create({
   },
   notificationBadgeDot: {
     position: 'absolute',
-    right: -2,
-    top: -1,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    right: -6,
+    top: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
     backgroundColor: '#E53935',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  notificationBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   logoutButton: {
     flexDirection: 'row',
@@ -93,7 +103,9 @@ export const styles = StyleSheet.create({
   mainContent: {
     flex: 1,
     padding: theme.spacing?.lg || 20,
+    minHeight: 0,
   },
+
   greeting: {
     fontSize: theme.typography?.fontSize?.xl || 24,
     fontWeight: '700',
@@ -335,7 +347,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: theme.colors?.primary,
     paddingVertical: 24,
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
     borderTopWidth: 1,
     borderTopColor: '#E0E0E0',
     paddingBottom: 48,
@@ -355,5 +367,110 @@ export const styles = StyleSheet.create({
     color: theme.colors?.white || '#FFFFFF',
     fontWeight: '600',
     fontSize: 20,
-  }
-});
+  },
+  footerTab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+  footerTabActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+  },
+  footerIcon: {
+    color: theme.colors?.white || '#FFFFFF',
+  },
+  navButtonTextActive: {
+    fontWeight: '700',
+  },
+
+  // --- LAYOUT DESKTOP ---
+  desktopContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: '#f0f4f8',
+  },
+  sidebar: {
+    width: 220,
+    backgroundColor: '#ffffff',
+    borderRightWidth: 1,
+    borderRightColor: '#e0e0e0',
+    paddingTop: 32,
+    paddingHorizontal: 16,
+    paddingBottom: 24,
+    justifyContent: 'space-between',
+  },
+  sidebarLogo: {
+    width: 120,
+    height: 48,
+    alignSelf: 'center',
+    marginBottom: 8,
+  },
+  sidebarBrand: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#003d70',
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  sidebarNav: {
+    flex: 1,
+    gap: 4,
+  },
+  sidebarItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+  },
+  sidebarItemActive: {
+    backgroundColor: '#EBF3FF',
+  },
+  sidebarItemText: {
+    fontSize: 15,
+    color: '#444',
+    fontWeight: '500',
+  },
+  sidebarItemTextActive: {
+    color: '#007AFF',
+    fontWeight: '700',
+  },
+  sidebarBadge: {
+    backgroundColor: '#E53935',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  sidebarBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  sidebarLogout: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#003d70',
+    borderRadius: 10,
+    paddingVertical: 12,
+    marginTop: 16,
+  },
+  sidebarLogoutText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  desktopMain: {
+    flex: 1,
+    padding: 32,
+    backgroundColor: '#f0f4f8',
+    minHeight: 0,
+  },
+});

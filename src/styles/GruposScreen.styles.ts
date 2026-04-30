@@ -5,16 +5,20 @@ export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.white,
+    minHeight: 0,
   },
   contentWrapper: {
     flex: 1,
     alignItems: "center",
     justifyContent: "flex-start",
-    paddingTop: 56,
+    paddingTop: 0,
     paddingHorizontal: 20,
+    minHeight: 0,
   },
+
   scrollView: {
     width: "100%",
+    flex: 1,
   },
   header: {
     width: "100%",
@@ -216,22 +220,41 @@ export const styles = StyleSheet.create({
     textAlign: "center",
     paddingHorizontal: 20,
   },
-  navButton: {
-    width: "100%",
-    backgroundColor: theme.colors.primary,
-    borderRadius: 0,
-    paddingVertical: 24,
-    paddingHorizontal: 20,
+  bottomBar: {
+    flexDirection: "row",
+    justifyContent: "space-around",
     alignItems: "center",
-    marginTop: 0,
-    paddingBottom: 46,
+    backgroundColor: theme.colors.primary,
+    paddingVertical: 24,
+    paddingHorizontal: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#E0E0E0",
+    paddingBottom: 48,
     paddingTop: 24,
+    width: "100%",
+    alignSelf: "stretch",
     minHeight: 80,
   },
   navButtonText: {
     color: "#ffffff",
     fontSize: 20,
+    fontWeight: "600",
+  },
+  footerTab: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+  footerTabActive: {
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
+  },
+  navButtonTextActive: {
     fontWeight: "700",
+  },
+  footerIcon: {
+    color: "#ffffff",
   },
   // Estilos del Modal de Crear Grupo
   modalOverlay: {
@@ -327,6 +350,20 @@ export const styles = StyleSheet.create({
   },
   modalButtonTextSubmit: {
     color: "#FFF",
+    fontWeight: "bold",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  closeButton: {
+    padding: 8,
+  },
+  closeButtonText: {
+    fontSize: 24,
+    color: theme.colors.primary,
     fontWeight: "bold",
   },
 });

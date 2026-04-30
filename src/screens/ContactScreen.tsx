@@ -7,17 +7,24 @@ import {
 	Text,
 	Image,
 	FlatList,
-	StyleSheet,
 	ListRenderItem,
 	Pressable,
 	Alert,
 	useWindowDimensions,
+	TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { authService, usuariosService } from '../services';
 import { showToast } from '../utils/toast';
 import { clearUnreadContactRequestNotification } from '../services/notificaciones-solicitudes.service';
 import { styles as principalStyles } from '../styles/PrincipalScreenStyles';
+import type { Usuario } from '../types/api.types';
+
+// Importamos los estilos separados
+import { styles } from '../styles/ContactScreen.styles';
+import { DesktopSidebar } from '../components/DesktopSidebar';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { useUnreadNotifications } from '../hooks/useUnreadNotifications';
 
 type Contacto = {
 	id: string;
@@ -46,22 +53,39 @@ export default function ContactScreen() {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [processingSolicitudId, setProcessingSolicitudId] = useState<string | null>(null);
+	const [searchQuery, setSearchQuery] = useState('');
+	const [searchResults, setSearchResults] = useState<Usuario[]>([]);
+	const [isSearching, setIsSearching] = useState(false);
+	const [sendingSolicitudTo, setSendingSolicitudTo] = useState<string | null>(null);
+	const [usuarioActualId, setUsuarioActualId] = useState<string | null>(null);
+	const [contactosIds, setContactosIds] = useState<Set<string>>(new Set());
+	const isDesktop = useIsDesktop();
+	const unreadNotifications = useUnreadNotifications();
 
 	const cargarDatos = async () => {
 		setLoading(true);
 		setError(null);
 
 		try {
-			const [contactosResult, solicitudesResult] = await Promise.allSettled([
-				usuariosService.getCompaneros(),
-				usuariosService.getSolicitudesRecibidas(),
-			]);
+			const [usuarioActual, contactosResult, solicitudesResult] =
+				await Promise.allSettled([
+					authService.obtenerIdUsuarioActual(),
+					usuariosService.getCompaneros(),
+					usuariosService.getSolicitudesRecibidas(),
+				]);
 
 			let errorCompaneros: string | null = null;
 			let errorSolicitudes: string | null = null;
 
+			if (usuarioActual.status === 'fulfilled') {
+				setUsuarioActualId(usuarioActual.value);
+			}
+
 			if (contactosResult.status === 'fulfilled') {
 				setContactos(contactosResult.value);
+				// Crear un Set con los IDs para búsqueda rápida
+				const ids = new Set(contactosResult.value.map((c) => c.id));
+				setContactosIds(ids);
 			} else {
 				setContactos([]);
 				errorCompaneros =
@@ -126,13 +150,47 @@ export default function ContactScreen() {
 			);
 
 			if (action === 'aceptar') {
-				// Al aceptar una solicitud se refrescan contactos para mostrar el nuevo companero.
 				await cargarDatos();
 			}
 		} catch (_e) {
 			Alert.alert('Error de red', 'No fue posible procesar la solicitud.');
 		} finally {
 			setProcessingSolicitudId(null);
+		}
+	};
+
+	const handleSearch = async (query: string) => {
+		setSearchQuery(query);
+
+		if (!query.trim()) {
+			setSearchResults([]);
+			return;
+		}
+
+		setIsSearching(true);
+		try {
+			let results = await usuariosService.buscarUsuarios(query);
+			results = results.filter((usuario) => usuario.id !== usuarioActualId);
+			setSearchResults(results);
+		} catch (e) {
+			setSearchResults([]);
+			showToast.error('Error al buscar usuarios');
+		} finally {
+			setIsSearching(false);
+		}
+	};
+
+	const handleEnviarSolicitud = async (usuarioId: string) => {
+		setSendingSolicitudTo(usuarioId);
+		try {
+			await usuariosService.enviarSolicitud(usuarioId);
+			showToast.success('Solicitud de amistad enviada');
+			setSearchQuery('');
+			setSearchResults([]);
+		} catch (e) {
+			showToast.error('No fue posible enviar la solicitud');
+		} finally {
+			setSendingSolicitudTo(null);
 		}
 	};
 
@@ -161,8 +219,59 @@ export default function ContactScreen() {
 		</View>
 	);
 
+	const renderSearchResult: ListRenderItem<Usuario> = ({ item }) => {
+		const esContacto = contactosIds.has(item.id);
+
+		return (
+			<View style={styles.searchResultCard}>
+				<View style={styles.infoContainer}>
+					<Text style={styles.name}>{item.nombre || 'Nombre no disponible'}</Text>
+					<Text style={styles.email}>{item.correo || 'Correo no disponible'}</Text>
+				</View>
+				<View style={styles.searchResultActions}>
+					<Pressable
+						style={({ pressed }) => [
+							styles.searchResultMessageButton,
+							pressed && { opacity: 0.8 },
+						]}
+						onPress={() => {
+							if (item.id) {
+								navigation.navigate('MensajeDirecto', {
+									contactoId: item.id,
+									nombre: item.nombre,
+									correo: item.correo,
+								});
+							} else {
+								Alert.alert('Error', 'No se pudo obtener el ID del usuario');
+							}
+						}}
+					>
+						<Ionicons name="chatbubble-outline" size={16} color="#fff" />
+						<Text style={styles.searchResultMessageButtonText}>Mensaje</Text>
+					</Pressable>
+					{!esContacto && (
+						<Pressable
+							style={({ pressed }) => [
+								styles.addButton,
+								pressed && { opacity: 0.8 },
+								sendingSolicitudTo === item.id && { opacity: 0.5 },
+							]}
+							disabled={sendingSolicitudTo === item.id}
+							onPress={() => handleEnviarSolicitud(item.id)}
+						>
+							<Ionicons name="person-add-outline" size={16} color="#fff" />
+							<Text style={styles.addButtonText}>Agregar</Text>
+						</Pressable>
+					)}
+				</View>
+			</View>
+		);
+	};
+
 	return (
+		<DesktopSidebar navigation={navigation} activeScreen="Contactos">
 		<View style={principalStyles.container}>
+			{!isDesktop && (
 			<View style={principalStyles.header}>
 				<View style={principalStyles.headerLeft}>
 					<Image
@@ -183,7 +292,18 @@ export default function ContactScreen() {
 						style={principalStyles.iconButton}
 						onPress={() => navigation.navigate('Notificaciones')}
 					>
-						<Ionicons name="notifications-outline" size={32} color="#007AFF" />
+						<View style={{ position: 'relative' }}>
+							<Ionicons name="notifications-outline" size={32} color="#007AFF" />
+							{unreadNotifications > 0 && (
+								<View style={{
+									position: 'absolute', top: -2, right: -4, backgroundColor: '#E53935', borderRadius: 10, minWidth: 18, height: 18, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3
+								}}>
+									<Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>
+										{unreadNotifications > 99 ? '99+' : unreadNotifications}
+									</Text>
+								</View>
+							)}
+						</View>
 					</Pressable>
 				</View>
 
@@ -194,12 +314,59 @@ export default function ContactScreen() {
 					</Pressable>
 				</View>
 			</View>
+			)}
 
 			<View style={principalStyles.mainContent}>
 				<Text style={principalStyles.greeting}>Contactos</Text>
 				<Text style={principalStyles.subtitle}>
 					Aqui podras ver y gestionar tus contactos de UniConnect.
 				</Text>
+
+				{/* Search Bar */}
+				<View style={styles.searchContainer}>
+					<Ionicons
+						name="search-outline"
+						size={20}
+						color="#64748b"
+						style={styles.searchIcon}
+					/>
+					<TextInput
+						style={styles.searchInput}
+						placeholder="Buscar compañeros..."
+						placeholderTextColor="#b1bcc8"
+						value={searchQuery}
+						onChangeText={handleSearch}
+					/>
+					{searchQuery !== '' && (
+						<Pressable
+							onPress={() => {
+								setSearchQuery('');
+								setSearchResults([]);
+							}}
+						>
+							<Ionicons name="close-outline" size={20} color="#64748b" />
+						</Pressable>
+					)}
+				</View>
+
+				{/* Search Results */}
+				{searchQuery !== '' && (
+					<View style={styles.searchResultsContainer}>
+						{isSearching ? (
+							<Text style={styles.centerText}>Buscando...</Text>
+						) : searchResults.length > 0 ? (
+							<FlatList<Usuario>
+								data={searchResults}
+								keyExtractor={(item) => item.id}
+								renderItem={renderSearchResult}
+								scrollEnabled={false}
+								contentContainerStyle={styles.searchResultsList}
+							/>
+						) : (
+							<Text style={styles.centerText}>No se encontraron compañeros</Text>
+						)}
+					</View>
+				)}
 
 				{loading ? (
 					<Text style={styles.centerText}>Cargando contactos...</Text>
@@ -275,159 +442,46 @@ export default function ContactScreen() {
 				)}
 			</View>
 
+			{!isDesktop && (
 			<View style={principalStyles.bottomBar}>
-				<Pressable onPress={() => navigation.navigate('Grupos')}>
-					<Text style={principalStyles.navButtonText}>Grupos</Text>
+				<Pressable
+					style={principalStyles.footerTab}
+					onPress={() => navigation.navigate('Principal')}
+					accessibilityLabel="Inicio"
+				>
+					<Ionicons name="home-outline" size={24} style={principalStyles.footerIcon} />
 				</Pressable>
 
-				<Pressable onPress={() => navigation.navigate('Eventos')}>
-					<Text style={principalStyles.navButtonText}>Eventos</Text>
+				<Pressable
+					style={principalStyles.footerTab}
+					onPress={() => navigation.navigate('Grupos')}
+					accessibilityLabel="Grupos"
+				>
+					<Ionicons name="people-outline" size={24} style={principalStyles.footerIcon} />
 				</Pressable>
 
-				<Pressable onPress={() => navigation.navigate('Contactos')}>
-					<Text style={principalStyles.navButtonText}>Contactos</Text>
+				<Pressable
+					style={principalStyles.footerTab}
+					onPress={() => navigation.navigate('Eventos')}
+					accessibilityLabel="Eventos"
+				>
+					<Ionicons
+						name="calendar-outline"
+						size={24}
+						style={principalStyles.footerIcon}
+					/>
+				</Pressable>
+
+				<Pressable
+					style={[principalStyles.footerTab, principalStyles.footerTabActive]}
+					onPress={() => navigation.navigate('Contactos')}
+					accessibilityLabel="Contactos"
+				>
+					<Ionicons name="chatbubbles" size={24} style={principalStyles.footerIcon} />
 				</Pressable>
 			</View>
+			)}
 		</View>
+		</DesktopSidebar>
 	);
 }
-
-const styles = StyleSheet.create({
-	centerText: {
-		textAlign: 'center',
-		color: '#64748b',
-		fontSize: 15,
-		paddingHorizontal: 20,
-		marginTop: 16,
-	},
-
-	listContent: {
-		paddingTop: 4,
-		paddingBottom: 20,
-	},
-
-	screenHeader: {
-		marginBottom: 12,
-	},
-
-	solicitudesSection: {
-		marginTop: 16,
-		padding: 14,
-		borderWidth: 1,
-		borderColor: '#dbe6f2',
-		borderRadius: 12,
-		backgroundColor: '#f7fbff',
-	},
-
-	solicitudesTitle: {
-		fontSize: 16,
-		fontWeight: '700',
-		color: '#002855',
-		marginBottom: 10,
-	},
-
-	solicitudVaciaText: {
-		fontSize: 14,
-		color: '#64748b',
-	},
-
-	solicitudCard: {
-		backgroundColor: '#fff',
-		borderWidth: 1,
-		borderColor: '#e1e9f3',
-		borderRadius: 10,
-		padding: 12,
-		marginBottom: 10,
-	},
-
-	solicitudInfo: {
-		marginBottom: 10,
-	},
-
-	solicitudNombre: {
-		fontSize: 15,
-		fontWeight: '700',
-		color: '#002855',
-	},
-
-	solicitudCorreo: {
-		fontSize: 13,
-		color: '#5e6f84',
-		marginTop: 2,
-	},
-
-	solicitudActions: {
-		flexDirection: 'row',
-		columnGap: 10,
-	},
-
-	aceptarButton: {
-		backgroundColor: '#003d70',
-		paddingVertical: 8,
-		paddingHorizontal: 14,
-		borderRadius: 8,
-	},
-
-	aceptarButtonText: {
-		color: '#fff',
-		fontWeight: '600',
-	},
-
-	rechazarButton: {
-		backgroundColor: '#bb4b4e',
-		paddingVertical: 8,
-		paddingHorizontal: 14,
-		borderRadius: 8,
-	},
-
-	rechazarButtonText: {
-		color: '#fff',
-		fontWeight: '600',
-	},
-
-	card: {
-		backgroundColor: '#fff',
-		borderRadius: 12,
-		padding: 18,
-		marginBottom: 16,
-		shadowColor: '#002855',
-		shadowOpacity: 0.08,
-		shadowRadius: 6,
-		elevation: 3,
-		borderWidth: 1,
-		borderColor: '#e0e7ef',
-		flexDirection: 'row',
-		justifyContent: 'space-between',
-		alignItems: 'center',
-	},
-
-	infoContainer: {
-		flex: 1,
-		marginRight: 12,
-	},
-
-	name: {
-		fontWeight: 'bold',
-		fontSize: 17,
-		color: '#002855',
-		marginBottom: 2,
-	},
-
-	email: {
-		color: '#666',
-		fontSize: 15,
-	},
-
-	messageButton: {
-		backgroundColor: '#002855',
-		paddingVertical: 8,
-		paddingHorizontal: 14,
-		borderRadius: 8,
-	},
-
-	messageButtonText: {
-		color: '#fff',
-		fontWeight: '600',
-		fontSize: 14,
-	},
-});

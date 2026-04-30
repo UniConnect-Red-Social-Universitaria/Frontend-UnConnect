@@ -19,9 +19,11 @@ import ContactScreen from '../screens/ContactScreen';
 import SolicitudesScreen from '../screens/SolicitudesScreen';
 import EditarPerfilScreen from '../screens/EditarPerfilScreen';
 import NotificacionesScreen from '../screens/NotificacionesScreen';
+import SolicitudesGrupoScreen from '../screens/SolicitudesGrupoScreen';
 import { resolverApiBaseUrl } from '../utils/apiConfig';
 import { authService } from '../services';
 import { notifyIncomingMessage } from '../services/notificaciones.service';
+import { showToast } from '../utils/toast';
 import { incrementUnreadNotificationsCount } from '../services/notificaciones-badge.service';
 import {
 	upsertUnreadDirectChatNotification,
@@ -29,6 +31,8 @@ import {
 } from '../services/notificaciones-chat.service';
 import { upsertUnreadContactRequestNotification } from '../services/notificaciones-solicitudes.service';
 import { publishContactRequestRejected } from '../services/contacto-events.service';
+import { upsertUnreadRejectedRequestNotification } from '../services/notificaciones-rechazos.service';
+import { upsertUnreadGroupEventNotification } from '../services/notificaciones-grupo.service';
 
 export type RootStackParamList = {
 	Home: undefined;
@@ -42,6 +46,7 @@ export type RootStackParamList = {
 	Solicitudes: undefined;
 	EditarPerfil: undefined;
 	Notificaciones: undefined;
+	SolicitudesGrupo: undefined;
 	DetalleGrupo: {
 		grupoId: string;
 		nombreGrupo: string;
@@ -202,6 +207,7 @@ export default function RootNavigator() {
 						receptorId: String(msg?.receptorId ?? ''),
 					},
 				});
+				showToast.info(emisorNombre.length > 0 ? `Nuevo mensaje de ${emisorNombre}` : 'Tienes un nuevo mensaje');
 			});
 
 			socket.on('grupo:mensaje:nuevo', async (msg: any) => {
@@ -254,6 +260,7 @@ export default function RootNavigator() {
 						emisorId: String(msg?.emisorId ?? ''),
 					},
 				});
+				showToast.info(nombreGrupo ? `Nuevo mensaje en ${nombreGrupo}` : 'Nuevo mensaje de grupo');
 			});
 
 			socket.on('contacto:solicitud:nueva', async (payload: any) => {
@@ -289,12 +296,46 @@ export default function RootNavigator() {
 						solicitanteId: String(payload?.solicitanteId ?? ''),
 					},
 				});
+				showToast.info(nombreCompleto.length > 0 ? `${nombreCompleto} te envió una solicitud de contacto` : 'Tienes una nueva solicitud de contacto');
 			});
 
 			socket.on('contacto:solicitud:rechazada', (payload: any) => {
 				if (!isMounted) {
 					return;
 				}
+
+				const receptorNombreCompleto = [
+					payload?.receptorNombre,
+					payload?.receptorApellido,
+				]
+					.filter(Boolean)
+					.join(' ')
+					.trim();
+
+				void upsertUnreadRejectedRequestNotification({
+					solicitudId: String(payload?.solicitudId ?? ''),
+					solicitanteId: String(payload?.solicitanteId ?? ''),
+					receptorId: String(payload?.receptorId ?? ''),
+					receptorNombre: receptorNombreCompleto,
+					tipo: 'contacto',
+					updatedAt:
+						typeof payload?.updatedAt === 'string'
+							? payload.updatedAt
+							: new Date().toISOString(),
+				});
+				void incrementUnreadNotificationsCount();
+				void notifyIncomingMessage({
+					title: 'Solicitud rechazada',
+					body:
+						receptorNombreCompleto.length > 0
+							? `${receptorNombreCompleto} rechazo tu solicitud de contacto.`
+							: 'Una solicitud de contacto enviada por ti fue rechazada.',
+					data: {
+						type: 'contact-request-rejected',
+						solicitudId: String(payload?.solicitudId ?? ''),
+					},
+				});
+				showToast.info(receptorNombreCompleto.length > 0 ? `${receptorNombreCompleto} rechazó tu solicitud de contacto.` : 'Una solicitud de contacto enviada por ti fue rechazada.');
 
 				publishContactRequestRejected({
 					solicitudId: String(payload?.solicitudId ?? ''),
@@ -303,6 +344,92 @@ export default function RootNavigator() {
 					updatedAt:
 						typeof payload?.updatedAt === 'string' ? payload.updatedAt : undefined,
 				});
+			});
+
+			// ── Eventos de grupo ──
+
+			socket.on('grupo:solicitud:nueva', async (payload: any) => {
+				if (!isMounted) return;
+
+				const nombreCompleto = [payload?.solicitanteNombre, payload?.solicitanteApellido]
+					.filter(Boolean)
+					.join(' ')
+					.trim();
+
+				await upsertUnreadGroupEventNotification({
+					id: `solicitud-${payload?.solicitudId ?? Date.now()}`,
+					tipo: 'solicitud-ingreso',
+					grupoId: String(payload?.grupoId ?? ''),
+					grupoNombre: String(payload?.grupoNombre ?? 'Grupo'),
+					mensaje: `${nombreCompleto || 'Un estudiante'} quiere unirse a tu grupo "${payload?.grupoNombre ?? 'Grupo'}".`,
+					createdAt: new Date().toISOString(),
+				});
+
+				await incrementUnreadNotificationsCount();
+				await notifyIncomingMessage({
+					title: 'Nueva solicitud de grupo',
+					body: `${nombreCompleto || 'Un estudiante'} quiere unirse a "${payload?.grupoNombre ?? ''}"`,
+					data: { type: 'grupo-solicitud-nueva', grupoId: String(payload?.grupoId ?? '') },
+				});
+				showToast.info(`${nombreCompleto || 'Un estudiante'} quiere unirse a "${payload?.grupoNombre ?? ''}"`);
+			});
+
+			socket.on('grupo:solicitud:resuelta', async (payload: any) => {
+				if (!isMounted) return;
+
+				const aprobada = payload?.estado === 'APROBADA';
+				const grupoNombre = String(payload?.grupoNombre ?? 'Grupo');
+
+				await upsertUnreadGroupEventNotification({
+					id: `resolucion-${payload?.solicitudId ?? Date.now()}`,
+					tipo: aprobada ? 'solicitud-aprobada' : 'solicitud-rechazada',
+					grupoId: String(payload?.grupoId ?? ''),
+					grupoNombre,
+					mensaje: aprobada
+						? `¡Tu solicitud para unirte a "${grupoNombre}" fue aprobada!`
+						: `Tu solicitud para unirte a "${grupoNombre}" fue rechazada.`,
+					createdAt: new Date().toISOString(),
+				});
+
+				await incrementUnreadNotificationsCount();
+				await notifyIncomingMessage({
+					title: aprobada ? 'Solicitud aprobada' : 'Solicitud rechazada',
+					body: aprobada
+						? `Fuiste aceptado en "${grupoNombre}"`
+						: `Tu solicitud a "${grupoNombre}" fue rechazada`,
+					data: { type: 'grupo-solicitud-resuelta', grupoId: String(payload?.grupoId ?? '') },
+				});
+				showToast.info(aprobada ? `Fuiste aceptado en "${grupoNombre}"` : `Tu solicitud a "${grupoNombre}" fue rechazada`);
+			});
+
+			socket.on('grupo:admin:transferido', async (payload: any) => {
+				if (!isMounted) return;
+
+				const esNuevoAdmin = payload?.nuevoAdminId === currentAuthUserIdRef.current;
+				const grupoNombre = String(payload?.grupoNombre ?? 'Grupo');
+
+				const mensaje = esNuevoAdmin
+					? `Ahora eres administrador del grupo "${grupoNombre}". ${payload?.anteriorAdminNombre || ''} te transfirió el rol.`
+					: `Transferiste la administración de "${grupoNombre}" a ${payload?.nuevoAdminNombre || 'otro miembro'}.`;
+
+				await upsertUnreadGroupEventNotification({
+					id: `admin-${payload?.grupoId ?? Date.now()}-${Date.now()}`,
+					tipo: 'admin-transferido',
+					grupoId: String(payload?.grupoId ?? ''),
+					grupoNombre,
+					mensaje,
+					createdAt: new Date().toISOString(),
+				});
+
+				await incrementUnreadNotificationsCount();
+				await notifyIncomingMessage({
+					title: 'Cambio de administrador',
+					body: esNuevoAdmin
+						? `Ahora eres admin de "${grupoNombre}"`
+						: `Transferiste admin de "${grupoNombre}"`,
+					data: { type: 'grupo-admin-transferido', grupoId: String(payload?.grupoId ?? '') },
+				});
+				showToast.info(esNuevoAdmin ? `Ahora eres admin de "${grupoNombre}"` : `Transferiste admin de "${grupoNombre}"`);
 			});
 		};
 
@@ -371,9 +498,33 @@ export default function RootNavigator() {
 		);
 	}
 
+	const linking = {
+		prefixes: ['https://uniconnect-frontend.fly.dev', 'http://localhost'],
+		config: {
+			screens: {
+				Home: '',
+				Login: 'login',
+				Registro: 'registro',
+				CompletarRegistro: 'completar-registro',
+				Principal: 'principal',
+				Grupos: 'grupos',
+				Eventos: 'eventos',
+				Contactos: 'contactos',
+				Solicitudes: 'solicitudes',
+				EditarPerfil: 'editar-perfil',
+				Notificaciones: 'notificaciones',
+				SolicitudesGrupo: 'solicitudes-grupo',
+				DetalleGrupo: 'grupos/:grupoId',
+				MensajeDirecto: 'mensajes/directo/:contactoId',
+				MensajeGrupo: 'mensajes/grupo/:grupoId',
+			},
+		},
+	};
+
 	return (
 		<NavigationContainer
 			ref={navigationRef}
+			linking={linking}
 			onReady={() => {
 				const state = navigationRef.current?.getRootState?.();
 				activeRouteRef.current = getDeepestRouteName(state as NavigationState);
@@ -404,6 +555,7 @@ export default function RootNavigator() {
 				<Stack.Screen name="Solicitudes" component={SolicitudesScreen} />
 				<Stack.Screen name="EditarPerfil" component={EditarPerfilScreen} />
 				<Stack.Screen name="Notificaciones" component={NotificacionesScreen} />
+				<Stack.Screen name="SolicitudesGrupo" component={SolicitudesGrupoScreen} />
 				<Stack.Screen name="MensajeDirecto" component={MensajeDirectoScreen} />
 				<Stack.Screen name="DetalleGrupo" component={DetalleGrupoScreen} />
 				<Stack.Screen name="MensajeGrupo" component={MensajeGrupoScreen} />

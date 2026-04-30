@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { FlatList } from "react-native";
+import { FlatList, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import io from "socket.io-client";
 
@@ -45,16 +45,34 @@ export const useChatGrupo = ({ grupoId, userIdParam }: UseChatGrupoProps) => {
         }
 
         const token = await AsyncStorage.getItem("userToken");
+        
+        // Detectar plataforma: 'web' si Platform.OS es 'web', 'mobile' si es 'android' o 'ios'
+        const platform = Platform.OS === 'web' ? 'web' : 'mobile';
+        
         if (!socketRef.current) {
           socketRef.current = io(resolverApiBaseUrl(), {
-            auth: { token },
+            auth: { token, platform },
             transports: ["websocket"],
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            reconnectionAttempts: Infinity,
           });
         } else {
-          socketRef.current.auth = { token };
+          socketRef.current.auth = { token, platform };
           socketRef.current.connect();
         }
+        
         socketRef.current.off("grupo:mensaje:nuevo");
+
+        // Escuchar conexión establecida para emitir suscripción
+        socketRef.current.on("connect", () => {
+          console.log(`[Chat Grupo] Socket conectado (${platform})`);
+          // Emitir evento de suscripción al grupo
+          socketRef.current.emit("grupo:suscribir", grupoId, (ack: any) => {
+            console.log(`[Chat Grupo] Suscripción confirmada para ${grupoId}:`, ack);
+          });
+        });
 
         const manejarMensajeSocket = (msg: any) => {
           if (msg.grupoId === grupoId) {
@@ -71,6 +89,16 @@ export const useChatGrupo = ({ grupoId, userIdParam }: UseChatGrupoProps) => {
         };
 
         socketRef.current.on("grupo:mensaje:nuevo", manejarMensajeSocket);
+        
+        // Log para debugging
+        socketRef.current.on("disconnect", () => {
+          console.log(`[Chat Grupo] Socket desconectado`);
+        });
+        
+        socketRef.current.on("connect_error", (error: any) => {
+          console.error(`[Chat Grupo] Error de conexión:`, error);
+        });
+
       } catch (error: any) {
         showToast.error(
           error.message || "Error cargando los mensajes del grupo",
@@ -81,7 +109,13 @@ export const useChatGrupo = ({ grupoId, userIdParam }: UseChatGrupoProps) => {
     inicializarChat();
 
     return () => {
-      socketRef.current?.disconnect();
+      if (socketRef.current) {
+        // Emitir desuscripción antes de desconectar
+        socketRef.current.emit("grupo:desuscribir", grupoId, () => {
+          console.log(`[Chat Grupo] Desuscripción enviada para ${grupoId}`);
+        });
+        socketRef.current.disconnect();
+      }
     };
   }, [grupoId, userId]);
 

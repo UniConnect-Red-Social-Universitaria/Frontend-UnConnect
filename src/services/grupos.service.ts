@@ -6,6 +6,23 @@ export interface CrearGrupoRequest {
   materiaId: string;
 }
 
+export interface SolicitudGrupo {
+  id: string;
+  estado: 'PENDIENTE' | 'APROBADA' | 'RECHAZADA';
+  createdAt: string;
+  solicitante?: {
+    id: string;
+    nombre: string;
+    apellido: string;
+    correo: string;
+  };
+  grupo?: {
+    id: string;
+    nombre: string;
+    materia: { id: string; nombre: string };
+  };
+}
+
 /**
  * Servicio de grupos
  */
@@ -38,17 +55,24 @@ class GruposService {
   }
 
   /**
-   * Unirse a un grupo existente
+   * Solicitar ingreso a un grupo (reemplaza unirse directo)
    */
-  async unirseAGrupo(grupoId: string): Promise<ApiResponse> {
-    return await apiClient.post(`/api/grupos/${grupoId}/unirse`);
+  async solicitarIngreso(grupoId: string): Promise<ApiResponse> {
+    return await apiClient.post(`/api/grupos/${grupoId}/solicitar-ingreso`, {});
   }
 
   /**
    * Salir de un grupo
    */
   async salirDeGrupo(grupoId: string): Promise<ApiResponse> {
-    return await apiClient.post(`/api/grupos/${grupoId}/salir`);
+    return await apiClient.post(`/api/grupos/${grupoId}/salir`, {});
+  }
+
+  /**
+   * Abandonar un grupo
+   */
+  async abandonarGrupo(grupoId: string): Promise<ApiResponse> {
+    return await apiClient.delete(`/api/grupos/${grupoId}/abandonar`);
   }
 
   /**
@@ -62,10 +86,11 @@ class GruposService {
    * Obtener miembros de un grupo
    */
   async getMiembros(grupoId: string): Promise<any[]> {
-    const response = await apiClient.get<any[]>(
+    const response = await apiClient.get<any>(
       `/api/grupos/${grupoId}/miembros`,
     );
-    return response.data || [];
+    // El endpoint retorna { success, data: { miembros: [...], ... } }
+    return response.data?.miembros || [];
   }
   /**
    * Agregar un miembro al grupo (solo administrador)
@@ -78,6 +103,68 @@ class GruposService {
       usuarioId,
     });
   }
+
+  // ── Solicitudes de ingreso a grupo ──
+
+  /**
+   * Listar solicitudes pendientes de un grupo (solo admin)
+   */
+  async getSolicitudesGrupo(grupoId: string): Promise<SolicitudGrupo[]> {
+    const response = await apiClient.get<SolicitudGrupo[]>(
+      `/api/grupos/${grupoId}/solicitudes`,
+    );
+    return response.data || [];
+  }
+
+  /**
+   * Listar mis solicitudes enviadas
+   */
+  async getMisSolicitudes(): Promise<SolicitudGrupo[]> {
+    const response = await apiClient.get<SolicitudGrupo[]>(
+      `/api/grupos/mis-solicitudes`,
+    );
+    return response.data || [];
+  }
+
+  /**
+   * Aprobar solicitud de ingreso (solo admin)
+   */
+  async aprobarSolicitud(
+    grupoId: string,
+    solicitudId: string,
+  ): Promise<ApiResponse> {
+    return await apiClient.patch(
+      `/api/grupos/${grupoId}/solicitudes/${solicitudId}/aprobar`,
+      {}
+    );
+  }
+
+  /**
+   * Rechazar solicitud de ingreso (solo admin)
+   */
+  async rechazarSolicitud(
+    grupoId: string,
+    solicitudId: string,
+  ): Promise<ApiResponse> {
+    return await apiClient.patch(
+      `/api/grupos/${grupoId}/solicitudes/${solicitudId}/rechazar`,
+      {}
+    );
+  }
+
+  /**
+   * Transferir administración del grupo a otro miembro (solo admin)
+   */
+  async cederAdministracion(
+    grupoId: string,
+    nuevoAdminId: string,
+  ): Promise<ApiResponse> {
+    return await apiClient.patch(`/api/grupos/${grupoId}/administrador`, {
+      nuevoAdminId,
+    });
+  }
 }
 
 export const gruposService = new GruposService();
+
+

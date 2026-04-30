@@ -4,8 +4,9 @@ import { Evento, ApiResponse } from '../types/api.types';
 export interface CrearEventoRequest {
     titulo: string;
     descripcion?: string;
-    fecha: string;
-    ubicacion?: string;
+    fechaEvento: string;
+    lugar?: string;
+    categoria?: 'academico' | 'cultural' | 'deportivo' | 'otro';
 }
 
 /**

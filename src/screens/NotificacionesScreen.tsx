@@ -6,12 +6,12 @@ import {
 	Image,
 	useWindowDimensions,
 	FlatList,
-	StyleSheet,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { styles } from '../styles/PrincipalScreenStyles';
+import { localStyles } from '../styles/NotificacionesScreen.styles';
 import { clearUnreadNotificationsCount } from '../services/notificaciones-badge.service';
 import {
 	clearUnreadDirectChatNotification,
@@ -29,9 +29,24 @@ import {
 	subscribeUnreadContactRequestNotifications,
 	type UnreadContactRequestNotification,
 } from '../services/notificaciones-solicitudes.service';
-import { authService } from '../services';
+import {
+	clearUnreadRejectedRequestNotification,
+	getUnreadRejectedRequestNotifications,
+	subscribeUnreadRejectedRequestNotifications,
+	type UnreadRejectedRequestNotification,
+} from '../services/notificaciones-rechazos.service';
+import { publishContactRequestRejectionSeen } from '../services/contacto-events.service';
+import { authService, gruposService } from '../services';
 import { showToast } from '../utils/toast';
 import type { RootStackParamList } from '../navigation/RootNavigator';
+import {
+	clearUnreadGroupEventNotification,
+	getUnreadGroupEventNotifications,
+	subscribeUnreadGroupEventNotifications,
+	type UnreadGroupEventNotification,
+} from '../services/notificaciones-grupo.service';
+import { DesktopSidebar } from '../components/DesktopSidebar';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type NotificacionesNavigationProp = StackNavigationProp<
 	RootStackParamList,
@@ -52,13 +67,21 @@ export default function NotificacionesScreen({
 	const [unreadContactRequests, setUnreadContactRequests] = useState<
 		UnreadContactRequestNotification[]
 	>([]);
+	const [unreadRejectedRequests, setUnreadRejectedRequests] = useState<
+		UnreadRejectedRequestNotification[]
+	>([]);
+	const [unreadGroupEvents, setUnreadGroupEvents] = useState<UnreadGroupEventNotification[]>([]);
+	const [esAdminDeGrupos, setEsAdminDeGrupos] = useState(false);
 	const { width } = useWindowDimensions();
 	const logoWidth = width < 380 ? 150 : width < 480 ? 180 : 220;
+	const isDesktop = useIsDesktop();
 
 	type NotificationItem =
 		| (UnreadDirectChatNotification & { kind: 'direct'; key: string })
 		| (UnreadGroupChatNotification & { kind: 'group'; key: string })
-		| (UnreadContactRequestNotification & { kind: 'request'; key: string });
+		| (UnreadContactRequestNotification & { kind: 'request'; key: string })
+		| (UnreadRejectedRequestNotification & { kind: 'request-rejected'; key: string })
+		| (UnreadGroupEventNotification & { kind: 'grupo-event'; key: string });
 
 	const unreadChats = useMemo<NotificationItem[]>(() => {
 		const directItems: NotificationItem[] = unreadDirectChats.map((item) => ({
@@ -79,18 +102,46 @@ export default function NotificacionesScreen({
 			key: `request-${item.solicitudId}`,
 		}));
 
-		return [...directItems, ...groupItems, ...requestItems].sort((a, b) => {
-			const dateA =
-				a.kind === 'request'
-					? new Date(a.createdAt).getTime()
-					: new Date(a.updatedAt).getTime();
-			const dateB =
-				b.kind === 'request'
-					? new Date(b.createdAt).getTime()
-					: new Date(b.updatedAt).getTime();
-			return dateB - dateA;
-		});
-	}, [unreadDirectChats, unreadGroupChats, unreadContactRequests]);
+		const rejectedItems: NotificationItem[] = unreadRejectedRequests.map((item) => ({
+			...item,
+			kind: 'request-rejected',
+			key: `request-rejected-${item.solicitudId}`,
+		}));
+
+		const grupoEventItems: NotificationItem[] = unreadGroupEvents.map((item) => ({
+			...item,
+			kind: 'grupo-event',
+			key: `grupo-event-${item.id}`,
+		}));
+
+		return [...directItems, ...groupItems, ...requestItems, ...rejectedItems, ...grupoEventItems].sort(
+			(a, b) => {
+				const dateA =
+					a.kind === 'request'
+						? new Date(a.createdAt).getTime()
+						: a.kind === 'request-rejected'
+							? new Date(a.updatedAt).getTime()
+							: a.kind === 'grupo-event'
+								? new Date(a.createdAt).getTime()
+								: new Date(a.updatedAt).getTime();
+				const dateB =
+					b.kind === 'request'
+						? new Date(b.createdAt).getTime()
+						: b.kind === 'request-rejected'
+							? new Date(b.updatedAt).getTime()
+							: b.kind === 'grupo-event'
+								? new Date(b.createdAt).getTime()
+								: new Date(b.updatedAt).getTime();
+				return dateB - dateA;
+			}
+		);
+	}, [
+		unreadDirectChats,
+		unreadGroupChats,
+		unreadContactRequests,
+		unreadRejectedRequests,
+		unreadGroupEvents,
+	]);
 
 	useEffect(() => {
 		const unsubscribeDirect = subscribeUnreadDirectChatNotifications((items) => {
@@ -105,6 +156,14 @@ export default function NotificacionesScreen({
 			setUnreadContactRequests(items);
 		});
 
+		const unsubscribeRejected = subscribeUnreadRejectedRequestNotifications((items) => {
+			setUnreadRejectedRequests(items);
+		});
+
+		const unsubscribeGroupEvents = subscribeUnreadGroupEventNotifications((items) => {
+			setUnreadGroupEvents(items);
+		});
+
 		void getUnreadDirectChatNotifications().then((items) => {
 			setUnreadDirectChats(items);
 		});
@@ -117,11 +176,37 @@ export default function NotificacionesScreen({
 			setUnreadContactRequests(items);
 		});
 
+		void getUnreadRejectedRequestNotifications().then((items) => {
+			setUnreadRejectedRequests(items);
+		});
+
+		void getUnreadGroupEventNotifications().then((items) => {
+			setUnreadGroupEvents(items);
+		});
+
 		return () => {
 			unsubscribeDirect();
 			unsubscribeGroup();
 			unsubscribeRequests();
+			unsubscribeRejected();
+			unsubscribeGroupEvents();
 		};
+	}, []);
+
+	useEffect(() => {
+		const verificarAdminGrupos = async () => {
+			try {
+				const userId = await authService.obtenerIdUsuarioActual();
+				const misGrupos = await gruposService.getGrupos();
+				const tieneGrupos = (misGrupos as any[]).some(
+					(g) => g.creadorId === userId || g.administradorId === userId,
+				);
+				setEsAdminDeGrupos(tieneGrupos);
+			} catch {
+				setEsAdminDeGrupos(false);
+			}
+		};
+		verificarAdminGrupos();
 	}, []);
 
 	useFocusEffect(
@@ -144,6 +229,25 @@ export default function NotificacionesScreen({
 		if (item.kind === 'request') {
 			await clearUnreadContactRequestNotification(item.solicitudId);
 			navigation.navigate('Solicitudes');
+			return;
+		}
+
+		if (item.kind === 'request-rejected') {
+			await clearUnreadRejectedRequestNotification(item.solicitudId);
+			publishContactRequestRejectionSeen({
+				solicitudId: item.solicitudId,
+				receptorId: item.receptorId,
+			});
+			return;
+		}
+
+		if (item.kind === 'grupo-event') {
+			await clearUnreadGroupEventNotification(item.id);
+			if (item.tipo === 'solicitud-ingreso') {
+				navigation.navigate('SolicitudesGrupo');
+			} else {
+				navigation.navigate('Grupos');
+			}
 			return;
 		}
 
@@ -172,9 +276,13 @@ export default function NotificacionesScreen({
 						? item.nombre
 						: item.kind === 'group'
 							? item.nombreGrupo
-							: item.nombre}
+							: item.kind === 'request'
+								? item.nombre
+								: item.kind === 'grupo-event'
+									? item.grupoNombre
+									: 'Solicitud rechazada'}
 				</Text>
-				{item.kind !== 'request' && item.mensajesNoLeidos > 1 ? (
+				{(item.kind === 'direct' || item.kind === 'group') && item.mensajesNoLeidos > 1 ? (
 					<Text style={localStyles.counter}>{item.mensajesNoLeidos} nuevos</Text>
 				) : null}
 			</View>
@@ -183,12 +291,26 @@ export default function NotificacionesScreen({
 					? 'Mensaje directo'
 					: item.kind === 'group'
 						? 'Mensaje de grupo'
-						: 'Solicitud de contacto'}
+						: item.kind === 'request'
+							? 'Solicitud de contacto'
+							: item.kind === 'grupo-event'
+								? item.tipo === 'solicitud-ingreso'
+									? 'Solicitud de grupo'
+									: item.tipo === 'solicitud-aprobada'
+										? 'Solicitud aprobada'
+										: item.tipo === 'solicitud-rechazada'
+											? 'Solicitud rechazada'
+											: 'Cambio de administrador'
+								: 'Solicitud rechazada'}
 			</Text>
 			<Text style={localStyles.cardMessage} numberOfLines={2}>
 				{item.kind === 'request'
 					? 'Te envio una solicitud de contacto.'
-					: item.ultimoMensaje || 'Te envio un mensaje nuevo'}
+					: item.kind === 'request-rejected'
+						? `Tu solicitud a ${item.receptorNombre || 'usuario'} fue rechazada. Puedes volver a enviarla.`
+						: item.kind === 'grupo-event'
+							? item.mensaje
+							: item.ultimoMensaje || 'Te envio un mensaje nuevo'}
 			</Text>
 
 			<Pressable
@@ -198,14 +320,24 @@ export default function NotificacionesScreen({
 				}}
 			>
 				<Text style={localStyles.viewButtonText}>
-					{item.kind === 'request' ? 'Ver solicitud' : 'Ver mensaje'}
+					{item.kind === 'request'
+						? 'Ver solicitud'
+						: item.kind === 'request-rejected'
+							? 'Visto'
+							: item.kind === 'grupo-event'
+								? item.tipo === 'solicitud-ingreso'
+									? 'Ver solicitudes'
+									: 'Ver grupo'
+								: 'Ver mensaje'}
 				</Text>
 			</Pressable>
 		</View>
 	);
 
 	return (
+		<DesktopSidebar navigation={navigation} activeScreen="Notificaciones">
 		<View style={styles.container}>
+			{!isDesktop && (
 			<View style={styles.header}>
 				<View style={styles.headerLeft}>
 					<Image
@@ -237,12 +369,52 @@ export default function NotificacionesScreen({
 					</Pressable>
 				</View>
 			</View>
+			)}
 
 			<View style={styles.mainContent}>
 				<Text style={styles.greeting}>Notificaciones</Text>
 				<Text style={styles.subtitle}>
 					Aqui veras chats y solicitudes pendientes por revisar.
 				</Text>
+
+				{esAdminDeGrupos ? (
+					<Pressable
+						style={{
+							backgroundColor: '#FFFFFF',
+							borderRadius: 12,
+							padding: 14,
+							marginBottom: 16,
+							borderWidth: 1,
+							borderColor: '#D8E3EE',
+							flexDirection: 'row',
+							alignItems: 'center',
+							gap: 12,
+						}}
+						onPress={() => navigation.navigate('SolicitudesGrupo')}
+					>
+						<View
+							style={{
+								width: 40,
+								height: 40,
+								borderRadius: 20,
+								backgroundColor: '#EAF3FF',
+								alignItems: 'center',
+								justifyContent: 'center',
+							}}
+						>
+							<Ionicons name="people-circle-outline" size={22} color="#003d70" />
+						</View>
+						<View style={{ flex: 1 }}>
+							<Text style={{ fontSize: 15, fontWeight: '700', color: '#0A4478' }}>
+								Solicitudes de ingreso a grupos
+							</Text>
+							<Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
+								Revisa quién quiere unirse a tus grupos
+							</Text>
+						</View>
+						<Ionicons name="chevron-forward" size={20} color="#94A3B8" />
+					</Pressable>
+				) : null}
 
 				<FlatList
 					data={unreadChats}
@@ -265,96 +437,42 @@ export default function NotificacionesScreen({
 				/>
 			</View>
 
+			{!isDesktop && (
 			<View style={styles.bottomBar}>
-				<Pressable onPress={() => navigation.navigate('Grupos')}>
-					<Text style={styles.navButtonText}>Grupos</Text>
+				<Pressable
+					style={styles.footerTab}
+					onPress={() => navigation.navigate('Principal')}
+					accessibilityLabel="Inicio"
+				>
+					<Ionicons name="home-outline" size={24} style={styles.footerIcon} />
 				</Pressable>
 
-				<Pressable onPress={() => navigation.navigate('Eventos')}>
-					<Text style={styles.navButtonText}>Eventos</Text>
+				<Pressable
+					style={styles.footerTab}
+					onPress={() => navigation.navigate('Grupos')}
+					accessibilityLabel="Grupos"
+				>
+					<Ionicons name="people-outline" size={24} style={styles.footerIcon} />
 				</Pressable>
 
-				<Pressable onPress={() => navigation.navigate('Contactos')}>
-					<Text style={styles.navButtonText}>Contactos</Text>
+				<Pressable
+					style={styles.footerTab}
+					onPress={() => navigation.navigate('Eventos')}
+					accessibilityLabel="Eventos"
+				>
+					<Ionicons name="calendar-outline" size={24} style={styles.footerIcon} />
+				</Pressable>
+
+				<Pressable
+					style={styles.footerTab}
+					onPress={() => navigation.navigate('Contactos')}
+					accessibilityLabel="Contactos"
+				>
+					<Ionicons name="chatbubbles-outline" size={24} style={styles.footerIcon} />
 				</Pressable>
 			</View>
+			)}
 		</View>
+		</DesktopSidebar>
 	);
 }
-
-const localStyles = StyleSheet.create({
-	listContainer: {
-		paddingBottom: 16,
-		gap: 12,
-	},
-	emptyListContainer: {
-		flexGrow: 1,
-	},
-	emptyState: {
-		paddingTop: 28,
-		alignItems: 'center',
-		paddingHorizontal: 18,
-	},
-	emptyTitle: {
-		fontSize: 18,
-		fontWeight: '700',
-		color: '#003d70',
-		marginBottom: 8,
-	},
-	emptyText: {
-		fontSize: 14,
-		textAlign: 'center',
-		color: '#4a5a6a',
-	},
-	card: {
-		backgroundColor: '#FFFFFF',
-		borderRadius: 12,
-		padding: 14,
-		borderWidth: 1,
-		borderColor: '#D8E3EE',
-	},
-	cardHeader: {
-		flexDirection: 'row',
-		justifyContent: 'space-between',
-		alignItems: 'center',
-		marginBottom: 6,
-	},
-	cardTitle: {
-		fontSize: 16,
-		fontWeight: '700',
-		color: '#0A4478',
-	},
-	counter: {
-		fontSize: 12,
-		fontWeight: '700',
-		color: '#C62828',
-	},
-	cardMessage: {
-		fontSize: 14,
-		color: '#3E566E',
-		marginBottom: 10,
-	},
-	typePill: {
-		alignSelf: 'flex-start',
-		fontSize: 11,
-		fontWeight: '700',
-		color: '#0A4478',
-		backgroundColor: '#E8F2FB',
-		paddingHorizontal: 8,
-		paddingVertical: 4,
-		borderRadius: 999,
-		marginBottom: 8,
-	},
-	viewButton: {
-		alignSelf: 'flex-start',
-		backgroundColor: '#003d70',
-		borderRadius: 8,
-		paddingHorizontal: 12,
-		paddingVertical: 8,
-	},
-	viewButtonText: {
-		fontSize: 13,
-		fontWeight: '700',
-		color: '#FFFFFF',
-	},
-});
