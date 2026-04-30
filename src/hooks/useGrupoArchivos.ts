@@ -4,7 +4,6 @@ import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
 import { Platform } from "react-native";
 import { archivosService } from "../services";
-import { apiClient } from "../services/api.client";
 import { showToast } from "../utils/toast";
 
 export type ArchivoGrupo = {
@@ -86,36 +85,19 @@ export function useGrupoArchivos(grupoId: string) {
       const url = await archivosService.descargarArchivo(grupoId, archivoId);
 
       if (Platform.OS === "web") {
-        const token = await apiClient.getToken();
-        const response = await fetch(url, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!response.ok) {
-          showToast.error(`Error del servidor: ${response.status}`);
-          return;
-        }
-        const blob = await response.blob();
-        const objectUrl = URL.createObjectURL(blob);
         const link = document.createElement("a");
-        link.href = objectUrl;
+        link.href = url;
         link.download = nombreArchivo.endsWith(".pdf") ? nombreArchivo : `${nombreArchivo}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        URL.revokeObjectURL(objectUrl);
         return;
       }
 
       const nombreLimpio = nombreArchivo.replace(/[^a-zA-Z0-9.-]/g, "_");
       const fileUri = `${FileSystem.documentDirectory}${nombreLimpio}`;
 
-      const token = await apiClient.getToken();
-
-      const downloadResult = await FileSystem.downloadAsync(url, fileUri, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const downloadResult = await FileSystem.downloadAsync(url, fileUri);
 
       if (downloadResult.status === 200) {
         await Sharing.shareAsync(downloadResult.uri);
