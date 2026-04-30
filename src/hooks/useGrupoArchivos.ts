@@ -4,7 +4,6 @@ import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
 import { Platform } from "react-native";
 import { archivosService } from "../services";
-import { apiClient } from "../services/api.client";
 import { showToast } from "../utils/toast";
 
 export type ArchivoGrupo = {
@@ -58,16 +57,16 @@ export function useGrupoArchivos(grupoId: string) {
       const fileData =
         Platform.OS === "web" && file.file
           ? {
-              uri: "",
-              name: file.name,
-              type: file.mimeType || "application/pdf",
-              file: file.file,
-            }
+            uri: "",
+            name: file.name,
+            type: file.mimeType || "application/pdf",
+            file: file.file,
+          }
           : {
-              uri: file.uri,
-              name: file.name,
-              type: file.mimeType || "application/pdf",
-            };
+            uri: file.uri,
+            name: file.name,
+            type: file.mimeType || "application/pdf",
+          };
 
       await archivosService.subirArchivo(grupoId, fileData as any);
 
@@ -88,8 +87,7 @@ export function useGrupoArchivos(grupoId: string) {
       if (Platform.OS === "web") {
         const link = document.createElement("a");
         link.href = url;
-        link.target = "_blank";
-        link.rel = "noopener noreferrer";
+        link.download = nombreArchivo.endsWith(".pdf") ? nombreArchivo : `${nombreArchivo}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -99,13 +97,7 @@ export function useGrupoArchivos(grupoId: string) {
       const nombreLimpio = nombreArchivo.replace(/[^a-zA-Z0-9.-]/g, "_");
       const fileUri = `${FileSystem.documentDirectory}${nombreLimpio}`;
 
-      const token = await apiClient.getToken();
-
-      const downloadResult = await FileSystem.downloadAsync(url, fileUri, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const downloadResult = await FileSystem.downloadAsync(url, fileUri);
 
       if (downloadResult.status === 200) {
         await Sharing.shareAsync(downloadResult.uri);
