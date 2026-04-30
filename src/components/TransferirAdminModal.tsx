@@ -9,6 +9,7 @@ import {
 	TouchableWithoutFeedback,
 	Keyboard,
 	Alert,
+	Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { styles } from '../styles/MiembrosGrupoModal.styles';
@@ -62,18 +63,22 @@ export function TransferirAdminModal({
 	};
 
 	const confirmarTransferencia = (miembro: Miembro) => {
-		Alert.alert(
-			'Transferir administración',
-			`¿Estás seguro de transferir la administración del grupo "${nombreGrupo}" a ${miembro.nombre} ${miembro.apellido}?\n\nEsta acción no se puede deshacer fácilmente.`,
-			[
+		const mensaje = `¿Estás seguro de transferir la administración del grupo "${nombreGrupo}" a ${miembro.nombre} ${miembro.apellido}?\n\nEsta acción no se puede deshacer fácilmente.`;
+
+		if (Platform.OS === 'web') {
+			if (window.confirm(mensaje)) {
+				ejecutarTransferencia(miembro.id);
+			}
+		} else {
+			Alert.alert('Transferir administración', mensaje, [
 				{ text: 'Cancelar', style: 'cancel' },
 				{
 					text: 'Transferir',
 					style: 'destructive',
 					onPress: () => ejecutarTransferencia(miembro.id),
 				},
-			],
-		);
+			]);
+		}
 	};
 
 	const ejecutarTransferencia = async (nuevoAdminId: string) => {
@@ -153,7 +158,8 @@ export function TransferirAdminModal({
 								lineHeight: 18,
 							}}
 						>
-							Selecciona al miembro que será el nuevo administrador de "{nombreGrupo}". Tú pasarás a ser miembro normal.
+							Selecciona al miembro que será el nuevo administrador de "{nombreGrupo}". Tú
+							pasarás a ser miembro normal.
 						</Text>
 
 						{/* Contenido */}
@@ -171,7 +177,8 @@ export function TransferirAdminModal({
 						) : (
 							<>
 								<Text style={styles.miembrosCount}>
-									{miembros.length} miembro{miembros.length !== 1 ? 's' : ''} disponible{miembros.length !== 1 ? 's' : ''}
+									{miembros.length} miembro{miembros.length !== 1 ? 's' : ''} disponible
+									{miembros.length !== 1 ? 's' : ''}
 								</Text>
 								<FlatList
 									data={miembros}
