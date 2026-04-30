@@ -16,6 +16,8 @@ import { styles as principalStyles } from '../styles/PrincipalScreenStyles';
 import { authService } from '../services';
 import { showToast } from '../utils/toast';
 
+const SUSCRIPCIONES_KEY = '@uniconnect_suscripciones_categorias';
+
 // --- Tipos ---
 type RootStackParamList = {
 	Principal: undefined;
