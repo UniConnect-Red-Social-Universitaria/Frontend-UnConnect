@@ -188,29 +188,29 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 				contentContainerStyle={styles.contentWrapper}
 				showsVerticalScrollIndicator={true}
 			>
+				{!isDesktop && (
 				<View style={styles.headerWithButton}>
 					<View style={styles.headerText}>
 						<Text style={styles.title}>UniConnect</Text>
 						<Text style={styles.subtitle}>Eventos</Text>
 						<Text style={styles.caption}>Comunidad Universidad de Caldas</Text>
 					</View>
-					{!isDesktop && (
-						<Pressable onPress={() => navigation.navigate('Notificaciones')}>
-							<View style={{ position: 'relative', marginRight: 8 }}>
-								<Ionicons name="notifications-outline" size={30} color="#007AFF" />
-								{unreadNotifications > 0 && (
-									<View style={{
-										position: 'absolute', top: -2, right: -4, backgroundColor: '#E53935', borderRadius: 10, minWidth: 18, height: 18, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3
-									}}>
-										<Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>
-											{unreadNotifications > 99 ? '99+' : unreadNotifications}
-										</Text>
-									</View>
-								)}
-							</View>
-						</Pressable>
-					)}
+					<Pressable onPress={() => navigation.navigate('Notificaciones')}>
+						<View style={{ position: 'relative', marginRight: 8 }}>
+							<Ionicons name="notifications-outline" size={30} color="#007AFF" />
+							{unreadNotifications > 0 && (
+								<View style={{
+									position: 'absolute', top: -2, right: -4, backgroundColor: '#E53935', borderRadius: 10, minWidth: 18, height: 18, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3
+								}}>
+									<Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>
+										{unreadNotifications > 99 ? '99+' : unreadNotifications}
+									</Text>
+								</View>
+							)}
+						</View>
+					</Pressable>
 				</View>
+				)}
 
 				{notificacionObserver && (
 					<View style={styles.observerBanner}>

@@ -337,6 +337,7 @@ export default function NotificacionesScreen({
 	return (
 		<DesktopSidebar navigation={navigation} activeScreen="Notificaciones">
 		<View style={styles.container}>
+			{!isDesktop && (
 			<View style={styles.header}>
 				<View style={styles.headerLeft}>
 					<Image
@@ -368,6 +369,7 @@ export default function NotificacionesScreen({
 					</Pressable>
 				</View>
 			</View>
+			)}
 
 			<View style={styles.mainContent}>
 				<Text style={styles.greeting}>Notificaciones</Text>

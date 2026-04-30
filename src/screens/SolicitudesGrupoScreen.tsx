@@ -218,6 +218,7 @@ export default function SolicitudesGrupoScreen({
 	return (
 		<DesktopSidebar navigation={navigation} activeScreen="Notificaciones">
 		<View style={styles.container}>
+			{!isDesktop && (
 			<View style={styles.header}>
 				<View style={styles.headerLeft}>
 					<Image
@@ -249,6 +250,7 @@ export default function SolicitudesGrupoScreen({
 					</Pressable>
 				</View>
 			</View>
+			)}
 
 			<View style={styles.mainContent}>
 				<Text style={styles.greeting}>Solicitudes de Grupo</Text>

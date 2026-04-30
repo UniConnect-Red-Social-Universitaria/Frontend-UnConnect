@@ -271,6 +271,7 @@ export default function ContactScreen() {
 	return (
 		<DesktopSidebar navigation={navigation} activeScreen="Contactos">
 		<View style={principalStyles.container}>
+			{!isDesktop && (
 			<View style={principalStyles.header}>
 				<View style={principalStyles.headerLeft}>
 					<Image
@@ -313,6 +314,7 @@ export default function ContactScreen() {
 					</Pressable>
 				</View>
 			</View>
+			)}
 
 			<View style={principalStyles.mainContent}>
 				<Text style={principalStyles.greeting}>Contactos</Text>

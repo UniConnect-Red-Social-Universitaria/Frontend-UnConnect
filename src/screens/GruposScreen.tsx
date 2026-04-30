@@ -77,6 +77,7 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 		<DesktopSidebar navigation={navigation} activeScreen="Grupos">
 		<View style={styles.container}>
 			<View style={styles.contentWrapper}>
+				{!isDesktop && (
 				<View style={styles.header}>
 					<Image
 						source={require('../../assets/images/logo-caldas.png')}
@@ -88,23 +89,22 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 						<Text style={styles.subtitle}>Mis Grupos</Text>
 						<Text style={styles.caption}>Comunidad Universidad de Caldas</Text>
 					</View>
-					{!isDesktop && (
-						<Pressable onPress={() => navigation.navigate('Notificaciones')}>
-							<View style={{ position: 'relative', marginRight: 8 }}>
-								<Ionicons name="notifications-outline" size={30} color="#007AFF" />
-								{unreadNotifications > 0 && (
-									<View style={{
-										position: 'absolute', top: -2, right: -4, backgroundColor: '#E53935', borderRadius: 10, minWidth: 18, height: 18, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3
-									}}>
-										<Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>
-											{unreadNotifications > 99 ? '99+' : unreadNotifications}
-										</Text>
-									</View>
-								)}
-							</View>
-						</Pressable>
-					)}
+					<Pressable onPress={() => navigation.navigate('Notificaciones')}>
+						<View style={{ position: 'relative', marginRight: 8 }}>
+							<Ionicons name="notifications-outline" size={30} color="#007AFF" />
+							{unreadNotifications > 0 && (
+								<View style={{
+									position: 'absolute', top: -2, right: -4, backgroundColor: '#E53935', borderRadius: 10, minWidth: 18, height: 18, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3
+								}}>
+									<Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>
+										{unreadNotifications > 99 ? '99+' : unreadNotifications}
+									</Text>
+								</View>
+							)}
+						</View>
+					</Pressable>
 				</View>
+				)}
 
 				{loading && <ActivityIndicator color={theme.colors.primary} size="large" />}
 				{error && (
