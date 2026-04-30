@@ -1,10 +1,21 @@
 import { apiClient } from "./api.client";
+import { resolverApiBaseUrl } from "../utils/apiConfig";
 import { Archivo, ApiResponse } from "../types/api.types";
 
 /**
  * Servicio de archivos
  */
 class ArchivosService {
+  private normalizarUrlDescarga(url: string): string {
+    if (/^https?:\/\//i.test(url)) {
+      return url;
+    }
+
+    const baseUrl = resolverApiBaseUrl().replace(/\/+$/, "");
+    const ruta = url.startsWith("/") ? url : `/${url}`;
+    return `${baseUrl}${ruta}`;
+  }
+
   /**
    * Obtener todos los archivos de un grupo
    */
@@ -53,7 +64,7 @@ class ArchivosService {
     const response = await apiClient.get<{ url: string; nombre: string }>(
       `/api/grupos/${grupoId}/archivos/${archivoId}/descargar`,
     );
-    return response.data!.url;
+    return this.normalizarUrlDescarga(response.data!.url);
   }
 
   /**
