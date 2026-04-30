@@ -1,4 +1,3 @@
-import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
@@ -126,6 +125,37 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 		}
 	}, []);
 
+	// Carga y re-registra suscripciones al montar la pantalla
+	useEffect(() => {
+		let isMounted = true;
+
+		const cargarSuscripciones = async () => {
+			try {
+				const raw = await AsyncStorage.getItem(SUSCRIPCIONES_KEY);
+				const almacenadas: CategoriaEvento[] = raw ? JSON.parse(raw) : [];
+				if (!isMounted || almacenadas.length === 0) return;
+
+				setCategoriasSuscritas(new Set(almacenadas));
+
+				// Re-registra con el backend por si el servidor reinició
+				await Promise.all(
+					almacenadas.map((cat) =>
+						apiClient
+							.post('/api/eventos/suscripciones', { categoria: cat })
+							.catch(() => {})
+					)
+				);
+			} catch {
+				// silencioso
+			}
+		};
+
+		cargarSuscripciones();
+		return () => {
+			isMounted = false;
+		};
+	}, []);
+
 	useEffect(() => {
 		let isMounted = true;
 
@@ -182,13 +212,19 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 				await apiClient.post(`/api/eventos/suscripciones`, { categoria });
 			}
 
-			setCategoriasSuscritas((prev) => {
-				const next = new Set(prev);
-				estaSuscrito ? next.delete(categoria) : next.add(categoria);
-				return next;
-			});
+			const next = new Set(categoriasSuscritas);
+			estaSuscrito ? next.delete(categoria) : next.add(categoria);
+			setCategoriasSuscritas(next);
+
+			await AsyncStorage.setItem(SUSCRIPCIONES_KEY, JSON.stringify(Array.from(next)));
+
+			showToast.success(
+				estaSuscrito
+					? `Desuscrito de eventos ${badgeCategoria(categoria)}`
+					: `Suscrito a eventos ${badgeCategoria(categoria)}`
+			);
 		} catch {
-			// silencioso
+			showToast.error('No se pudo actualizar la suscripción');
 		}
 	};
 
