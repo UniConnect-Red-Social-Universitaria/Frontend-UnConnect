@@ -4,13 +4,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { authService } from '../services';
 import { showToast } from '../utils/toast';
+import { getUnreadNotificationsCount, subscribeUnreadNotificationsCount } from '../services/notificaciones-badge.service';
+import { useFocusEffect } from '@react-navigation/native';
 
 type ActiveScreen = 'Principal' | 'Grupos' | 'Eventos' | 'Contactos' | 'Notificaciones' | 'EditarPerfil' | null;
 
 type Props = {
     navigation: any;
     activeScreen?: ActiveScreen;
-    unreadNotifications?: number;
     children: React.ReactNode;
 };
 
@@ -23,12 +24,36 @@ const NAV_ITEMS = [
     { screen: 'EditarPerfil', label: 'Perfil', icon: 'person-circle-outline', iconActive: 'person-circle' },
 ] as const;
 
-export function DesktopSidebar({ navigation, activeScreen, unreadNotifications = 0, children }: Props) {
+export function DesktopSidebar({ navigation, activeScreen, children }: Props) {
+    const [unreadNotifications, setUnreadNotifications] = React.useState(0);
     const isDesktop = useIsDesktop();
     // useWindowDimensions gives us real pixel viewport dimensions.
     // We apply these explicitly so the layout does NOT depend on any
     // flex:1 chain — React Navigation wrappers break that chain on web.
     const { width, height } = useWindowDimensions();
+
+    useFocusEffect(
+        React.useCallback(() => {
+            let mounted = true;
+
+            void getUnreadNotificationsCount().then((count) => {
+                if (mounted) {
+                    setUnreadNotifications(count);
+                }
+            });
+
+            const unsubscribe = subscribeUnreadNotificationsCount((count) => {
+                if (mounted) {
+                    setUnreadNotifications(count);
+                }
+            });
+
+            return () => {
+                mounted = false;
+                unsubscribe();
+            };
+        }, [])
+    );
 
     const handleLogout = async () => {
         try {
