@@ -86,12 +86,23 @@ export function useGrupoArchivos(grupoId: string) {
       const url = await archivosService.descargarArchivo(grupoId, archivoId);
 
       if (Platform.OS === "web") {
+        const token = await apiClient.getToken();
+        const response = await fetch(url, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) {
+          showToast.error(`Error del servidor: ${response.status}`);
+          return;
+        }
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
         const link = document.createElement("a");
-        link.href = url;
+        link.href = objectUrl;
         link.download = nombreArchivo.endsWith(".pdf") ? nombreArchivo : `${nombreArchivo}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        URL.revokeObjectURL(objectUrl);
         return;
       }
 
