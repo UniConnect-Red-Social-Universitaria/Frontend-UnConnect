@@ -58,14 +58,14 @@ class GruposService {
    * Solicitar ingreso a un grupo (reemplaza unirse directo)
    */
   async solicitarIngreso(grupoId: string): Promise<ApiResponse> {
-    return await apiClient.post(`/api/grupos/${grupoId}/solicitar-ingreso`);
+    return await apiClient.post(`/api/grupos/${grupoId}/solicitar-ingreso`, {});
   }
 
   /**
    * Salir de un grupo
    */
   async salirDeGrupo(grupoId: string): Promise<ApiResponse> {
-    return await apiClient.post(`/api/grupos/${grupoId}/salir`);
+    return await apiClient.post(`/api/grupos/${grupoId}/salir`, {});
   }
 
   /**
@@ -135,6 +135,7 @@ class GruposService {
   ): Promise<ApiResponse> {
     return await apiClient.patch(
       `/api/grupos/${grupoId}/solicitudes/${solicitudId}/aprobar`,
+      {}
     );
   }
 
@@ -147,6 +148,7 @@ class GruposService {
   ): Promise<ApiResponse> {
     return await apiClient.patch(
       `/api/grupos/${grupoId}/solicitudes/${solicitudId}/rechazar`,
+      {}
     );
   }
 

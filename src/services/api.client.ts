@@ -62,9 +62,17 @@ class ApiClient {
         const token = await this.getToken();
 
         const headers: Record<string, string> = {
-            'Content-Type': 'application/json',
             ...(options.headers as Record<string, string>),
         };
+
+        // Solo agregar Content-Type si hay un body o si es un método que espera datos
+        if (options.body || ['POST', 'PUT', 'PATCH'].includes(options.method || '')) {
+            headers['Content-Type'] = 'application/json';
+            // Asegurar que haya un body válido para JSON si se envió undefined
+            if (!options.body) {
+                options.body = '{}';
+            }
+        }
 
         // Agregar token si existe
         if (token) {
@@ -82,24 +90,32 @@ class ApiClient {
 
             if (!contentType.includes('application/json')) {
                 if (!response.ok) {
-                    throw new Error(`Error ${response.status}: respuesta no JSON desde ${endpoint}`);
+                    throw new Error(`Error del servidor. Inténtalo de nuevo más tarde.`);
                 }
 
-                throw new Error(`Respuesta inesperada del servidor en ${endpoint}`);
+                throw new Error(`Respuesta inesperada del servidor.`);
             }
 
             const data = rawBody ? JSON.parse(rawBody) : {};
 
             if (!response.ok) {
-                throw new Error(data.message || `Error ${response.status}`);
+                // Solo mandamos el mensaje del backend o uno genérico
+                throw new Error(data.message || `Error en la solicitud al servidor.`);
             }
 
             return data;
         } catch (error) {
+            // Imprimir error técnico en consola para debugging
+            console.error(`[API ${options.method || 'GET'} ${endpoint}]`, error);
+
             if (error instanceof Error) {
-                throw new Error(`[API ${options.method || 'GET'} ${endpoint}] ${error.message} (baseUrl: ${this.baseUrl})`);
+                // Revisar si es un error de fetch (network error)
+                if (error.message.includes('Network request failed') || error.message.includes('Failed to fetch')) {
+                    throw new Error('Error de conexión con el servidor. Revisa tu internet.');
+                }
+                throw error;
             }
-            throw new Error(`[API ${options.method || 'GET'} ${endpoint}] Error de conexión con el servidor (baseUrl: ${this.baseUrl})`);
+            throw new Error('Error de conexión con el servidor.');
         }
     }
 
@@ -157,9 +173,15 @@ class ApiClient {
         const url = `${this.baseUrl}${endpoint}`;
 
         const headers: Record<string, string> = {
-            'Content-Type': 'application/json',
             ...(options.headers as Record<string, string>),
         };
+
+        if (options.body || ['POST', 'PUT', 'PATCH'].includes(options.method || '')) {
+            headers['Content-Type'] = 'application/json';
+            if (!options.body) {
+                options.body = '{}';
+            }
+        }
 
         try {
             const response = await fetch(url, {
@@ -172,24 +194,30 @@ class ApiClient {
 
             if (!contentType.includes('application/json')) {
                 if (!response.ok) {
-                    throw new Error(`Error ${response.status}: respuesta no JSON desde ${endpoint}`);
+                    throw new Error(`Error del servidor. Inténtalo de nuevo más tarde.`);
                 }
 
-                throw new Error(`Respuesta inesperada del servidor en ${endpoint}`);
+                throw new Error(`Respuesta inesperada del servidor.`);
             }
 
             const data = rawBody ? JSON.parse(rawBody) : {};
 
             if (!response.ok) {
-                throw new Error(data.message || `Error ${response.status}`);
+                throw new Error(data.message || `Error en la solicitud al servidor.`);
             }
 
             return data;
         } catch (error) {
+            // Imprimir error técnico en consola para debugging
+            console.error(`[API PUBLIC ${options.method || 'GET'} ${endpoint}]`, error);
+
             if (error instanceof Error) {
-                throw new Error(`[API PUBLIC ${options.method || 'GET'} ${endpoint}] ${error.message} (baseUrl: ${this.baseUrl})`);
+                if (error.message.includes('Network request failed') || error.message.includes('Failed to fetch')) {
+                    throw new Error('Error de conexión con el servidor. Revisa tu internet.');
+                }
+                throw error;
             }
-            throw new Error(`[API PUBLIC ${options.method || 'GET'} ${endpoint}] Error de conexión con el servidor (baseUrl: ${this.baseUrl})`);
+            throw new Error('Error de conexión con el servidor.');
         }
     }
 }

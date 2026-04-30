@@ -5,18 +5,23 @@ export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.white,
+    minHeight: 0,
   },
 
+
   contentWrapper: {
-    flex: 1,
     alignItems: "center",
-    justifyContent: "flex-start",
-    paddingTop: 56,
+    paddingTop: 0,
     paddingHorizontal: 20,
+    paddingBottom: 40,
+    width: "100%",
   },
+
+
 
   scrollView: {
     width: "100%",
+    flex: 1,
   },
 
   // HEADER
@@ -216,8 +221,10 @@ export const styles = StyleSheet.create({
 
   formMessage: {
     fontSize: 13,
-    color: theme.colors.primaryMid,
-    marginBottom: 8,
+    color: "#E53935",
+    marginBottom: 12,
+    fontWeight: "bold",
+    textAlign: "center",
   },
 
   button: {

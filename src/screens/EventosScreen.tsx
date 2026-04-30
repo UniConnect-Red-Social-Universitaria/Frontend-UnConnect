@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import io, { Socket } from 'socket.io-client';
@@ -10,9 +10,11 @@ import { apiClient } from '../services';
 import { CrearEventoModal } from '../components/CrearEventoModal';
 import { resolverApiBaseUrl } from '../utils/apiConfig';
 import { DesktopSidebar } from '../components/DesktopSidebar';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { useUnreadNotifications } from '../hooks/useUnreadNotifications';
+import { styles as principalStyles } from '../styles/PrincipalScreenStyles';
+import { authService } from '../services';
 import { showToast } from '../utils/toast';
-
-const SUSCRIPCIONES_KEY = '@uniconnect_suscripciones_categorias';
 
 // --- Tipos ---
 type RootStackParamList = {
@@ -20,6 +22,9 @@ type RootStackParamList = {
 	Eventos: undefined;
 	Grupos: undefined;
 	Contactos: undefined;
+	Notificaciones: undefined;
+	EditarPerfil: undefined;
+	Login: undefined;
 };
 
 type EventosScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Eventos'>;
@@ -89,6 +94,19 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 
 	const socketRef = useRef<Socket | null>(null);
 	const apiBaseUrl = resolverApiBaseUrl(); // <-- ¡Usando la función importada!
+	const isDesktop = useIsDesktop();
+	const unreadNotifications = useUnreadNotifications();
+	const { width } = useWindowDimensions();
+	const logoWidth = width < 380 ? 150 : width < 480 ? 180 : 220;
+
+	const handleLogout = async () => {
+		try {
+			await authService.logout();
+			navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+		} catch {
+			showToast.error('Error al cerrar sesión');
+		}
+	};
 
 	const cargarEventos = useCallback(async (categoria?: CategoriaEvento | 'todas') => {
 		try {
@@ -217,14 +235,63 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 	return (
 		<DesktopSidebar navigation={navigation} activeScreen="Eventos">
 		<View style={styles.container}>
-			<View style={styles.contentWrapper}>
-				<View style={styles.headerWithButton}>
-					<View style={styles.headerText}>
-						<Text style={styles.title}>UniConnect</Text>
-						<Text style={styles.subtitle}>Eventos</Text>
-						<Text style={styles.caption}>Comunidad Universidad de Caldas</Text>
-					</View>
+			{!isDesktop && (
+			<View style={principalStyles.header}>
+				<View style={principalStyles.headerLeft}>
+					<Image
+						source={require('../../assets/images/logo-caldas.png')}
+						style={[principalStyles.brandLogo, { width: logoWidth }]}
+						resizeMode="contain"
+					/>
 				</View>
+
+				<View style={principalStyles.headerCenter}>
+					<Pressable
+						style={principalStyles.iconButton}
+						onPress={() => navigation.navigate('EditarPerfil')}
+					>
+						<Ionicons name="person-circle-outline" size={32} color="#007AFF" />
+					</Pressable>
+					<Pressable
+						style={principalStyles.iconButton}
+						onPress={() => navigation.navigate('Notificaciones')}
+					>
+						<View style={{ position: 'relative' }}>
+							<Ionicons name="notifications-outline" size={32} color="#007AFF" />
+							{unreadNotifications > 0 && (
+								<View style={{
+									position: 'absolute', top: -2, right: -4, backgroundColor: '#E53935', borderRadius: 10, minWidth: 18, height: 18, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3
+								}}>
+									<Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>
+										{unreadNotifications > 99 ? '99+' : unreadNotifications}
+									</Text>
+								</View>
+							)}
+						</View>
+					</Pressable>
+				</View>
+
+				<View style={principalStyles.headerRight}>
+					<Pressable style={principalStyles.logoutButton} onPress={handleLogout}>
+						<Text style={principalStyles.logoutText}>Salir</Text>
+						<Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
+					</Pressable>
+				</View>
+			</View>
+			)}
+
+			<ScrollView
+				style={styles.scrollView}
+				contentContainerStyle={styles.contentWrapper}
+				showsVerticalScrollIndicator={true}
+			>
+				<View style={{ width: '100%', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 }}>
+					<Text style={principalStyles.greeting}>Eventos</Text>
+					<Text style={principalStyles.subtitle}>
+						Comunidad Universidad de Caldas
+					</Text>
+				</View>
+
 
 				{notificacionObserver && (
 					<View style={styles.observerBanner}>
@@ -298,7 +365,7 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 				{error && <Text style={styles.error}>Error: {error}</Text>}
 
 				{!loadingEventos && !error && (
-					<ScrollView contentContainerStyle={styles.list} style={styles.scrollView}>
+					<View style={styles.list}>
 						{eventos.map((evento) => (
 							<View key={evento.id} style={styles.card}>
 								<View style={styles.cardHeader}>
@@ -324,10 +391,11 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 						{eventos.length === 0 && (
 							<Text style={styles.empty}>No hay eventos próximos en este momento.</Text>
 						)}
-					</ScrollView>
+					</View>
 				)}
-			</View>
+			</ScrollView>
 
+			{!isDesktop && (
 			<View style={styles.bottomBar}>
 				<Pressable
 					style={styles.footerTab}
@@ -361,6 +429,7 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 					<Ionicons name="chatbubbles-outline" size={24} style={styles.footerIcon} />
 				</Pressable>
 			</View>
+			)}
 
 			<CrearEventoModal
 				visible={crearEventoModalVisible}

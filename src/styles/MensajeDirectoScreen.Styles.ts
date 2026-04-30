@@ -1,9 +1,10 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 
 export const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#eef2f7',
+        ...(Platform.OS === 'web' && ({ maxHeight: '100vh', height: '100vh' } as any)),
     },
     safeHeader: {
         backgroundColor: '#002855',

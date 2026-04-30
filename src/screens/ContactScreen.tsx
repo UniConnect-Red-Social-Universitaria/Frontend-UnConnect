@@ -23,6 +23,8 @@ import type { Usuario } from '../types/api.types';
 // Importamos los estilos separados
 import { styles } from '../styles/ContactScreen.styles';
 import { DesktopSidebar } from '../components/DesktopSidebar';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { useUnreadNotifications } from '../hooks/useUnreadNotifications';
 
 type Contacto = {
 	id: string;
@@ -57,6 +59,8 @@ export default function ContactScreen() {
 	const [sendingSolicitudTo, setSendingSolicitudTo] = useState<string | null>(null);
 	const [usuarioActualId, setUsuarioActualId] = useState<string | null>(null);
 	const [contactosIds, setContactosIds] = useState<Set<string>>(new Set());
+	const isDesktop = useIsDesktop();
+	const unreadNotifications = useUnreadNotifications();
 
 	const cargarDatos = async () => {
 		setLoading(true);
@@ -267,6 +271,7 @@ export default function ContactScreen() {
 	return (
 		<DesktopSidebar navigation={navigation} activeScreen="Contactos">
 		<View style={principalStyles.container}>
+			{!isDesktop && (
 			<View style={principalStyles.header}>
 				<View style={principalStyles.headerLeft}>
 					<Image
@@ -287,7 +292,18 @@ export default function ContactScreen() {
 						style={principalStyles.iconButton}
 						onPress={() => navigation.navigate('Notificaciones')}
 					>
-						<Ionicons name="notifications-outline" size={32} color="#007AFF" />
+						<View style={{ position: 'relative' }}>
+							<Ionicons name="notifications-outline" size={32} color="#007AFF" />
+							{unreadNotifications > 0 && (
+								<View style={{
+									position: 'absolute', top: -2, right: -4, backgroundColor: '#E53935', borderRadius: 10, minWidth: 18, height: 18, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3
+								}}>
+									<Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>
+										{unreadNotifications > 99 ? '99+' : unreadNotifications}
+									</Text>
+								</View>
+							)}
+						</View>
 					</Pressable>
 				</View>
 
@@ -298,6 +314,7 @@ export default function ContactScreen() {
 					</Pressable>
 				</View>
 			</View>
+			)}
 
 			<View style={principalStyles.mainContent}>
 				<Text style={principalStyles.greeting}>Contactos</Text>
@@ -425,6 +442,7 @@ export default function ContactScreen() {
 				)}
 			</View>
 
+			{!isDesktop && (
 			<View style={principalStyles.bottomBar}>
 				<Pressable
 					style={principalStyles.footerTab}
@@ -462,6 +480,7 @@ export default function ContactScreen() {
 					<Ionicons name="chatbubbles" size={24} style={principalStyles.footerIcon} />
 				</Pressable>
 			</View>
+			)}
 		</View>
 		</DesktopSidebar>
 	);

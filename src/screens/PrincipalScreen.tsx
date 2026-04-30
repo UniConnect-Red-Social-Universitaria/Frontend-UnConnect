@@ -90,7 +90,7 @@ export default function PrincipalScreen({
 }: {
 	navigation: PrincipalScreenNavigationProp;
 }) {
-	const { width } = useWindowDimensions();
+	const { width, height } = useWindowDimensions();
 	const logoWidth = width < 380 ? 150 : width < 480 ? 180 : 220;
 	const isDesktop = useIsDesktop();
 
@@ -481,7 +481,7 @@ export default function PrincipalScreen({
 
 	if (isDesktop) {
 		return (
-			<View style={styles.desktopContainer}>
+			<View style={[styles.desktopContainer, { width, height }]}>
 				<Modal visible={showOnboarding} transparent animationType="fade">
 					<View style={styles.onboardingBackdrop}>
 						<View style={styles.onboardingCard}>
@@ -578,7 +578,7 @@ export default function PrincipalScreen({
 	}
 
 	return (
-		<View style={styles.container}>
+		<View style={[styles.container, { width, height }]}>
 			<Modal visible={showOnboarding} transparent animationType="fade">
 				<View
 					style={[

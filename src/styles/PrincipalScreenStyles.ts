@@ -6,7 +6,9 @@ export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.white,
+    minHeight: 0,
   },
+
 
   header: {
     flexDirection: 'row',
@@ -101,7 +103,9 @@ export const styles = StyleSheet.create({
   mainContent: {
     flex: 1,
     padding: theme.spacing?.lg || 20,
+    minHeight: 0,
   },
+
   greeting: {
     fontSize: theme.typography?.fontSize?.xl || 24,
     fontWeight: '700',
@@ -467,5 +471,6 @@ export const styles = StyleSheet.create({
     flex: 1,
     padding: 32,
     backgroundColor: '#f0f4f8',
+    minHeight: 0,
   },
-});
+});
