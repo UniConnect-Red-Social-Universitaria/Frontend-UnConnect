@@ -23,6 +23,7 @@ import SolicitudesGrupoScreen from '../screens/SolicitudesGrupoScreen';
 import { resolverApiBaseUrl } from '../utils/apiConfig';
 import { authService } from '../services';
 import { notifyIncomingMessage } from '../services/notificaciones.service';
+import { showToast } from '../utils/toast';
 import { incrementUnreadNotificationsCount } from '../services/notificaciones-badge.service';
 import {
 	upsertUnreadDirectChatNotification,
@@ -206,6 +207,7 @@ export default function RootNavigator() {
 						receptorId: String(msg?.receptorId ?? ''),
 					},
 				});
+				showToast.info(emisorNombre.length > 0 ? `Nuevo mensaje de ${emisorNombre}` : 'Tienes un nuevo mensaje');
 			});
 
 			socket.on('grupo:mensaje:nuevo', async (msg: any) => {
@@ -258,6 +260,7 @@ export default function RootNavigator() {
 						emisorId: String(msg?.emisorId ?? ''),
 					},
 				});
+				showToast.info(nombreGrupo ? `Nuevo mensaje en ${nombreGrupo}` : 'Nuevo mensaje de grupo');
 			});
 
 			socket.on('contacto:solicitud:nueva', async (payload: any) => {
@@ -293,6 +296,7 @@ export default function RootNavigator() {
 						solicitanteId: String(payload?.solicitanteId ?? ''),
 					},
 				});
+				showToast.info(nombreCompleto.length > 0 ? `${nombreCompleto} te envió una solicitud de contacto` : 'Tienes una nueva solicitud de contacto');
 			});
 
 			socket.on('contacto:solicitud:rechazada', (payload: any) => {
@@ -331,6 +335,7 @@ export default function RootNavigator() {
 						solicitudId: String(payload?.solicitudId ?? ''),
 					},
 				});
+				showToast.info(receptorNombreCompleto.length > 0 ? `${receptorNombreCompleto} rechazó tu solicitud de contacto.` : 'Una solicitud de contacto enviada por ti fue rechazada.');
 
 				publishContactRequestRejected({
 					solicitudId: String(payload?.solicitudId ?? ''),
@@ -366,6 +371,7 @@ export default function RootNavigator() {
 					body: `${nombreCompleto || 'Un estudiante'} quiere unirse a "${payload?.grupoNombre ?? ''}"`,
 					data: { type: 'grupo-solicitud-nueva', grupoId: String(payload?.grupoId ?? '') },
 				});
+				showToast.info(`${nombreCompleto || 'Un estudiante'} quiere unirse a "${payload?.grupoNombre ?? ''}"`);
 			});
 
 			socket.on('grupo:solicitud:resuelta', async (payload: any) => {
@@ -393,6 +399,7 @@ export default function RootNavigator() {
 						: `Tu solicitud a "${grupoNombre}" fue rechazada`,
 					data: { type: 'grupo-solicitud-resuelta', grupoId: String(payload?.grupoId ?? '') },
 				});
+				showToast.info(aprobada ? `Fuiste aceptado en "${grupoNombre}"` : `Tu solicitud a "${grupoNombre}" fue rechazada`);
 			});
 
 			socket.on('grupo:admin:transferido', async (payload: any) => {
@@ -422,6 +429,7 @@ export default function RootNavigator() {
 						: `Transferiste admin de "${grupoNombre}"`,
 					data: { type: 'grupo-admin-transferido', grupoId: String(payload?.grupoId ?? '') },
 				});
+				showToast.info(esNuevoAdmin ? `Ahora eres admin de "${grupoNombre}"` : `Transferiste admin de "${grupoNombre}"`);
 			});
 		};
 

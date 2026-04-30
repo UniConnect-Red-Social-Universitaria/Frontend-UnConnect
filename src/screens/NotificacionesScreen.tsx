@@ -46,6 +46,7 @@ import {
 	type UnreadGroupEventNotification,
 } from '../services/notificaciones-grupo.service';
 import { DesktopSidebar } from '../components/DesktopSidebar';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type NotificacionesNavigationProp = StackNavigationProp<
 	RootStackParamList,
@@ -73,6 +74,7 @@ export default function NotificacionesScreen({
 	const [esAdminDeGrupos, setEsAdminDeGrupos] = useState(false);
 	const { width } = useWindowDimensions();
 	const logoWidth = width < 380 ? 150 : width < 480 ? 180 : 220;
+	const isDesktop = useIsDesktop();
 
 	type NotificationItem =
 		| (UnreadDirectChatNotification & { kind: 'direct'; key: string })
@@ -335,6 +337,7 @@ export default function NotificacionesScreen({
 	return (
 		<DesktopSidebar navigation={navigation} activeScreen="Notificaciones">
 		<View style={styles.container}>
+			{!isDesktop && (
 			<View style={styles.header}>
 				<View style={styles.headerLeft}>
 					<Image
@@ -366,6 +369,7 @@ export default function NotificacionesScreen({
 					</Pressable>
 				</View>
 			</View>
+			)}
 
 			<View style={styles.mainContent}>
 				<Text style={styles.greeting}>Notificaciones</Text>
@@ -433,6 +437,7 @@ export default function NotificacionesScreen({
 				/>
 			</View>
 
+			{!isDesktop && (
 			<View style={styles.bottomBar}>
 				<Pressable
 					style={styles.footerTab}
@@ -466,6 +471,7 @@ export default function NotificacionesScreen({
 					<Ionicons name="chatbubbles-outline" size={24} style={styles.footerIcon} />
 				</Pressable>
 			</View>
+			)}
 		</View>
 		</DesktopSidebar>
 	);

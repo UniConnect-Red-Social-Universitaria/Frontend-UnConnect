@@ -3,7 +3,7 @@ name: Deploy Frontend to Fly.io
 on:
   push:
     branches:
-      - developer
+      - main
 
 jobs:
   deploy:
