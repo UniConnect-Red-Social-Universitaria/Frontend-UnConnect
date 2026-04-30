@@ -4,8 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { authService } from '../services';
 import { showToast } from '../utils/toast';
-import { getUnreadNotificationsCount, subscribeUnreadNotificationsCount } from '../services/notificaciones-badge.service';
-import { useFocusEffect } from '@react-navigation/native';
+import { useUnreadNotifications } from '../hooks/useUnreadNotifications';
 
 type ActiveScreen = 'Principal' | 'Grupos' | 'Eventos' | 'Contactos' | 'Notificaciones' | 'EditarPerfil' | null;
 
@@ -25,35 +24,12 @@ const NAV_ITEMS = [
 ] as const;
 
 export function DesktopSidebar({ navigation, activeScreen, children }: Props) {
-    const [unreadNotifications, setUnreadNotifications] = React.useState(0);
+    const unreadNotifications = useUnreadNotifications();
     const isDesktop = useIsDesktop();
     // useWindowDimensions gives us real pixel viewport dimensions.
     // We apply these explicitly so the layout does NOT depend on any
     // flex:1 chain — React Navigation wrappers break that chain on web.
     const { width, height } = useWindowDimensions();
-
-    useFocusEffect(
-        React.useCallback(() => {
-            let mounted = true;
-
-            void getUnreadNotificationsCount().then((count) => {
-                if (mounted) {
-                    setUnreadNotifications(count);
-                }
-            });
-
-            const unsubscribe = subscribeUnreadNotificationsCount((count) => {
-                if (mounted) {
-                    setUnreadNotifications(count);
-                }
-            });
-
-            return () => {
-                mounted = false;
-                unsubscribe();
-            };
-        }, [])
-    );
 
     const handleLogout = async () => {
         try {

@@ -24,6 +24,7 @@ import type { Usuario } from '../types/api.types';
 import { styles } from '../styles/ContactScreen.styles';
 import { DesktopSidebar } from '../components/DesktopSidebar';
 import { useIsDesktop } from '../hooks/useIsDesktop';
+import { useUnreadNotifications } from '../hooks/useUnreadNotifications';
 
 type Contacto = {
 	id: string;
@@ -59,6 +60,7 @@ export default function ContactScreen() {
 	const [usuarioActualId, setUsuarioActualId] = useState<string | null>(null);
 	const [contactosIds, setContactosIds] = useState<Set<string>>(new Set());
 	const isDesktop = useIsDesktop();
+	const unreadNotifications = useUnreadNotifications();
 
 	const cargarDatos = async () => {
 		setLoading(true);
@@ -289,7 +291,18 @@ export default function ContactScreen() {
 						style={principalStyles.iconButton}
 						onPress={() => navigation.navigate('Notificaciones')}
 					>
-						<Ionicons name="notifications-outline" size={32} color="#007AFF" />
+						<View style={{ position: 'relative' }}>
+							<Ionicons name="notifications-outline" size={32} color="#007AFF" />
+							{unreadNotifications > 0 && (
+								<View style={{
+									position: 'absolute', top: -2, right: -4, backgroundColor: '#E53935', borderRadius: 10, minWidth: 18, height: 18, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3
+								}}>
+									<Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>
+										{unreadNotifications > 99 ? '99+' : unreadNotifications}
+									</Text>
+								</View>
+							)}
+						</View>
 					</Pressable>
 				</View>
 

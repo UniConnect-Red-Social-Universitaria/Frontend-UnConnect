@@ -12,6 +12,7 @@ import { CrearEventoModal } from '../components/CrearEventoModal';
 import { resolverApiBaseUrl } from '../utils/apiConfig';
 import { DesktopSidebar } from '../components/DesktopSidebar';
 import { useIsDesktop } from '../hooks/useIsDesktop';
+import { useUnreadNotifications } from '../hooks/useUnreadNotifications';
 
 // --- Tipos ---
 type RootStackParamList = {
@@ -19,6 +20,7 @@ type RootStackParamList = {
 	Eventos: undefined;
 	Grupos: undefined;
 	Contactos: undefined;
+	Notificaciones: undefined;
 };
 
 type EventosScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Eventos'>;
@@ -89,6 +91,7 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 	const socketRef = useRef<Socket | null>(null);
 	const apiBaseUrl = resolverApiBaseUrl(); // <-- ¡Usando la función importada!
 	const isDesktop = useIsDesktop();
+	const unreadNotifications = useUnreadNotifications();
 
 	const cargarEventos = useCallback(async (categoria?: CategoriaEvento | 'todas') => {
 		try {
@@ -191,6 +194,22 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 						<Text style={styles.subtitle}>Eventos</Text>
 						<Text style={styles.caption}>Comunidad Universidad de Caldas</Text>
 					</View>
+					{!isDesktop && (
+						<Pressable onPress={() => navigation.navigate('Notificaciones')}>
+							<View style={{ position: 'relative', marginRight: 8 }}>
+								<Ionicons name="notifications-outline" size={30} color="#007AFF" />
+								{unreadNotifications > 0 && (
+									<View style={{
+										position: 'absolute', top: -2, right: -4, backgroundColor: '#E53935', borderRadius: 10, minWidth: 18, height: 18, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3
+									}}>
+										<Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>
+											{unreadNotifications > 99 ? '99+' : unreadNotifications}
+										</Text>
+									</View>
+								)}
+							</View>
+						</Pressable>
+					)}
 				</View>
 
 				{notificacionObserver && (
