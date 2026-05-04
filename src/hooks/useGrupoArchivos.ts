@@ -82,42 +82,29 @@ export function useGrupoArchivos(grupoId: string) {
   const descargarPdf = async (archivoId: string, nombreArchivo: string) => {
     setDownloadingId(archivoId);
     try {
-      const url = await archivosService.descargarArchivo(grupoId, archivoId);
+      const { url, headers } = await archivosService.getDownloadRequest(grupoId, archivoId);
+      const nombreFinal = nombreArchivo.endsWith(".pdf") ? nombreArchivo : `${nombreArchivo}.pdf`;
 
       if (Platform.OS === "web") {
-        try {
-          const response = await fetch(url);
-          if (!response.ok) {
-            throw new Error(`Error del servidor: ${response.status}`);
-          }
-
-          const blob = await response.blob();
-          const objectUrl = window.URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = objectUrl;
-          link.download = nombreArchivo.endsWith(".pdf") ? nombreArchivo : `${nombreArchivo}.pdf`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 1000);
-          return;
-        } catch (webError) {
-          console.warn("No se pudo descargar como blob, usando enlace directo:", webError);
-          const link = document.createElement("a");
-          link.href = url;
-          link.target = "_blank";
-          link.rel = "noopener noreferrer";
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          return;
+        const response = await fetch(url, { headers });
+        if (!response.ok) {
+          throw new Error(`Error del servidor: ${response.status}`);
         }
+        const blob = await response.blob();
+        const objectUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = nombreFinal;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 1000);
+        return;
       }
 
-      const nombreLimpio = nombreArchivo.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const nombreLimpio = nombreFinal.replace(/[^a-zA-Z0-9.-]/g, "_");
       const fileUri = `${FileSystem.documentDirectory}${nombreLimpio}`;
-
-      const downloadResult = await FileSystem.downloadAsync(url, fileUri);
+      const downloadResult = await FileSystem.downloadAsync(url, fileUri, { headers });
 
       if (downloadResult.status === 200) {
         await Sharing.shareAsync(downloadResult.uri);

@@ -6,16 +6,6 @@ import { Archivo, ApiResponse } from "../types/api.types";
  * Servicio de archivos
  */
 class ArchivosService {
-  private normalizarUrlDescarga(url: string): string {
-    if (/^https?:\/\//i.test(url)) {
-      return url;
-    }
-
-    const baseUrl = resolverApiBaseUrl().replace(/\/+$/, "");
-    const ruta = url.startsWith("/") ? url : `/${url}`;
-    return `${baseUrl}${ruta}`;
-  }
-
   /**
    * Obtener todos los archivos de un grupo
    */
@@ -60,11 +50,13 @@ class ArchivosService {
     return data;
   }
 
-  async descargarArchivo(grupoId: string, archivoId: string): Promise<string> {
-    const response = await apiClient.get<{ url: string; nombre: string }>(
-      `/api/grupos/${grupoId}/archivos/${archivoId}/descargar`,
-    );
-    return this.normalizarUrlDescarga(response.data!.url);
+  async getDownloadRequest(grupoId: string, archivoId: string): Promise<{ url: string; headers: Record<string, string> }> {
+    const token = await apiClient.getToken();
+    const baseUrl = resolverApiBaseUrl().replace(/\/+$/, "");
+    return {
+      url: `${baseUrl}/api/grupos/${grupoId}/archivos/${archivoId}/descargar`,
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    };
   }
 
   /**
