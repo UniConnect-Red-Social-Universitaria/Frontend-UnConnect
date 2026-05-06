@@ -1,24 +1,45 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
+import { jwtDecode } from 'jwt-decode';
 import theme from '@uniconnect/theme';
 
 export default function RegistroScreen() {
 	const navigate = useNavigate();
 
+	const [error, setError] = useState('');
 	const allowedDomain = 'ucaldas.edu.co';
+	const GOOGLE_CLIENT_ID = '962671967940-0ui1kavjc190n9iaj8kc0vsn9h81ppsu.apps.googleusercontent.com';
 
-	const handleGoogleLogin = () => {
-		// En web, el registro institucional se maneja manualmente con correo + contraseña
-		// redirigimos al formulario de completar registro pasando estado vacío
-		navigate('/completar-registro', {
-			state: {
-				googleData: {
-					nombre: '',
-					apellido: '',
-					correo: '',
-					googleIdToken: '',
+	const handleGoogleSuccess = (credentialResponse: any) => {
+		if (!credentialResponse.credential) {
+			setError('Error al recibir credenciales de Google.');
+			return;
+		}
+
+		try {
+			const decoded: any = jwtDecode(credentialResponse.credential);
+			const userEmail = decoded.email || '';
+
+			if (!userEmail.toLowerCase().endsWith(`@${allowedDomain}`)) {
+				setError(`Solo se permiten correos que terminen en @${allowedDomain}`);
+				return;
+			}
+
+			// Redirigimos al formulario de completar registro pasando los datos de Google
+			navigate('/completar-registro', {
+				state: {
+					googleData: {
+						nombre: decoded.given_name || decoded.name?.split(' ')[0] || '',
+						apellido: decoded.family_name || decoded.name?.split(' ').slice(1).join(' ') || '',
+						correo: userEmail,
+						googleIdToken: credentialResponse.credential,
+					},
 				},
-			},
-		});
+			});
+		} catch (err) {
+			setError('Error al decodificar la información de Google.');
+		}
 	};
 
 	return (
@@ -45,6 +66,28 @@ export default function RegistroScreen() {
 					gap: 10px;
 				}
 				.uc-btn-primary:hover { background: #00284d; }
+				.uc-input {
+					width: 100%;
+					padding: 12px 14px;
+					border: 1.5px solid #c5d3df;
+					border-radius: 8px;
+					font-size: 15px;
+					font-family: 'Inter', sans-serif;
+					color: #00284d;
+					background: #fff;
+					outline: none;
+					transition: border-color 0.2s;
+					margin-bottom: 4px;
+				}
+				.uc-input:focus { border-color: #003e70; }
+				.uc-input.error { border-color: #e74c3c; }
+				.error-text {
+					margin: 0 0 16px 0;
+					font-size: 14px;
+					color: #e74c3c;
+					text-align: center;
+					font-weight: 500;
+				}
 				@keyframes fadeUp {
 					from { opacity: 0; transform: translateY(20px); }
 					to   { opacity: 1; transform: translateY(0); }
@@ -90,11 +133,19 @@ export default function RegistroScreen() {
 						</div>
 					</div>
 
-					{/* Botón continuar */}
-					<button className="uc-btn-primary" onClick={handleGoogleLogin}>
-						<span>🎓</span>
-						Continuar con cuenta institucional
-					</button>
+					<div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px', flexDirection: 'column', alignItems: 'center' }}>
+						{error && <p className="error-text">{error}</p>}
+						<GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+							<GoogleLogin
+								onSuccess={handleGoogleSuccess}
+								onError={() => setError('Error al iniciar sesión con Google.')}
+								theme="filled_blue"
+								shape="pill"
+								text="continue_with"
+								width={300}
+							/>
+						</GoogleOAuthProvider>
+					</div>
 
 					{/* Volver */}
 					<div style={s.footer}>

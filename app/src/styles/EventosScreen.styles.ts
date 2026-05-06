@@ -210,13 +210,19 @@ export const styles = StyleSheet.create({
   },
 
   suscripcionBtnActivo: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: "#EAF2FF",
+    borderColor: theme.colors.primary,
   },
 
   suscripcionBtnText: {
     fontSize: 13,
     color: theme.colors.primary,
     fontWeight: "600",
+  },
+
+  suscripcionBtnTextActivo: {
+    color: theme.colors.primaryDark,
+    fontWeight: "700",
   },
 
   formMessage: {

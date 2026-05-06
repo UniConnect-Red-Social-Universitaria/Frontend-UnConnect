@@ -375,7 +375,13 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 											styles.suscripcionBtnActivo,
 									]}
 								>
-									<Text style={styles.suscripcionBtnText}>
+									<Text
+										style={[
+											styles.suscripcionBtnText,
+											categoriasSuscritas.has(filtroActivo as CategoriaEvento) &&
+												styles.suscripcionBtnTextActivo,
+										]}
+									>
 										{categoriasSuscritas.has(filtroActivo as CategoriaEvento)
 											? 'Desuscribirse'
 											: 'Suscribirse'}

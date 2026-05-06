@@ -77,7 +77,9 @@ export default function CompletarRegistroScreen() {
 		if (!nombre.trim()) { e.nombre = 'El nombre es obligatorio.'; ok = false; }
 		if (!apellido.trim()) { e.apellido = 'El apellido es obligatorio.'; ok = false; }
 		const emailReg = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		const allowedDomain = 'ucaldas.edu.co';
 		if (!correo.trim() || !emailReg.test(correo)) { e.correo = 'Ingresa un correo válido.'; ok = false; }
+		else if (!correo.toLowerCase().endsWith(`@${allowedDomain}`)) { e.correo = `Por favor, utiliza exclusivamente tu correo institucional (@${allowedDomain}).`; ok = false; }
 		if (contrasena.trim().length < 8) { e.contrasena = 'La contraseña debe tener al menos 8 caracteres.'; ok = false; }
 		if (!selectedCarreraId) { e.carrera = 'Selecciona tu carrera.'; ok = false; }
 		const sem = parseInt(semestre);
