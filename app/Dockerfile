@@ -1,5 +1,5 @@
 # ── Stage 1: builder ──────────────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:20 AS builder
 
 WORKDIR /app
 
@@ -24,8 +24,13 @@ ENV EXPO_PUBLIC_AUTH0_DOMAIN=$EXPO_PUBLIC_AUTH0_DOMAIN
 ENV EXPO_PUBLIC_AUTH0_CLIENT_ID=$EXPO_PUBLIC_AUTH0_CLIENT_ID
 ENV EXPO_PUBLIC_AUTH0_CONNECTION=$EXPO_PUBLIC_AUTH0_CONNECTION
 
-COPY package*.json ./
-RUN npm ci --legacy-peer-deps
+COPY package.json ./
+COPY app/package.json ./app/
+COPY web/package.json ./web/
+COPY packages/api/package.json ./packages/api/
+COPY packages/theme/package.json ./packages/theme/
+COPY packages/ui/package.json ./packages/ui/
+RUN npm install --legacy-peer-deps
 
 COPY . .
 
@@ -35,7 +40,7 @@ RUN npm run build:web
 FROM nginx:alpine AS runner
 
 COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY app/nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 
