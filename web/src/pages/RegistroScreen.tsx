@@ -9,7 +9,8 @@ export default function RegistroScreen() {
 
 	const [error, setError] = useState('');
 	const allowedDomain = 'ucaldas.edu.co';
-	const GOOGLE_CLIENT_ID = '962671967940-0ui1kavjc190n9iaj8kc0vsn9h81ppsu.apps.googleusercontent.com';
+	const GOOGLE_CLIENT_ID =
+		'962671967940-0ui1kavjc190n9iaj8kc0vsn9h81ppsu.apps.googleusercontent.com';
 
 	const handleGoogleSuccess = (credentialResponse: any) => {
 		if (!credentialResponse.credential) {
@@ -19,7 +20,9 @@ export default function RegistroScreen() {
 
 		try {
 			const decoded: any = jwtDecode(credentialResponse.credential);
-			const userEmail = decoded.email || '';
+			const userEmail = String(decoded.email || '')
+				.trim()
+				.toLowerCase();
 
 			if (!userEmail.toLowerCase().endsWith(`@${allowedDomain}`)) {
 				setError(`Solo se permiten correos que terminen en @${allowedDomain}`);
@@ -31,7 +34,8 @@ export default function RegistroScreen() {
 				state: {
 					googleData: {
 						nombre: decoded.given_name || decoded.name?.split(' ')[0] || '',
-						apellido: decoded.family_name || decoded.name?.split(' ').slice(1).join(' ') || '',
+						apellido:
+							decoded.family_name || decoded.name?.split(' ').slice(1).join(' ') || '',
 						correo: userEmail,
 						googleIdToken: credentialResponse.credential,
 					},
@@ -107,14 +111,16 @@ export default function RegistroScreen() {
 							src="/logo-caldas.png"
 							alt="Logo Universidad de Caldas"
 							style={s.logo}
-							onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+							onError={(e) => {
+								(e.target as HTMLImageElement).style.display = 'none';
+							}}
 						/>
 					</div>
 
 					<h2 style={s.title}>Registro Institucional</h2>
 					<p style={s.subtitle}>
-						Para unirte a UniConnect, utiliza tu correo institucional de la
-						Universidad de Caldas{' '}
+						Para unirte a UniConnect, utiliza tu correo institucional de la Universidad de
+						Caldas{' '}
 						<strong style={{ color: theme.colors.primaryDark }}>
 							(@{allowedDomain})
 						</strong>
@@ -127,13 +133,21 @@ export default function RegistroScreen() {
 							<p style={s.infoTitle}>Acceso exclusivo para estudiantes</p>
 							<p style={s.infoDesc}>
 								Solo se admiten cuentas con correo <strong>@{allowedDomain}</strong>.
-								Necesitarás completar tu perfil académico (carrera, semestre y
-								materias) en el siguiente paso.
+								Necesitarás completar tu perfil académico (carrera, semestre y materias)
+								en el siguiente paso.
 							</p>
 						</div>
 					</div>
 
-					<div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px', flexDirection: 'column', alignItems: 'center' }}>
+					<div
+						style={{
+							display: 'flex',
+							justifyContent: 'center',
+							marginBottom: '16px',
+							flexDirection: 'column',
+							alignItems: 'center',
+						}}
+					>
 						{error && <p className="error-text">{error}</p>}
 						<GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
 							<GoogleLogin

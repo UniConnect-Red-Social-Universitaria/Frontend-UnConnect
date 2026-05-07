@@ -46,16 +46,22 @@ export default function CompletarRegistroScreen() {
 	useEffect(() => {
 		const cargarCatalogos = async () => {
 			try {
-				try { await apiClient.post('/api/catalogos/poblar'); } catch {}
-				const response = await apiClient.get<{ carreras: Carrera[]; materias: MateriaCatalogo[] }>(
-					'/api/catalogos'
-				);
+				try {
+					await apiClient.post('/api/catalogos/poblar');
+				} catch {}
+				const response = await apiClient.get<{
+					carreras: Carrera[];
+					materias: MateriaCatalogo[];
+				}>('/api/catalogos');
 				if (response.success && response.data) {
 					setCarrerasList(response.data.carreras);
 					setMateriasList(response.data.materias);
 				}
 			} catch (err: any) {
-				setErrores((p) => ({ ...p, general: err.message || 'Error al cargar catálogos.' }));
+				setErrores((p) => ({
+					...p,
+					general: err.message || 'Error al cargar catálogos.',
+				}));
 			} finally {
 				setCargandoCatalogos(false);
 			}
@@ -71,20 +77,52 @@ export default function CompletarRegistroScreen() {
 	};
 
 	const validar = () => {
-		const e = { nombre: '', apellido: '', correo: '', contrasena: '', carrera: '', semestre: '', materias: '', general: '' };
+		const e = {
+			nombre: '',
+			apellido: '',
+			correo: '',
+			contrasena: '',
+			carrera: '',
+			semestre: '',
+			materias: '',
+			general: '',
+		};
 		let ok = true;
 
-		if (!nombre.trim()) { e.nombre = 'El nombre es obligatorio.'; ok = false; }
-		if (!apellido.trim()) { e.apellido = 'El apellido es obligatorio.'; ok = false; }
+		if (!nombre.trim()) {
+			e.nombre = 'El nombre es obligatorio.';
+			ok = false;
+		}
+		if (!apellido.trim()) {
+			e.apellido = 'El apellido es obligatorio.';
+			ok = false;
+		}
 		const emailReg = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 		const allowedDomain = 'ucaldas.edu.co';
-		if (!correo.trim() || !emailReg.test(correo)) { e.correo = 'Ingresa un correo válido.'; ok = false; }
-		else if (!correo.toLowerCase().endsWith(`@${allowedDomain}`)) { e.correo = `Por favor, utiliza exclusivamente tu correo institucional (@${allowedDomain}).`; ok = false; }
-		if (contrasena.trim().length < 8) { e.contrasena = 'La contraseña debe tener al menos 8 caracteres.'; ok = false; }
-		if (!selectedCarreraId) { e.carrera = 'Selecciona tu carrera.'; ok = false; }
+		if (!correo.trim() || !emailReg.test(correo)) {
+			e.correo = 'Ingresa un correo válido.';
+			ok = false;
+		} else if (!correo.toLowerCase().endsWith(`@${allowedDomain}`)) {
+			e.correo = `Por favor, utiliza exclusivamente tu correo institucional (@${allowedDomain}).`;
+			ok = false;
+		}
+		if (contrasena.trim().length < 8) {
+			e.contrasena = 'La contraseña debe tener al menos 8 caracteres.';
+			ok = false;
+		}
+		if (!selectedCarreraId) {
+			e.carrera = 'Selecciona tu carrera.';
+			ok = false;
+		}
 		const sem = parseInt(semestre);
-		if (!semestre || isNaN(sem) || sem < 1 || sem > 20) { e.semestre = 'Ingresa un semestre válido (1-20).'; ok = false; }
-		if (selectedMaterias.length === 0) { e.materias = 'Selecciona al menos una materia.'; ok = false; }
+		if (!semestre || isNaN(sem) || sem < 1 || sem > 20) {
+			e.semestre = 'Ingresa un semestre válido (1-20).';
+			ok = false;
+		}
+		if (selectedMaterias.length === 0) {
+			e.materias = 'Selecciona al menos una materia.';
+			ok = false;
+		}
 
 		setErrores(e);
 		return ok;
@@ -93,6 +131,13 @@ export default function CompletarRegistroScreen() {
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		if (!validar()) return;
+		if (!googleData?.googleIdToken) {
+			setErrores((p) => ({
+				...p,
+				general: 'No se encontró el token de Google. Vuelve a iniciar el registro.',
+			}));
+			return;
+		}
 
 		const materiasNombres = selectedMaterias
 			.map((id) => materiasList.find((m) => String(m.id) === id)?.nombre)
@@ -104,7 +149,7 @@ export default function CompletarRegistroScreen() {
 				nombre: nombre.trim(),
 				apellido: apellido.trim(),
 				correo: correo.trim(),
-				googleIdToken: googleData.googleIdToken || '',
+				googleIdToken: googleData.googleIdToken,
 				contrasena,
 				carrera: selectedCarreraId,
 				semestre: parseInt(semestre),
@@ -122,7 +167,10 @@ export default function CompletarRegistroScreen() {
 
 			setTimeout(() => navigate('/principal', { replace: true }), 1800);
 		} catch (err: any) {
-			setErrores((p) => ({ ...p, general: err.message || 'Ocurrió un problema de conexión.' }));
+			setErrores((p) => ({
+				...p,
+				general: err.message || 'Ocurrió un problema de conexión.',
+			}));
 		} finally {
 			setEstaCargando(false);
 		}
@@ -229,7 +277,10 @@ export default function CompletarRegistroScreen() {
 									className={`uc-input${errores.nombre ? ' error' : ''}`}
 									placeholder="Tu nombre"
 									value={nombre}
-									onChange={(e) => { setNombre(e.target.value); setErrores((p) => ({ ...p, nombre: '' })); }}
+									onChange={(e) => {
+										setNombre(e.target.value);
+										setErrores((p) => ({ ...p, nombre: '' }));
+									}}
 									disabled={estaCargando}
 								/>
 								{errores.nombre && <p style={s.errorText}>{errores.nombre}</p>}
@@ -241,7 +292,10 @@ export default function CompletarRegistroScreen() {
 									className={`uc-input${errores.apellido ? ' error' : ''}`}
 									placeholder="Tu apellido"
 									value={apellido}
-									onChange={(e) => { setApellido(e.target.value); setErrores((p) => ({ ...p, apellido: '' })); }}
+									onChange={(e) => {
+										setApellido(e.target.value);
+										setErrores((p) => ({ ...p, apellido: '' }));
+									}}
 									disabled={estaCargando}
 								/>
 								{errores.apellido && <p style={s.errorText}>{errores.apellido}</p>}
@@ -257,7 +311,10 @@ export default function CompletarRegistroScreen() {
 								className={`uc-input${errores.correo ? ' error' : ''}`}
 								placeholder="ejemplo@ucaldas.edu.co"
 								value={correo}
-								onChange={(e) => { setCorreo(e.target.value); setErrores((p) => ({ ...p, correo: '' })); }}
+								onChange={(e) => {
+									setCorreo(e.target.value);
+									setErrores((p) => ({ ...p, correo: '' }));
+								}}
 								disabled={estaCargando}
 							/>
 							{errores.correo && <p style={s.errorText}>{errores.correo}</p>}
@@ -272,7 +329,10 @@ export default function CompletarRegistroScreen() {
 								className={`uc-input${errores.contrasena ? ' error' : ''}`}
 								placeholder="Mínimo 8 caracteres"
 								value={contrasena}
-								onChange={(e) => { setContrasena(e.target.value); setErrores((p) => ({ ...p, contrasena: '' })); }}
+								onChange={(e) => {
+									setContrasena(e.target.value);
+									setErrores((p) => ({ ...p, contrasena: '' }));
+								}}
 								disabled={estaCargando}
 								autoComplete="new-password"
 							/>
@@ -287,7 +347,10 @@ export default function CompletarRegistroScreen() {
 									id="carrera"
 									className={`uc-input${errores.carrera ? ' error' : ''}`}
 									value={selectedCarreraId}
-									onChange={(e) => { setSelectedCarreraId(e.target.value); setErrores((p) => ({ ...p, carrera: '' })); }}
+									onChange={(e) => {
+										setSelectedCarreraId(e.target.value);
+										setErrores((p) => ({ ...p, carrera: '' }));
+									}}
 									disabled={estaCargando || cargandoCatalogos}
 									style={{ cursor: 'pointer' }}
 								>
@@ -312,7 +375,10 @@ export default function CompletarRegistroScreen() {
 									className={`uc-input${errores.semestre ? ' error' : ''}`}
 									placeholder="Ej. 5"
 									value={semestre}
-									onChange={(e) => { setSemestre(e.target.value); setErrores((p) => ({ ...p, semestre: '' })); }}
+									onChange={(e) => {
+										setSemestre(e.target.value);
+										setErrores((p) => ({ ...p, semestre: '' }));
+									}}
 									disabled={estaCargando}
 								/>
 								{errores.semestre && <p style={s.errorText}>{errores.semestre}</p>}

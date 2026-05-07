@@ -15,8 +15,8 @@
 		"@uniconnect/theme": "0.0.0",
 		"@uniconnect/ui": "0.0.0",
 		"jwt-decode": "^4.0.0",
-		"react": "^19.2.6",
-		"react-dom": "^19.2.6",
+		"react": "19.1.0",
+		"react-dom": "19.1.0",
 		"react-router-dom": "^6.30.3",
 		"socket.io-client": "^4.8.3"
 	},

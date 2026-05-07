@@ -31,11 +31,23 @@ export default function RegistroScreen({ navigation }: any) {
 		if (user) {
 			const googleUser = user as GoogleUser;
 			const allowedDomain = process.env.EXPO_PUBLIC_ALLOWED_DOMAIN || 'ucaldas.edu.co';
+			const email = String(googleUser.email || '')
+				.trim()
+				.toLowerCase();
 
-			if (!googleUser.email.endsWith(`@${allowedDomain}`)) {
+			if (!email.endsWith(`@${allowedDomain}`)) {
 				Alert.alert(
 					'Acceso denegado',
 					`Por favor, utiliza exclusivamente tu correo institucional (@${allowedDomain}).`
+				);
+				if (signOut) signOut();
+				return;
+			}
+
+			if (!googleUser.idToken) {
+				Alert.alert(
+					'Inicio incompleto',
+					'No se pudo obtener el token de identidad de Google. Intenta nuevamente.'
 				);
 				if (signOut) signOut();
 				return;
@@ -45,11 +57,11 @@ export default function RegistroScreen({ navigation }: any) {
 				nombre: googleUser.given_name || googleUser.name?.split(' ')[0] || '',
 				apellido:
 					googleUser.family_name || googleUser.name?.split(' ').slice(1).join(' ') || '',
-				correo: googleUser.email,
-				googleIdToken: googleUser.idToken || googleUser.id || '',
+				correo: email,
+				googleIdToken: googleUser.idToken,
 			};
 
-			console.log('¡Login con Auth0 exitoso!', googleDataReal.correo);
+			console.log('¡Login con Google exitoso!', googleDataReal.correo);
 
 			navigation.navigate('CompletarRegistro', {
 				googleData: googleDataReal,

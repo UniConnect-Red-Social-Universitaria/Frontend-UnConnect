@@ -112,6 +112,10 @@ export default function CompletarRegistroScreen({ navigation, route }: any) {
 
 	const handleFinalizarRegistro = async () => {
 		if (!validarFormulario()) return;
+		if (!googleData?.googleIdToken) {
+			showToast.error('No se encontró el token de Google. Vuelve a iniciar el registro.');
+			return;
+		}
 
 		const materiasSeleccionadas = selectedMateriasIds
 			.map(
@@ -129,8 +133,10 @@ export default function CompletarRegistroScreen({ navigation, route }: any) {
 		const datosCompletos = {
 			nombre: googleData?.nombre || '',
 			apellido: googleData?.apellido || '',
-			correo: googleData?.correo || '',
-			googleIdToken: googleData?.googleIdToken || '',
+			correo: String(googleData?.correo || '')
+				.trim()
+				.toLowerCase(),
+			googleIdToken: googleData.googleIdToken,
 			contrasena: contrasena,
 			carrera: selectedCarreraId!, // Enviar como string
 			semestre: parseInt(semestre),
