@@ -20,6 +20,7 @@
 	},
 	"dependencies": {
 		"@uniconnect/api": "0.0.0",
+		"@uniconnect/api-types": "1.0.0",
 		"@uniconnect/theme": "0.0.0",
 		"@uniconnect/ui": "0.0.0",
 		"@expo/vector-icons": "^15.0.3",
