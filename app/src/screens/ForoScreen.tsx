@@ -4,7 +4,6 @@ import {
   FlatList,
   Modal,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
@@ -49,7 +48,7 @@ export default function ForoScreen({ navigation, route }: ForoScreenProps) {
       const data = await foroService.obtenerPreguntas(materiaId);
       setPreguntas(data);
     } catch {
-      showToast('Error al cargar preguntas');
+      showToast.error('Error al cargar preguntas');
     } finally {
       setCargando(false);
     }
@@ -61,7 +60,7 @@ export default function ForoScreen({ navigation, route }: ForoScreenProps) {
       const data = await foroService.obtenerRespuestas(preguntaId);
       setRespuestas(data);
     } catch {
-      showToast('Error al cargar respuestas');
+      showToast.error('Error al cargar respuestas');
     } finally {
       setCargando(false);
     }
@@ -86,9 +85,9 @@ export default function ForoScreen({ navigation, route }: ForoScreenProps) {
       setTitulo('');
       setContenido('');
       setModalPregunta(false);
-      showToast('Pregunta publicada');
+      showToast.success('Pregunta publicada');
     } catch (e: any) {
-      showToast(e?.response?.data?.error || 'No puedes publicar en esta asignatura');
+      showToast.error(e?.response?.data?.error || 'No puedes publicar en esta asignatura');
     } finally {
       setEnviando(false);
     }
@@ -102,9 +101,9 @@ export default function ForoScreen({ navigation, route }: ForoScreenProps) {
       setRespuestas(prev => [...prev, nueva].sort((a, b) => b.puntuacion - a.puntuacion));
       setContenido('');
       setModalRespuesta(false);
-      showToast('Respuesta publicada');
+      showToast.success('Respuesta publicada');
     } catch (e: any) {
-      showToast(e?.response?.data?.error || 'No puedes responder en esta asignatura');
+      showToast.error(e?.response?.data?.error || 'No puedes responder en esta asignatura');
     } finally {
       setEnviando(false);
     }
@@ -119,7 +118,7 @@ export default function ForoScreen({ navigation, route }: ForoScreenProps) {
           .sort((a, b) => b.puntuacion - a.puntuacion),
       );
     } catch {
-      showToast('Error al votar');
+      showToast.error('Error al votar');
     }
   };
 
