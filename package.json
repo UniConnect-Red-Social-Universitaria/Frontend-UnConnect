@@ -10,7 +10,8 @@
 		"dev:app": "npm --workspace uniconnect-app run start",
 		"dev:web": "npm --workspace web run dev",
 		"build:web": "npm --workspace web run build",
-		"test:app": "npm --workspace uniconnect-app run test"
+		"test:app": "npm --workspace uniconnect-app run test",
+		"generate:api-types": "npm --workspace @uniconnect/api-types run generate"
 	},
 	"overrides": {
 		"react": "19.1.0",
