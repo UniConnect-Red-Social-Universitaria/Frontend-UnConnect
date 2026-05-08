@@ -1,0 +1,64 @@
+import { apiClient } from '../api/apiClient';
+
+export type FrecuenciaRecurrencia = 'DIARIA' | 'SEMANAL' | 'QUINCENAL';
+export type AlcanceModificacion = 'solo_esta' | 'esta_y_siguientes';
+
+export interface SesionDTO {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  lugar: string;
+  fecha: string;
+  recordatorioMinutos: number;
+  cancelada: boolean;
+  modificada: boolean;
+  serieId: string;
+  creadorId: string;
+}
+
+export interface SerieDTO {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  lugar: string;
+  frecuencia: FrecuenciaRecurrencia;
+  fechaInicio: string;
+  fechaFin: string;
+  recordatorioMinutos: number;
+  sesiones: SesionDTO[];
+}
+
+class SesionService {
+  async crearSerie(data: {
+    titulo: string;
+    descripcion: string;
+    lugar: string;
+    frecuencia: FrecuenciaRecurrencia;
+    fechaInicio: string;
+    fechaFin: string;
+    recordatorioMinutos: number;
+  }): Promise<SerieDTO> {
+    const res = await apiClient.post('/sesiones/series', data);
+    return res.data.data;
+  }
+
+  async obtenerSesiones(): Promise<SesionDTO[]> {
+    const res = await apiClient.get('/sesiones');
+    return res.data.data;
+  }
+
+  async modificarSesion(
+    sesionId: string,
+    alcance: AlcanceModificacion,
+    data: Partial<{ titulo: string; descripcion: string; lugar: string; fecha: string; recordatorioMinutos: number }>,
+  ): Promise<SesionDTO[]> {
+    const res = await apiClient.patch(`/sesiones/${sesionId}`, { alcance, ...data });
+    return res.data.data;
+  }
+
+  async cancelarSesion(sesionId: string, alcance: AlcanceModificacion): Promise<void> {
+    await apiClient.post(`/sesiones/${sesionId}/cancelar`, { alcance });
+  }
+}
+
+export const sesionService = new SesionService();
