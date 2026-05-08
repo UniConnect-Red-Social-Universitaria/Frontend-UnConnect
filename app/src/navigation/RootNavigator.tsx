@@ -20,6 +20,7 @@ import SolicitudesScreen from '../screens/SolicitudesScreen';
 import EditarPerfilScreen from '../screens/EditarPerfilScreen';
 import NotificacionesScreen from '../screens/NotificacionesScreen';
 import SolicitudesGrupoScreen from '../screens/SolicitudesGrupoScreen';
+import ForoScreen from '../screens/ForoScreen';
 import { resolverApiBaseUrl } from '../utils/apiConfig';
 import { authService } from '../services';
 import { notifyIncomingMessage } from '../services/notificaciones.service';
@@ -65,6 +66,10 @@ export type RootStackParamList = {
 		grupoId: string;
 		nombreGrupo: string | null;
 		userId?: string | null;
+	};
+	Foro: {
+		materiaId: string;
+		materiaNombre: string;
 	};
 };
 
@@ -556,6 +561,7 @@ export default function RootNavigator() {
 				<Stack.Screen name="EditarPerfil" component={EditarPerfilScreen} />
 				<Stack.Screen name="Notificaciones" component={NotificacionesScreen} />
 				<Stack.Screen name="SolicitudesGrupo" component={SolicitudesGrupoScreen} />
+				<Stack.Screen name="Foro" component={ForoScreen} />
 				<Stack.Screen name="MensajeDirecto" component={MensajeDirectoScreen} />
 				<Stack.Screen name="DetalleGrupo" component={DetalleGrupoScreen} />
 				<Stack.Screen name="MensajeGrupo" component={MensajeGrupoScreen} />
