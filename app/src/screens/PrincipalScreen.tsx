@@ -38,6 +38,7 @@ type RootStackParamList = {
 	Contactos: undefined;
 	EditarPerfil: undefined;
 	Notificaciones: undefined;
+	SesionesEstudio: undefined;
 	Login: undefined;
 	Home: undefined;
 };
@@ -557,6 +558,13 @@ export default function PrincipalScreen({
 						>
 							<Ionicons name="calendar-outline" size={20} color="#555" />
 							<Text style={styles.sidebarItemText}>Eventos</Text>
+						</Pressable>
+						<Pressable
+							style={styles.sidebarItem}
+							onPress={() => navigation.navigate('SesionesEstudio')}
+						>
+							<Ionicons name="book-outline" size={20} color="#555" />
+							<Text style={styles.sidebarItemText}>Sesiones</Text>
 						</Pressable>
 						<Pressable
 							style={styles.sidebarItem}

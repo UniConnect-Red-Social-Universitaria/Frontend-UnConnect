@@ -278,6 +278,16 @@ export default function DetalleGrupoScreen() {
 							>
 								💬 Ir al Chat
 							</button>
+							{grupo.materia?.id && (
+								<button
+									className="uc-btn primary"
+									onClick={() =>
+										navigate(`/foro/${grupo.materia!.id}?nombre=${encodeURIComponent(grupo.materia!.nombre)}`)
+									}
+								>
+									🗣️ Ir al Foro
+								</button>
+							)}
 							<button
 								className="uc-btn primary"
 								onClick={() => fileInputRef.current?.click()}

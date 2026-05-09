@@ -17,6 +17,7 @@ type DetalleGrupoParamList = {
 		nombreGrupo: string;
 		creadorId: string;
 		administradorId: string;
+		materiaId: string;
 		materiaNombre: string;
 		miembrosIds: string[];
 	};
@@ -25,12 +26,16 @@ type DetalleGrupoParamList = {
 		nombreGrupo: string;
 		userId?: string | null;
 	};
+	Foro: {
+		materiaId: string;
+		materiaNombre: string;
+	};
 };
 
 type Props = StackScreenProps<DetalleGrupoParamList, 'DetalleGrupo'>;
 
 export function DetalleGrupoScreen({ route, navigation }: Props) {
-	const { grupoId, nombreGrupo, creadorId, administradorId, materiaNombre, miembrosIds } =
+	const { grupoId, nombreGrupo, creadorId, administradorId, materiaId, materiaNombre, miembrosIds } =
 		route.params;
 
 	const [busqueda, setBusqueda] = useState('');
@@ -122,6 +127,12 @@ export function DetalleGrupoScreen({ route, navigation }: Props) {
 					onPress={() => navigation.navigate('MensajeGrupo', { grupoId, nombreGrupo })}
 				>
 					<Text style={styles.actionButtonText}>Ir al Chat</Text>
+				</PrimaryButton>
+				<PrimaryButton
+					style={styles.actionButton}
+					onPress={() => navigation.navigate('Foro', { materiaId, materiaNombre })}
+				>
+					<Text style={styles.actionButtonText}>🗣️ Foro</Text>
 				</PrimaryButton>
 
 				<PrimaryButton
