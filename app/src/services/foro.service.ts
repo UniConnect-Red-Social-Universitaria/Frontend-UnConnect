@@ -23,26 +23,26 @@ export interface ForoRespuesta {
 export const foroService = {
   obtenerPreguntas: async (materiaId: string): Promise<ForoPregunta[]> => {
     const res = await apiClient.get(`/foro/${materiaId}/preguntas`);
-    return res.data.data;
+    return res.data;
   },
 
   publicarPregunta: async (materiaId: string, titulo: string, contenido: string): Promise<ForoPregunta> => {
     const res = await apiClient.post(`/foro/${materiaId}/preguntas`, { titulo, contenido });
-    return res.data.data;
+    return res.data;
   },
 
   obtenerRespuestas: async (preguntaId: string): Promise<ForoRespuesta[]> => {
     const res = await apiClient.get(`/foro/preguntas/${preguntaId}/respuestas`);
-    return res.data.data;
+    return res.data;
   },
 
   publicarRespuesta: async (preguntaId: string, materiaId: string, contenido: string): Promise<ForoRespuesta> => {
     const res = await apiClient.post(`/foro/preguntas/${preguntaId}/respuestas`, { contenido, materiaId });
-    return res.data.data;
+    return res.data;
   },
 
   votarRespuesta: async (respuestaId: string, valor: 1 | -1): Promise<ForoRespuesta> => {
     const res = await apiClient.post(`/foro/respuestas/${respuestaId}/votos`, { valor });
-    return res.data.data;
+    return res.data;
   },
 };

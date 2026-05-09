@@ -39,12 +39,12 @@ class SesionService {
     recordatorioMinutos: number;
   }): Promise<SerieDTO> {
     const res = await apiClient.post('/sesiones/series', data);
-    return res.data.data;
+    return res.data;
   }
 
   async obtenerSesiones(): Promise<SesionDTO[]> {
     const res = await apiClient.get('/sesiones');
-    return res.data.data;
+    return res.data;
   }
 
   async modificarSesion(
@@ -53,7 +53,7 @@ class SesionService {
     data: Partial<{ titulo: string; descripcion: string; lugar: string; fecha: string; recordatorioMinutos: number }>,
   ): Promise<SesionDTO[]> {
     const res = await apiClient.patch(`/sesiones/${sesionId}`, { alcance, ...data });
-    return res.data.data;
+    return res.data;
   }
 
   async cancelarSesion(sesionId: string, alcance: AlcanceModificacion): Promise<void> {

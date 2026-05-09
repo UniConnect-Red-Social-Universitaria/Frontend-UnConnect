@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { sesionService, SesionDTO, FrecuenciaRecurrencia, AlcanceModificacion } from '../services/sesion.service';
+import { sesionService } from '../services/sesion.service';
+import type { SesionDTO, FrecuenciaRecurrencia, AlcanceModificacion } from '../services/sesion.service';
 
 const CSS = `
   .ses-container { max-width: 860px; margin: 0 auto; padding: 24px 16px; }

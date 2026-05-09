@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { foroService, ForoPregunta, ForoRespuesta } from '../services/foro.service';
+import { foroService } from '../services/foro.service';
+import type { ForoPregunta, ForoRespuesta } from '../services/foro.service';
 
 const CSS = `
   .foro-container { max-width: 800px; margin: 0 auto; padding: 24px 16px; }
