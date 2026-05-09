@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   FlatList,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -10,6 +11,7 @@ import {
   View,
   StyleSheet,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -25,6 +27,11 @@ type RootStackParamList = { SesionesEstudio: undefined };
 type Props = { navigation: StackNavigationProp<RootStackParamList, 'SesionesEstudio'> };
 
 type ModalTipo = 'crear' | 'editar' | 'cancelar' | null;
+type PickerTarget = 'inicio' | 'fin' | null;
+
+function fmtFecha(d: Date) {
+  return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
 
 export default function SesionesEstudioScreen({ navigation }: Props) {
   const [sesiones, setSesiones] = useState<SesionDTO[]>([]);
@@ -39,9 +46,14 @@ export default function SesionesEstudioScreen({ navigation }: Props) {
   const [descripcion, setDescripcion] = useState('');
   const [lugar, setLugar] = useState('');
   const [frecuencia, setFrecuencia] = useState<FrecuenciaRecurrencia>('SEMANAL');
-  const [fechaInicio, setFechaInicio] = useState('');
-  const [fechaFin, setFechaFin] = useState('');
+  const [dateInicio, setDateInicio] = useState<Date>(new Date());
+  const [dateFin, setDateFin] = useState<Date>(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
   const [recordatorio, setRecordatorio] = useState('30');
+
+  // DateTimePicker state
+  const [pickerTarget, setPickerTarget] = useState<PickerTarget>(null);
+  const [pickerMode, setPickerMode] = useState<'date' | 'time'>('date');
+  const [tempDate, setTempDate] = useState<Date>(new Date());
 
   // Editar
   const [editTitulo, setEditTitulo] = useState('');
@@ -75,25 +87,62 @@ export default function SesionesEstudioScreen({ navigation }: Props) {
     setModal('cancelar');
   };
 
+  const abrirPicker = (target: PickerTarget) => {
+    const current = target === 'inicio' ? dateInicio : dateFin;
+    setTempDate(current);
+    setPickerTarget(target);
+    setPickerMode('date');
+  };
+
+  const onPickerChange = (_event: unknown, selected?: Date) => {
+    if (!selected) {
+      // Android: dismissed
+      setPickerTarget(null);
+      return;
+    }
+    if (Platform.OS === 'android') {
+      if (pickerMode === 'date') {
+        setTempDate(selected);
+        setPickerMode('time');
+      } else {
+        applyDate(selected);
+      }
+    } else {
+      setTempDate(selected);
+    }
+  };
+
+  const applyDate = (date: Date) => {
+    if (pickerTarget === 'inicio') setDateInicio(date);
+    else setDateFin(date);
+    setPickerTarget(null);
+  };
+
   const handleCrear = async () => {
-    if (!titulo.trim() || !descripcion.trim() || !lugar.trim() || !fechaInicio || !fechaFin) {
+    if (!titulo.trim() || !descripcion.trim() || !lugar.trim()) {
       showToast.error('Completa todos los campos');
+      return;
+    }
+    if (dateFin <= dateInicio) {
+      showToast.error('La fecha fin debe ser posterior a la fecha inicio');
       return;
     }
     setEnviando(true);
     try {
       await sesionService.crearSerie({
         titulo, descripcion, lugar, frecuencia,
-        fechaInicio: new Date(fechaInicio).toISOString(),
-        fechaFin: new Date(fechaFin).toISOString(),
+        fechaInicio: dateInicio.toISOString(),
+        fechaFin: dateFin.toISOString(),
         recordatorioMinutos: parseInt(recordatorio, 10) || 30,
       });
       setModal(null);
-      setTitulo(''); setDescripcion(''); setLugar(''); setFechaInicio(''); setFechaFin('');
+      setTitulo(''); setDescripcion(''); setLugar('');
+      setDateInicio(new Date());
+      setDateFin(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
       showToast.success('Serie creada');
       cargar();
     } catch (e: any) {
-      showToast.error(e?.response?.data?.error || 'Error al crear la serie');
+      showToast.error(e?.message || 'Error al crear la serie');
     } finally {
       setEnviando(false);
     }
@@ -191,9 +240,22 @@ export default function SesionesEstudioScreen({ navigation }: Props) {
                 </Pressable>
               ))}
             </View>
-            <TextInput style={s.input} placeholder="Fecha inicio (YYYY-MM-DDTHH:MM)" value={fechaInicio} onChangeText={setFechaInicio} />
-            <TextInput style={s.input} placeholder="Fecha fin (YYYY-MM-DDTHH:MM)" value={fechaFin} onChangeText={setFechaFin} />
-            <TextInput style={s.input} placeholder="Recordatorio (minutos)" keyboardType="numeric" value={recordatorio} onChangeText={setRecordatorio} />
+
+            <Text style={s.label}>Fecha inicio</Text>
+            <Pressable style={s.dateBtn} onPress={() => abrirPicker('inicio')}>
+              <Ionicons name="calendar-outline" size={16} color={theme.colors.primary} />
+              <Text style={s.dateBtnText}>{fmtFecha(dateInicio)}</Text>
+            </Pressable>
+
+            <Text style={s.label}>Fecha fin de la serie</Text>
+            <Pressable style={s.dateBtn} onPress={() => abrirPicker('fin')}>
+              <Ionicons name="calendar-outline" size={16} color={theme.colors.primary} />
+              <Text style={s.dateBtnText}>{fmtFecha(dateFin)}</Text>
+            </Pressable>
+
+            <Text style={s.label}>Recordatorio (minutos antes)</Text>
+            <TextInput style={s.input} placeholder="30" keyboardType="numeric" value={recordatorio} onChangeText={setRecordatorio} />
+
             <View style={s.modalBtns}>
               <Pressable style={s.btnSecondary} onPress={() => setModal(null)}><Text>Cancelar</Text></Pressable>
               <Pressable style={s.btnPrimary} onPress={handleCrear} disabled={enviando}>
@@ -203,6 +265,48 @@ export default function SesionesEstudioScreen({ navigation }: Props) {
           </ScrollView>
         </View>
       </Modal>
+
+      {/* iOS date picker modal */}
+      {Platform.OS === 'ios' && pickerTarget !== null && (
+        <Modal visible transparent animationType="slide">
+          <View style={s.overlay}>
+            <View style={[s.modal, { paddingBottom: 24 }]}>
+              <Text style={s.modalTitle}>
+                {pickerTarget === 'inicio' ? 'Fecha inicio' : 'Fecha fin'}
+              </Text>
+              <DateTimePicker
+                value={tempDate}
+                mode="datetime"
+                display="spinner"
+                onValueChange={onPickerChange}
+                onDismiss={() => setPickerTarget(null)}
+                locale="es-CO"
+                minimumDate={new Date()}
+              />
+              <View style={s.modalBtns}>
+                <Pressable style={s.btnSecondary} onPress={() => setPickerTarget(null)}>
+                  <Text>Cancelar</Text>
+                </Pressable>
+                <Pressable style={s.btnPrimary} onPress={() => applyDate(tempDate)}>
+                  <Text style={s.btnPrimaryText}>Listo</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Android date/time picker (se muestra como diálogo nativo) */}
+      {Platform.OS === 'android' && pickerTarget !== null && (
+        <DateTimePicker
+          value={tempDate}
+          mode={pickerMode}
+          display="default"
+          onValueChange={onPickerChange}
+          onDismiss={() => setPickerTarget(null)}
+          minimumDate={new Date()}
+        />
+      )}
 
       {/* Modal editar */}
       <Modal visible={modal === 'editar'} transparent animationType="slide">
@@ -279,6 +383,8 @@ const s = StyleSheet.create({
   modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
   label: { fontSize: 13, fontWeight: '600', color: '#555', marginBottom: 4 },
   input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 10, fontSize: 14, marginBottom: 4 },
+  dateBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: theme.colors.primary, borderRadius: 8, padding: 10, marginBottom: 4, backgroundColor: '#f0f6ff' },
+  dateBtnText: { fontSize: 14, color: theme.colors.primary, fontWeight: '500' },
   chipRow: { flexDirection: 'row', gap: 8, marginBottom: 10, flexWrap: 'wrap' },
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#ddd' },
   chipActive: { borderColor: theme.colors.primary, backgroundColor: '#e8f0fe' },
