@@ -1,24 +1,7 @@
 import { apiClient } from '../api/apiClient';
+import type { ForoPregunta, ForoRespuesta } from '@uniconnect/api-types';
 
-export interface ForoPregunta {
-  id: string;
-  titulo: string;
-  contenido: string;
-  autorId: string;
-  autorNombre: string;
-  materiaId: string;
-  createdAt: string;
-}
-
-export interface ForoRespuesta {
-  id: string;
-  contenido: string;
-  autorId: string;
-  autorNombre: string;
-  preguntaId: string;
-  puntuacion: number;
-  createdAt: string;
-}
+export type { ForoPregunta, ForoRespuesta };
 
 class ForoService {
   async obtenerPreguntas(materiaId: string): Promise<ForoPregunta[]> {

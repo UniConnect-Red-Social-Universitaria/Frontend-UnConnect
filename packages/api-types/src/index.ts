@@ -9,6 +9,9 @@ export {
   SesionEstudioSchema,
   SerieEstudioSchema,
   UsuarioSchema,
+  GrupoSchema,
+  MensajeSchema,
+  MateriaSchema,
 } from './schemas';
 
 export type {
@@ -18,4 +21,7 @@ export type {
   SesionEstudio,
   SerieEstudio,
   Usuario,
+  Grupo,
+  Mensaje,
+  Materia,
 } from './schemas';

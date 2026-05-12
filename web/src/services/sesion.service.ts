@@ -1,32 +1,11 @@
 import { apiClient } from '../api/apiClient';
+import type { SesionEstudio, SerieEstudio } from '@uniconnect/api-types';
 
 export type FrecuenciaRecurrencia = 'DIARIA' | 'SEMANAL' | 'QUINCENAL';
 export type AlcanceModificacion = 'solo_esta' | 'esta_y_siguientes';
 
-export interface SesionDTO {
-  id: string;
-  titulo: string;
-  descripcion: string;
-  lugar: string;
-  fecha: string;
-  recordatorioMinutos: number;
-  cancelada: boolean;
-  modificada: boolean;
-  serieId: string;
-  creadorId: string;
-}
-
-export interface SerieDTO {
-  id: string;
-  titulo: string;
-  descripcion: string;
-  lugar: string;
-  frecuencia: FrecuenciaRecurrencia;
-  fechaInicio: string;
-  fechaFin: string;
-  recordatorioMinutos: number;
-  sesiones: SesionDTO[];
-}
+export type SesionDTO = SesionEstudio;
+export type SerieDTO = SerieEstudio;
 
 class SesionService {
   async crearSerie(data: {

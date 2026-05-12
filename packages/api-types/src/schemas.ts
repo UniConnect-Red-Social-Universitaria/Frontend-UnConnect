@@ -64,6 +64,34 @@ export const UsuarioSchema = z.object({
   semestre: z.number().int(),
 });
 
+export const GrupoSchema = z.object({
+  id: z.string(),
+  nombre: z.string(),
+  materiaId: z.string().optional(),
+  materia: z.object({ id: z.string(), nombre: z.string() }).optional(),
+  creadorId: z.string(),
+  administradorId: z.string().optional(),
+  cantidadMiembros: z.number().int().nonnegative(),
+  createdAt: z.string().datetime().optional(),
+});
+
+export const MensajeSchema = z.object({
+  id: z.string(),
+  contenido: z.string(),
+  remitenteId: z.string(),
+  remitenteNombre: z.string().optional(),
+  destinatarioId: z.string().optional(),
+  grupoId: z.string().optional(),
+  createdAt: z.string().datetime(),
+});
+
+export const MateriaSchema = z.object({
+  id: z.string(),
+  nombre: z.string(),
+  codigo: z.string().optional(),
+  descripcion: z.string().optional(),
+});
+
 // Tipos inferidos de Zod (única fuente de verdad en runtime)
 export type ForoPregunta = z.infer<typeof ForoPreguntaSchema>;
 export type ForoRespuesta = z.infer<typeof ForoRespuestaSchema>;
@@ -71,3 +99,6 @@ export type Evento = z.infer<typeof EventoSchema>;
 export type SesionEstudio = z.infer<typeof SesionEstudioSchema>;
 export type SerieEstudio = z.infer<typeof SerieEstudioSchema>;
 export type Usuario = z.infer<typeof UsuarioSchema>;
+export type Grupo = z.infer<typeof GrupoSchema>;
+export type Mensaje = z.infer<typeof MensajeSchema>;
+export type Materia = z.infer<typeof MateriaSchema>;
