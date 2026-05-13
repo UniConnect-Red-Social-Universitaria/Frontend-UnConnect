@@ -12,6 +12,11 @@ export {
   GrupoSchema,
   MensajeSchema,
   MateriaSchema,
+  EncuestaEstadoSchema,
+  EncuestaTargetTypeSchema,
+  EncuestaTargetSchema,
+  EncuestaOpcionSchema,
+  EncuestaSchema,
 } from './schemas';
 
 export type {
@@ -24,4 +29,9 @@ export type {
   Grupo,
   Mensaje,
   Materia,
+  EncuestaEstado,
+  EncuestaTargetType,
+  EncuestaTarget,
+  EncuestaOpcion,
+  Encuesta,
 } from './schemas';

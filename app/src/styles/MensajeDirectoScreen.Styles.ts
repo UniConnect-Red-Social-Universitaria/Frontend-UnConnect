@@ -10,9 +10,19 @@ export const styles = StyleSheet.create({
         backgroundColor: '#002855',
     },
     header: {
-        paddingVertical: 50,
-        paddingHorizontal: 20,
         backgroundColor: '#002855',
+        paddingTop: 50,
+        paddingBottom: 18,
+        paddingHorizontal: 20,
+    },
+    chatHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+    },
+    headerContent: {
+        flex: 1,
     },
     title: {
         color: '#fff',
@@ -23,6 +33,16 @@ export const styles = StyleSheet.create({
         color: '#cbd5e1',
         fontSize: 14,
         marginTop: 4,
+    },
+    pollHeaderButton: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: '#d9bd7f',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+        marginLeft: 4,
     },
     chatWrapper: {
         flex: 1,
