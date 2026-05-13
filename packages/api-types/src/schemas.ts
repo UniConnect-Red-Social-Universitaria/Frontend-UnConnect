@@ -85,6 +85,40 @@ export const MensajeSchema = z.object({
   createdAt: z.string().datetime(),
 });
 
+export const EncuestaEstadoSchema = z.enum(['OPEN', 'CLOSED']);
+
+export const EncuestaTargetTypeSchema = z.enum(['CHAT', 'CHANNEL']);
+
+export const EncuestaTargetSchema = z.object({
+  type: EncuestaTargetTypeSchema,
+  id: z.string(),
+});
+
+export const EncuestaOpcionSchema = z.object({
+  id: z.string(),
+  pollId: z.string(),
+  text: z.string(),
+  position: z.number().int(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  votos: z.number().int().nonnegative().optional(),
+  porcentaje: z.number().nonnegative().max(100).optional(),
+});
+
+export const EncuestaSchema = z.object({
+  id: z.string(),
+  question: z.string(),
+  status: EncuestaEstadoSchema,
+  target: EncuestaTargetSchema,
+  createdById: z.string(),
+  autoCloseAt: z.string().datetime().nullable().optional(),
+  closedAt: z.string().datetime().nullable().optional(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  opciones: z.array(EncuestaOpcionSchema),
+  grupoId: z.string(),
+});
+
 export const MateriaSchema = z.object({
   id: z.string(),
   nombre: z.string(),
@@ -102,3 +136,8 @@ export type Usuario = z.infer<typeof UsuarioSchema>;
 export type Grupo = z.infer<typeof GrupoSchema>;
 export type Mensaje = z.infer<typeof MensajeSchema>;
 export type Materia = z.infer<typeof MateriaSchema>;
+export type EncuestaEstado = z.infer<typeof EncuestaEstadoSchema>;
+export type EncuestaTargetType = z.infer<typeof EncuestaTargetTypeSchema>;
+export type EncuestaTarget = z.infer<typeof EncuestaTargetSchema>;
+export type EncuestaOpcion = z.infer<typeof EncuestaOpcionSchema>;
+export type Encuesta = z.infer<typeof EncuestaSchema>;
