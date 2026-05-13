@@ -5,20 +5,20 @@ import { authService } from '../services/auth.service';
 import { apiClient } from '../api/apiClient';
 import { onboardingService } from '../services/onboarding.service';
 import { useAuth } from '../context/AuthContext';
+import { useAuth0Web } from '../hooks/useAuth0Web';
 import type { Carrera, MateriaCatalogo } from '../types/api.types';
 
 export default function CompletarRegistroScreen() {
 	const navigate = useNavigate();
 	const location = useLocation();
 	const { onLoginSuccess } = useAuth();
-
-	// Datos del paso anterior (o vacíos para registro manual)
-	const googleData = (location.state as any)?.googleData || {};
-
-	// Campos del formulario
-	const [nombre, setNombre] = useState(googleData.nombre || '');
-	const [apellido, setApellido] = useState(googleData.apellido || '');
-	const [correo, setCorreo] = useState(googleData.correo || '');
+	const { handleCallback, loading: auth0Loading, error: auth0Error } = useAuth0Web();
+	const locationData = (location.state as any)?.googleData || {};
+	const [auth0Token, setAuth0Token] = useState<string>(locationData.googleIdToken || '');
+	const [callbackProcessed, setCallbackProcessed] = useState(false);
+	const [nombre, setNombre] = useState(locationData.nombre || '');
+	const [apellido, setApellido] = useState(locationData.apellido || '');
+	const [correo, setCorreo] = useState(locationData.correo || '');
 	const [contrasena, setContrasena] = useState('');
 	const [selectedCarreraId, setSelectedCarreraId] = useState('');
 	const [semestre, setSemestre] = useState('');
@@ -42,7 +42,6 @@ export default function CompletarRegistroScreen() {
 		general: '',
 	});
 
-	// Cargar catálogos al montar
 	useEffect(() => {
 		const cargarCatalogos = async () => {
 			try {
@@ -68,6 +67,46 @@ export default function CompletarRegistroScreen() {
 		};
 		cargarCatalogos();
 	}, []);
+
+	useEffect(() => {
+		if (callbackProcessed) return;
+
+		const params = new URLSearchParams(window.location.search);
+		const code = params.get('code');
+		const state = params.get('state');
+		const errorParam = params.get('error');
+
+		if (errorParam) {
+			setErrores((p) => ({
+				...p,
+				general: params.get('error_description') || 'Auth0 devolvió un error.',
+			}));
+			setCallbackProcessed(true);
+			window.history.replaceState({}, '', window.location.pathname);
+			return;
+		}
+
+		if (!code || !state) return;
+
+		setCallbackProcessed(true);
+		window.history.replaceState({}, '', window.location.pathname);
+
+		handleCallback(code, state).then((result) => {
+			if (!result) return;
+
+			const { idToken, profile } = result;
+			setAuth0Token(idToken);
+			if (profile.given_name || profile.name) {
+				setNombre(profile.given_name || profile.name?.split(' ')[0] || '');
+			}
+			if (profile.family_name || profile.name) {
+				setApellido(profile.family_name || profile.name?.split(' ').slice(1).join(' ') || '');
+			}
+			if (profile.email) {
+				setCorreo(profile.email.toLowerCase());
+			}
+		});
+	}, [callbackProcessed, handleCallback]);
 
 	const toggleMateria = (id: string) => {
 		setSelectedMaterias((prev) =>
@@ -131,10 +170,10 @@ export default function CompletarRegistroScreen() {
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		if (!validar()) return;
-		if (!googleData?.googleIdToken) {
+		if (!auth0Token) {
 			setErrores((p) => ({
 				...p,
-				general: 'No se encontró el token de Google. Vuelve a iniciar el registro.',
+				general: 'No se encontró el token de Auth0. Vuelve a iniciar el registro.',
 			}));
 			return;
 		}
@@ -149,7 +188,7 @@ export default function CompletarRegistroScreen() {
 				nombre: nombre.trim(),
 				apellido: apellido.trim(),
 				correo: correo.trim(),
-				googleIdToken: googleData.googleIdToken,
+				googleIdToken: auth0Token,
 				contrasena,
 				carrera: selectedCarreraId,
 				semestre: parseInt(semestre),
@@ -264,6 +303,19 @@ export default function CompletarRegistroScreen() {
 					{mensajeExito && (
 						<div style={s.successBox}>
 							<span>✅</span> {mensajeExito}
+						</div>
+					)}
+
+					{/* Estado del callback de Auth0 */}
+					{auth0Loading && (
+						<div style={{ display: 'flex', alignItems: 'center', gap: 10, backgroundColor: '#eaf4fb', border: '1px solid #aed6f1', borderRadius: 8, padding: '10px 14px', color: '#1a5276', fontSize: 14, marginBottom: 16 }}>
+							<span style={{ display: 'inline-block', width: 16, height: 16, border: '2px solid rgba(26,82,118,0.3)', borderTopColor: '#1a5276', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
+							Verificando tu cuenta con Auth0...
+						</div>
+					)}
+					{auth0Error && (
+						<div style={s.errorBox}>
+							<span>⚠️</span> {auth0Error}
 						</div>
 					)}
 

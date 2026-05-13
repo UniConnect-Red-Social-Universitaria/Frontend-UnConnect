@@ -1,236 +1,237 @@
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import Constants from 'expo-constants';
-import { useCallback, useMemo, useState, useEffect } from 'react';
-import { Platform } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
 
 WebBrowser.maybeCompleteAuthSession();
 
 export function useGoogleAuth() {
-	const [user, setUser] = useState(null);
-	const [error, setError] = useState(null);
-	const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState(null);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-	const allowedDomain = process.env.EXPO_PUBLIC_ALLOWED_DOMAIN || 'ucaldas.edu.co';
-	const googleClientIdWeb = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB;
-	const googleClientIdExpo =
-		process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_EXPO || googleClientIdWeb;
-	const googleClientIdAndroid = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID;
-	const googleClientIdIos = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS;
-	const googleClientId = useMemo(() => {
-		if (Platform.OS === 'web') {
-			return googleClientIdWeb;
-		}
+  const allowedDomain =
+    process.env.EXPO_PUBLIC_ALLOWED_DOMAIN || 'ucaldas.edu.co';
+  const auth0Domain = (process.env.EXPO_PUBLIC_AUTH0_DOMAIN || '').replace(
+    /^https?:\/\//,
+    '',
+  );
+  const auth0ClientId = process.env.EXPO_PUBLIC_AUTH0_CLIENT_ID;
+  const auth0Audience = process.env.EXPO_PUBLIC_AUTH0_AUDIENCE;
+  const auth0Connection =
+    process.env.EXPO_PUBLIC_AUTH0_CONNECTION || 'google-oauth2';
 
-		const isExpoGo =
-			Constants.executionEnvironment === 'storeClient' ||
-			Constants.appOwnership === 'expo' ||
-			Constants.appOwnership === 'guest';
+  const isExpoGo =
+    Constants.executionEnvironment === 'storeClient' ||
+    Constants.appOwnership === 'expo' ||
+    Constants.appOwnership === 'guest';
 
-		if (isExpoGo) {
-			return googleClientIdExpo;
-		}
+  const appOwner = Constants.expoConfig?.owner;
+  const appSlug = Constants.expoConfig?.slug;
+  const projectFullName =
+    appOwner && appSlug ? `@${appOwner}/${appSlug}` : null;
 
-		if (Platform.OS === 'ios') {
-			return googleClientIdIos || googleClientIdExpo || googleClientIdWeb;
-		}
 
-		if (Platform.OS === 'android') {
-			return googleClientIdAndroid || googleClientIdExpo || googleClientIdWeb;
-		}
+  const nativeReturnUrl = AuthSession.makeRedirectUri({
+    scheme: 'com.jackeliner.uniconnectapp',
+    path: 'auth0-callback',
+  });
 
-		return googleClientIdExpo || googleClientIdWeb;
-	}, [googleClientIdAndroid, googleClientIdExpo, googleClientIdIos, googleClientIdWeb]);
+const redirectUri = AuthSession.makeRedirectUri({
+  scheme: 'com.jackeliner.uniconnectapp',
+  path: 'auth0-callback',
+});
 
-	const redirectUri = useMemo(() => {
-		if (Platform.OS === 'web') {
-			return window.location.origin;
-		}
+  const discovery = useMemo(() => {
+    if (!auth0Domain) return null;
 
-		const isExpoGo =
-			Constants.executionEnvironment === 'storeClient' ||
-			Constants.appOwnership === 'expo' ||
-			Constants.appOwnership === 'guest';
+    return {
+      authorizationEndpoint: `https://${auth0Domain}/authorize`,
+      tokenEndpoint: `https://${auth0Domain}/oauth/token`,
+      revocationEndpoint: `https://${auth0Domain}/oauth/revoke`,
+      userInfoEndpoint: `https://${auth0Domain}/userinfo`,
+    };
+  }, [auth0Domain]);
 
-		if (isExpoGo) {
-			const appOwner = Constants.expoConfig?.owner || 'jackeliner';
-			const appSlug = Constants.expoConfig?.slug || 'uniconnect-app';
-			return AuthSession.makeRedirectUri({
-				useProxy: true,
-				projectNameForProxy: `@${appOwner}/${appSlug}`,
-			});
-		}
 
-		return AuthSession.makeRedirectUri({
-			scheme: 'com.jackeliner.uniconnectapp',
-			path: 'google-callback',
-		});
-	}, []);
+  const [request, response, promptAsync] = AuthSession.useAuthRequest(
+    {
+      clientId: auth0ClientId,
+      redirectUri,
+      responseType: AuthSession.ResponseType.Code,
+      usePKCE: true,
+      scopes: ['openid', 'profile', 'email'],
+      extraParams: {
+        ...(auth0Audience ? { audience: auth0Audience } : {}),
+        ...(auth0Connection ? { connection: auth0Connection } : {}),
+        prompt: 'login',
+      },
+    },
+    discovery,
+  );
 
-	const discovery = useMemo(() => {
-		return {
-			authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
-			tokenEndpoint: 'https://oauth2.googleapis.com/token',
-			revocationEndpoint: 'https://oauth2.googleapis.com/revoke',
-			userInfoEndpoint: 'https://openidconnect.googleapis.com/v1/userinfo',
-		};
-	}, []);
+  /**
+   * Obtiene el perfil del usuario desde Auth0 userinfo y
+   * verifica que el correo sea institucional.
+   * Guarda en `user` los datos + el accessToken (que el backend
+   * recibe como googleIdToken para validar con Auth0 JWKS).
+   */
+  const fetchUserInfo = useCallback(
+    async (accessToken, idToken) => {
+      const responseUser = await fetch(`https://${auth0Domain}/userinfo`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
 
-	const [request, response, promptAsync] = AuthSession.useAuthRequest(
-		{
-			clientId: googleClientId,
-			redirectUri,
-			responseType: AuthSession.ResponseType.Code,
-			usePKCE: true,
-			scopes: ['openid', 'profile', 'email'],
-			extraParams: {
-				prompt: 'select_account',
-			},
-		},
-		discovery
-	);
+      const profile = await responseUser.json();
 
-	const fetchUserInfo = useCallback(
-		async (accessToken, idToken) => {
-			try {
-				const responseUser = await fetch(
-					'https://openidconnect.googleapis.com/v1/userinfo',
-					{
-						headers: { Authorization: `Bearer ${accessToken}` },
-					}
-				);
+      if (!profile.email?.endsWith(`@${allowedDomain}`)) {
+        setError(`Acceso denegado. Solo se permiten cuentas @${allowedDomain}`);
+        setUser(null);
+        return;
+      }
 
-				if (!responseUser.ok) {
-					throw new Error('No se pudo obtener el perfil del usuario de Google.');
-				}
+      setUser({
+        id: profile.sub,
+        name: profile.name,
+        given_name: profile.given_name,
+        family_name: profile.family_name,
+        email: profile.email,
+        picture: profile.picture,
+        domain: profile.email?.split('@')[1],
+        lastLogin: new Date().toISOString(),
+        idToken: idToken,
+      });
+    },
+    [allowedDomain, auth0Domain],
+  );
 
-				const profile = await responseUser.json();
-				const email = String(profile.email || '')
-					.trim()
-					.toLowerCase();
+  /**
+   * Intercambia el authorization code (PKCE) por tokens de Auth0.
+   * Devuelve el access_token (JWT RS256 validable en el backend).
+   */
+  const exchangeCodeForToken = useCallback(
+    async (code, codeVerifier) => {
+      const params = new URLSearchParams({
+        grant_type: 'authorization_code',
+        client_id: auth0ClientId,
+        code,
+        redirect_uri: redirectUri,
+        code_verifier: codeVerifier,
+      });
 
-				if (!email || !email.endsWith(`@${allowedDomain}`)) {
-					setError(`Acceso denegado. Solo se permiten cuentas @${allowedDomain}`);
-					setUser(null);
-					return;
-				}
+      if (auth0Audience) {
+        params.append('audience', auth0Audience);
+      }
 
-				if (!idToken) {
-					setError(
-						'No se pudo obtener el token de identidad de Google. Intenta nuevamente.'
-					);
-					setUser(null);
-					return;
-				}
+      const tokenRes = await fetch(`https://${auth0Domain}/oauth/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString(),
+      });
 
-				setUser({
-					id: profile.sub,
-					name: profile.name,
-					given_name: profile.given_name,
-					family_name: profile.family_name,
-					email,
-					picture: profile.picture,
-					idToken: idToken,
-				});
-			} catch (err) {
-				throw new Error('Error al obtener el perfil del usuario.');
-			}
-		},
-		[allowedDomain]
-	);
+      const tokenJson = await tokenRes.json();
 
-	const exchangeCodeForToken = useCallback(
-		async (code, codeVerifier) => {
-			const params = new URLSearchParams({
-				grant_type: 'authorization_code',
-				client_id: googleClientId,
-				code,
-				redirect_uri: redirectUri,
-				code_verifier: codeVerifier,
-			});
+      if (!tokenRes.ok || !tokenJson.access_token) {
+        throw new Error(
+          tokenJson.error_description ||
+            tokenJson.error ||
+            'No se pudo obtener access token de Auth0',
+        );
+      }
 
-			const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-				body: params.toString(),
-			});
+      return {
+        accessToken: tokenJson.access_token,
+        idToken: tokenJson.id_token
+      };
+    },
+    [auth0Audience, auth0ClientId, auth0Domain, redirectUri],
+  );
 
-			const tokenJson = await tokenRes.json();
+  const signIn = useCallback(async () => {
+    setError(null);
+    setLoading(true);
 
-			if (!tokenRes.ok || !tokenJson.access_token) {
-				throw new Error(
-					tokenJson.error_description || tokenJson.error || 'No se pudo obtener el token.'
-				);
-			}
+    try {
+      if (!auth0Domain || !auth0ClientId) {
+        setError(
+          'Falta configurar Auth0: EXPO_PUBLIC_AUTH0_DOMAIN y EXPO_PUBLIC_AUTH0_CLIENT_ID en .env',
+        );
+        return;
+      }
 
-			return {
-				accessToken: tokenJson.access_token,
-				idToken: tokenJson.id_token,
-			};
-		},
-		[googleClientId, redirectUri]
-	);
+      if (!request || !discovery) {
+        setError(
+          'La solicitud de autenticación aún no está lista. Intenta de nuevo.',
+        );
+        return;
+      }
 
-	useEffect(() => {
-		const handleResponse = async () => {
-			if (response?.type === 'success') {
-				setLoading(true);
-				setError(null);
-				try {
-					const code = response.params?.code;
-					if (!code || !request?.codeVerifier) {
-						setError('Google no devolvió un código válido.');
-						return;
-					}
+      if (isExpoGo && !projectFullName) {
+        setError('En Expo Go falta owner/slug para AuthSession proxy.');
+        return;
+      }
 
-					const tokens = await exchangeCodeForToken(code, request.codeVerifier);
-					await fetchUserInfo(tokens.accessToken, tokens.idToken);
-				} catch (err) {
-					setError(err.message || 'Error al procesar el inicio de sesión.');
-				} finally {
-					setLoading(false);
-				}
-			} else if (response?.type === 'error') {
-				setError(response.params?.error_description || 'Error en la autenticación.');
-			} else if (response?.type === 'dismiss' || response?.type === 'cancel') {
-				setError('Inicio de sesión cancelado.');
-			}
-		};
+      console.log('[Auth0] redirectUri:', redirectUri);
+      const result = await promptAsync();
 
-		if (response) {
-			handleResponse();
-		}
-	}, [response, exchangeCodeForToken, fetchUserInfo, request]);
+      if (result.type !== 'success') {
+        const authError =
+          result.params?.error_description ||
+          result.params?.error ||
+          result.error?.message;
 
-	const signIn = useCallback(async () => {
-		setError(null);
-		setLoading(true);
+        if (result.type === 'cancel') {
+          setError('Inicio de sesión cancelado');
+        } else if (result.type === 'dismiss') {
+          setError(
+            'Se cerró la pantalla de inicio de sesión antes de completar el proceso.',
+          );
+        } else {
+          setError(authError || 'No se pudo completar el inicio de sesión');
+        }
+        return;
+      }
 
-		try {
-			if (!googleClientId) {
-				setError('Falta configurar los client IDs de Google en .env');
-				setLoading(false);
-				return;
-			}
+      const code = result.params?.code;
 
-			if (!request) {
-				setError('La solicitud aún no está lista. Intenta de nuevo.');
-				setLoading(false);
-				return;
-			}
+      if (!code || !request.codeVerifier) {
+        setError('Auth0 no devolvió código de autorización válido.');
+        return;
+      }
 
-			await promptAsync();
-		} catch (err) {
-			console.error('Sign-In error:', err);
-			setError(err.message || 'Error inesperado.');
-			setLoading(false);
-		}
-	}, [googleClientId, promptAsync, request, redirectUri]);
+      const tokens = await exchangeCodeForToken(code, request.codeVerifier);
+      await fetchUserInfo(tokens.accessToken, tokens.idToken);
+    } catch (err) {
+      console.error('[Auth0] Sign-In error:', err);
+      setError(err.message || 'Error al iniciar sesión con Auth0');
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    projectFullName,
+    auth0ClientId,
+    auth0Domain,
+    discovery,
+    exchangeCodeForToken,
+    fetchUserInfo,
+    isExpoGo,
+    promptAsync,
+    redirectUri,
+    request,
+  ]);
 
-	const signOut = useCallback(() => {
-		setUser(null);
-		setError(null);
-	}, []);
+  const signOut = useCallback(() => {
+    setUser(null);
+    setError(null);
+  }, []);
 
-	return { user, error, loading, request, signIn, signOut };
+  return {
+    user,
+    error,
+    loading,
+    request,
+    signIn,
+    signOut,
+    isAuthenticated: !!user,
+  };
 }
