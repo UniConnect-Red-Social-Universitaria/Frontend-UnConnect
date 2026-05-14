@@ -81,7 +81,8 @@ export default function SesionesEstudioScreen() {
     setEditTitulo(s.titulo);
     setEditDescripcion(s.descripcion);
     setEditLugar(s.lugar);
-    setEditFecha(new Date(s.fecha).toISOString().slice(0, 16));
+    const d = new Date(s.fecha);
+    setEditFecha(new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
     setEditRecordatorio(s.recordatorioMinutos);
     setAlcance('solo_esta');
     setError('');
@@ -107,8 +108,7 @@ export default function SesionesEstudioScreen() {
       setTitulo(''); setDescripcion(''); setLugar(''); setFechaInicio(''); setFechaFin('');
       await cargar();
     } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      setError(msg ?? 'Error al crear la serie');
+      setError(e instanceof Error ? e.message : 'Error al crear la serie');
     } finally {
       setEnviando(false);
     }

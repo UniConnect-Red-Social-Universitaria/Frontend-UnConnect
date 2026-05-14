@@ -46,8 +46,8 @@ export default function SesionesEstudioScreen({ navigation }: Props) {
   const [descripcion, setDescripcion] = useState('');
   const [lugar, setLugar] = useState('');
   const [frecuencia, setFrecuencia] = useState<FrecuenciaRecurrencia>('SEMANAL');
-  const [dateInicio, setDateInicio] = useState<Date>(new Date());
-  const [dateFin, setDateFin] = useState<Date>(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+  const [dateInicio, setDateInicio] = useState<Date>(new Date(Date.now() + 24 * 60 * 60 * 1000));
+  const [dateFin, setDateFin] = useState<Date>(new Date(Date.now() + 8 * 24 * 60 * 60 * 1000));
   const [recordatorio, setRecordatorio] = useState('30');
 
   // DateTimePicker state
@@ -137,8 +137,8 @@ export default function SesionesEstudioScreen({ navigation }: Props) {
       });
       setModal(null);
       setTitulo(''); setDescripcion(''); setLugar('');
-      setDateInicio(new Date());
-      setDateFin(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+      setDateInicio(new Date(Date.now() + 24 * 60 * 60 * 1000));
+      setDateFin(new Date(Date.now() + 8 * 24 * 60 * 60 * 1000));
       showToast.success('Serie creada');
       cargar();
     } catch (e: any) {
@@ -278,7 +278,7 @@ export default function SesionesEstudioScreen({ navigation }: Props) {
                 value={tempDate}
                 mode="datetime"
                 display="spinner"
-                onValueChange={onPickerChange}
+                onChange={onPickerChange}
                 onDismiss={() => setPickerTarget(null)}
                 locale="es-CO"
                 minimumDate={new Date()}
@@ -302,7 +302,7 @@ export default function SesionesEstudioScreen({ navigation }: Props) {
           value={tempDate}
           mode={pickerMode}
           display="default"
-          onValueChange={onPickerChange}
+          onChange={onPickerChange}
           onDismiss={() => setPickerTarget(null)}
           minimumDate={new Date()}
         />
