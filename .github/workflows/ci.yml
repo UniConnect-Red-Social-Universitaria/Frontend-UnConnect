@@ -24,8 +24,8 @@ jobs:
       - name: Instalar dependencias (Raíz / Workspaces)
         run: npm install
 
-      - name: Generar tipos de la API
-        run: npm run generate:api-types
+    #   - name: Generar tipos de la API
+    #     run: npm run generate:api-types
 
       - name: Correr todas las pruebas (App y Web)
         run: npm run test:all
