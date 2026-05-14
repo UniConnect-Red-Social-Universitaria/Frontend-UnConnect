@@ -3,6 +3,7 @@
 	"compilerOptions": {
 		"strict": true,
 		"skipLibCheck": true,
+		"ignoreDeprecations": "6.0",
 		"baseUrl": ".",
 		"paths": {
 			"@uniconnect/api-types": ["../packages/api-types/src/index.ts"]
@@ -10,9 +11,3 @@
 	},
 	"exclude": ["node_modules"]
 }
-			"strict": true,
-			"skipLibCheck": true,
-			"baseUrl": ".",
-			"paths": {
-				"@uniconnect/api-types": ["../packages/api-types/src/index.ts"]
-			}
