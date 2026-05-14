@@ -19,10 +19,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm' # Usa 'yarn' o 'pnpm' si es tu gestor de paquetes
+          cache: 'npm' 
 
       - name: Instalar dependencias (Raíz / Workspaces)
         run: npm install
+
+      - name: Generar tipos de la API
+        run: npm run generate:api-types
+
       - name: Correr todas las pruebas (App y Web)
         run: npm run test:all
 

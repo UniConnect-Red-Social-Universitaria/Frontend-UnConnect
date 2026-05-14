@@ -4,9 +4,9 @@ on:
   push:
     branches:
       - main
-    # Opcional: Solo desplegar si hay cambios en web/ o fly.toml
     paths:
       - 'web/**'
+      - 'packages/**' # Agregamos esto por si cambian los tipos
       - 'fly.toml'
       - '.github/workflows/fly-deploy.yml'
 
@@ -18,6 +18,18 @@ jobs:
     steps:
       - name: Checkout del código
         uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Generar tipos de la API
+        run: npm run generate:api-types
 
       - name: Setup Flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master

@@ -34,6 +34,7 @@ RUN npm install --legacy-peer-deps
 
 COPY . .
 
+RUN npm run generate:api-types
 RUN npm run build:web
 
 # ── Stage 2: runner ───────────────────────────────────────────────────────────
