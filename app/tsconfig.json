@@ -2,7 +2,17 @@
 	"extends": "expo/tsconfig.base.json",
 	"compilerOptions": {
 		"strict": true,
-		"skipLibCheck": true
+		"skipLibCheck": true,
+		"baseUrl": ".",
+		"paths": {
+			"@uniconnect/api-types": ["../packages/api-types/src/index.ts"]
+		}
 	},
 	"exclude": ["node_modules"]
 }
+			"strict": true,
+			"skipLibCheck": true,
+			"baseUrl": ".",
+			"paths": {
+				"@uniconnect/api-types": ["../packages/api-types/src/index.ts"]
+			}

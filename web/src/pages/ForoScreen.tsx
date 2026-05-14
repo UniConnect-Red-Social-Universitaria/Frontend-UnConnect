@@ -34,186 +34,267 @@ const CSS = `
 type Vista = 'preguntas' | 'respuestas';
 
 export default function ForoScreen() {
-  const { materiaId } = useParams<{ materiaId: string }>();
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const materiaNombre = searchParams.get('nombre') ?? 'Asignatura';
+	const { materiaId } = useParams<{ materiaId: string }>();
+	const [searchParams] = useSearchParams();
+	const navigate = useNavigate();
+	const materiaNombre = searchParams.get('nombre') ?? 'Asignatura';
 
-  const [vista, setVista] = useState<Vista>('preguntas');
-  const [preguntas, setPreguntas] = useState<ForoPregunta[]>([]);
-  const [respuestas, setRespuestas] = useState<ForoRespuesta[]>([]);
-  const [preguntaSeleccionada, setPreguntaSeleccionada] = useState<ForoPregunta | null>(null);
-  const [cargando, setCargando] = useState(false);
+	const [vista, setVista] = useState<Vista>('preguntas');
+	const [preguntas, setPreguntas] = useState<ForoPregunta[]>([]);
+	const [respuestas, setRespuestas] = useState<ForoRespuesta[]>([]);
+	const [preguntaSeleccionada, setPreguntaSeleccionada] = useState<ForoPregunta | null>(
+		null
+	);
+	const [cargando, setCargando] = useState(false);
 
-  const [modalPregunta, setModalPregunta] = useState(false);
-  const [modalRespuesta, setModalRespuesta] = useState(false);
-  const [titulo, setTitulo] = useState('');
-  const [contenido, setContenido] = useState('');
-  const [enviando, setEnviando] = useState(false);
-  const [error, setError] = useState('');
+	const [modalPregunta, setModalPregunta] = useState(false);
+	const [modalRespuesta, setModalRespuesta] = useState(false);
+	const [titulo, setTitulo] = useState('');
+	const [contenido, setContenido] = useState('');
+	const [enviando, setEnviando] = useState(false);
+	const [error, setError] = useState('');
 
-  const cargarPreguntas = useCallback(async () => {
-    if (!materiaId) return;
-    setCargando(true);
-    try {
-      const data = await foroService.obtenerPreguntas(materiaId);
-      setPreguntas(data);
-    } finally {
-      setCargando(false);
-    }
-  }, [materiaId]);
+	const cargarPreguntas = useCallback(async () => {
+		if (!materiaId) return;
+		setCargando(true);
+		try {
+			const data = await foroService.obtenerPreguntas(materiaId);
+			setPreguntas(data);
+		} finally {
+			setCargando(false);
+		}
+	}, [materiaId]);
 
-  const cargarRespuestas = useCallback(async (preguntaId: string) => {
-    setCargando(true);
-    try {
-      const data = await foroService.obtenerRespuestas(preguntaId);
-      setRespuestas(data);
-    } finally {
-      setCargando(false);
-    }
-  }, []);
+	const cargarRespuestas = useCallback(async (preguntaId: string) => {
+		setCargando(true);
+		try {
+			const data = await foroService.obtenerRespuestas(preguntaId);
+			setRespuestas(data);
+		} finally {
+			setCargando(false);
+		}
+	}, []);
 
-  useEffect(() => { cargarPreguntas(); }, [cargarPreguntas]);
+	useEffect(() => {
+		cargarPreguntas();
+	}, [cargarPreguntas]);
 
-  const abrirPregunta = (p: ForoPregunta) => {
-    setPreguntaSeleccionada(p);
-    setVista('respuestas');
-    cargarRespuestas(p.id);
-  };
+	const abrirPregunta = (p: ForoPregunta) => {
+		setPreguntaSeleccionada(p);
+		setVista('respuestas');
+		cargarRespuestas(p.id);
+	};
 
-  const handlePublicarPregunta = async () => {
-    if (!titulo.trim() || !contenido.trim() || !materiaId) return;
-    setEnviando(true);
-    setError('');
-    try {
-      const nueva = await foroService.publicarPregunta(materiaId, titulo, contenido);
-      setPreguntas(prev => [nueva, ...prev]);
-      setTitulo(''); setContenido('');
-      setModalPregunta(false);
-    } catch (e: any) {
-      setError(e?.response?.data?.error ?? 'No tienes matrícula activa en esta asignatura');
-    } finally {
-      setEnviando(false);
-    }
-  };
+	const handlePublicarPregunta = async () => {
+		if (!titulo.trim() || !contenido.trim() || !materiaId) return;
+		setEnviando(true);
+		setError('');
+		try {
+			const nueva = await foroService.publicarPregunta(materiaId, titulo, contenido);
+			setPreguntas((prev) => [nueva, ...prev]);
+			setTitulo('');
+			setContenido('');
+			setModalPregunta(false);
+		} catch (e: any) {
+			setError(
+				e?.message ??
+					e?.response?.data?.error ??
+					'No tienes matrícula activa en esta asignatura'
+			);
+		} finally {
+			setEnviando(false);
+		}
+	};
 
-  const handlePublicarRespuesta = async () => {
-    if (!contenido.trim() || !preguntaSeleccionada || !materiaId) return;
-    setEnviando(true);
-    setError('');
-    try {
-      const nueva = await foroService.publicarRespuesta(preguntaSeleccionada.id, materiaId, contenido);
-      setRespuestas(prev => [...prev, nueva].sort((a, b) => b.puntuacion - a.puntuacion));
-      setContenido('');
-      setModalRespuesta(false);
-    } catch (e: any) {
-      setError(e?.response?.data?.error ?? 'No tienes matrícula activa en esta asignatura');
-    } finally {
-      setEnviando(false);
-    }
-  };
+	const handlePublicarRespuesta = async () => {
+		if (!contenido.trim() || !preguntaSeleccionada || !materiaId) return;
+		setEnviando(true);
+		setError('');
+		try {
+			const nueva = await foroService.publicarRespuesta(
+				preguntaSeleccionada.id,
+				materiaId,
+				contenido
+			);
+			setRespuestas((prev) =>
+				[...prev, nueva].sort((a, b) => b.puntuacion - a.puntuacion)
+			);
+			setContenido('');
+			setModalRespuesta(false);
+		} catch (e: any) {
+			setError(
+				e?.message ??
+					e?.response?.data?.error ??
+					'No tienes matrícula activa en esta asignatura'
+			);
+		} finally {
+			setEnviando(false);
+		}
+	};
 
-  const handleVotar = async (respuestaId: string, valor: 1 | -1) => {
-    try {
-      const actualizada = await foroService.votarRespuesta(respuestaId, valor);
-      setRespuestas(prev =>
-        prev
-          .map(r => (r.id === respuestaId ? actualizada : r))
-          .sort((a, b) => b.puntuacion - a.puntuacion),
-      );
-    } catch { /* ignore */ }
-  };
+	const handleVotar = async (respuestaId: string, valor: 1 | -1) => {
+		try {
+			const actualizada = await foroService.votarRespuesta(respuestaId, valor);
+			setRespuestas((prev) =>
+				prev
+					.map((r) => (r.id === respuestaId ? actualizada : r))
+					.sort((a, b) => b.puntuacion - a.puntuacion)
+			);
+		} catch {
+			/* ignore */
+		}
+	};
 
-  return (
-    <>
-      <style>{CSS}</style>
-      <div className="foro-container">
-        {/* Header */}
-        <div className="foro-header">
-          <button
-            className="foro-back"
-            onClick={() => vista === 'respuestas' ? setVista('preguntas') : navigate(-1)}
-          >
-            ←
-          </button>
-          <span className="foro-title">
-            {vista === 'preguntas' ? `Foro · ${materiaNombre}` : preguntaSeleccionada?.titulo}
-          </span>
-          <button
-            className="foro-btn"
-            onClick={() => vista === 'preguntas' ? setModalPregunta(true) : setModalRespuesta(true)}
-          >
-            {vista === 'preguntas' ? '+ Pregunta' : '+ Respuesta'}
-          </button>
-        </div>
+	return (
+		<>
+			<style>{CSS}</style>
+			<div className="foro-container">
+				{/* Header */}
+				<div className="foro-header">
+					<button
+						className="foro-back"
+						onClick={() =>
+							vista === 'respuestas' ? setVista('preguntas') : navigate(-1)
+						}
+					>
+						←
+					</button>
+					<span className="foro-title">
+						{vista === 'preguntas'
+							? `Foro · ${materiaNombre}`
+							: preguntaSeleccionada?.titulo}
+					</span>
+					<button
+						className="foro-btn"
+						onClick={() =>
+							vista === 'preguntas' ? setModalPregunta(true) : setModalRespuesta(true)
+						}
+					>
+						{vista === 'preguntas' ? '+ Pregunta' : '+ Respuesta'}
+					</button>
+				</div>
 
-        {cargando && <p style={{ textAlign: 'center', color: '#888' }}>Cargando...</p>}
+				{cargando && <p style={{ textAlign: 'center', color: '#888' }}>Cargando...</p>}
 
-        {/* Lista preguntas */}
-        {!cargando && vista === 'preguntas' && (
-          preguntas.length === 0
-            ? <p className="foro-empty">No hay preguntas aún. ¡Sé el primero!</p>
-            : preguntas.map(p => (
-              <div key={p.id} className="foro-card" onClick={() => abrirPregunta(p)}>
-                <div className="foro-card-title">{p.titulo}</div>
-                <div className="foro-card-meta">{p.autorNombre} · {new Date(p.createdAt).toLocaleDateString()}</div>
-                <div className="foro-card-preview">{p.contenido.slice(0, 120)}{p.contenido.length > 120 ? '...' : ''}</div>
-              </div>
-            ))
-        )}
+				{/* Lista preguntas */}
+				{!cargando &&
+					vista === 'preguntas' &&
+					(preguntas.length === 0 ? (
+						<p className="foro-empty">No hay preguntas aún. ¡Sé el primero!</p>
+					) : (
+						preguntas.map((p) => (
+							<div key={p.id} className="foro-card" onClick={() => abrirPregunta(p)}>
+								<div className="foro-card-title">{p.titulo}</div>
+								<div className="foro-card-meta">
+									{p.autorNombre} · {new Date(p.createdAt).toLocaleDateString()}
+								</div>
+								<div className="foro-card-preview">
+									{p.contenido.slice(0, 120)}
+									{p.contenido.length > 120 ? '...' : ''}
+								</div>
+							</div>
+						))
+					))}
 
-        {/* Lista respuestas */}
-        {!cargando && vista === 'respuestas' && (
-          respuestas.length === 0
-            ? <p className="foro-empty">No hay respuestas aún.</p>
-            : respuestas.map(r => (
-              <div key={r.id} className="foro-card" style={{ cursor: 'default' }}>
-                <div className="foro-card-content">{r.contenido}</div>
-                <div className="foro-card-meta">{r.autorNombre} · {new Date(r.createdAt).toLocaleDateString()}</div>
-                <div className="foro-vote">
-                  <button className="foro-vote-btn" onClick={() => handleVotar(r.id, 1)}>▲</button>
-                  <span className="foro-score">{r.puntuacion}</span>
-                  <button className="foro-vote-btn" onClick={() => handleVotar(r.id, -1)}>▼</button>
-                </div>
-              </div>
-            ))
-        )}
+				{/* Lista respuestas */}
+				{!cargando &&
+					vista === 'respuestas' &&
+					(respuestas.length === 0 ? (
+						<p className="foro-empty">No hay respuestas aún.</p>
+					) : (
+						respuestas.map((r) => (
+							<div key={r.id} className="foro-card" style={{ cursor: 'default' }}>
+								<div className="foro-card-content">{r.contenido}</div>
+								<div className="foro-card-meta">
+									{r.autorNombre} · {new Date(r.createdAt).toLocaleDateString()}
+								</div>
+								<div className="foro-vote">
+									<button className="foro-vote-btn" onClick={() => handleVotar(r.id, 1)}>
+										▲
+									</button>
+									<span className="foro-score">{r.puntuacion}</span>
+									<button className="foro-vote-btn" onClick={() => handleVotar(r.id, -1)}>
+										▼
+									</button>
+								</div>
+							</div>
+						))
+					))}
 
-        {/* Modal nueva pregunta */}
-        {modalPregunta && (
-          <div className="foro-modal-overlay" onClick={() => setModalPregunta(false)}>
-            <div className="foro-modal" onClick={e => e.stopPropagation()}>
-              <div className="foro-modal-title">Nueva pregunta</div>
-              <input className="foro-input" placeholder="Título" value={titulo} onChange={e => setTitulo(e.target.value)} />
-              <textarea className="foro-input foro-textarea" placeholder="Describe tu duda..." value={contenido} onChange={e => setContenido(e.target.value)} />
-              {error && <p style={{ color: '#e74c3c', fontSize: 13 }}>{error}</p>}
-              <div className="foro-modal-btns">
-                <button className="foro-btn-secondary" onClick={() => { setModalPregunta(false); setError(''); }}>Cancelar</button>
-                <button className="foro-btn" onClick={handlePublicarPregunta} disabled={enviando}>
-                  {enviando ? 'Publicando...' : 'Publicar'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+				{/* Modal nueva pregunta */}
+				{modalPregunta && (
+					<div className="foro-modal-overlay" onClick={() => setModalPregunta(false)}>
+						<div className="foro-modal" onClick={(e) => e.stopPropagation()}>
+							<div className="foro-modal-title">Nueva pregunta</div>
+							<input
+								className="foro-input"
+								placeholder="Título"
+								value={titulo}
+								onChange={(e) => setTitulo(e.target.value)}
+							/>
+							<textarea
+								className="foro-input foro-textarea"
+								placeholder="Describe tu duda..."
+								value={contenido}
+								onChange={(e) => setContenido(e.target.value)}
+							/>
+							{error && <p style={{ color: '#e74c3c', fontSize: 13 }}>{error}</p>}
+							<div className="foro-modal-btns">
+								<button
+									className="foro-btn-secondary"
+									onClick={() => {
+										setModalPregunta(false);
+										setError('');
+									}}
+								>
+									Cancelar
+								</button>
+								<button
+									className="foro-btn"
+									onClick={handlePublicarPregunta}
+									disabled={enviando}
+								>
+									{enviando ? 'Publicando...' : 'Publicar'}
+								</button>
+							</div>
+						</div>
+					</div>
+				)}
 
-        {/* Modal nueva respuesta */}
-        {modalRespuesta && (
-          <div className="foro-modal-overlay" onClick={() => setModalRespuesta(false)}>
-            <div className="foro-modal" onClick={e => e.stopPropagation()}>
-              <div className="foro-modal-title">Responder</div>
-              <textarea className="foro-input foro-textarea" placeholder="Escribe tu respuesta..." value={contenido} onChange={e => setContenido(e.target.value)} />
-              {error && <p style={{ color: '#e74c3c', fontSize: 13 }}>{error}</p>}
-              <div className="foro-modal-btns">
-                <button className="foro-btn-secondary" onClick={() => { setModalRespuesta(false); setError(''); }}>Cancelar</button>
-                <button className="foro-btn" onClick={handlePublicarRespuesta} disabled={enviando}>
-                  {enviando ? 'Publicando...' : 'Responder'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </>
-  );
+				{/* Modal nueva respuesta */}
+				{modalRespuesta && (
+					<div className="foro-modal-overlay" onClick={() => setModalRespuesta(false)}>
+						<div className="foro-modal" onClick={(e) => e.stopPropagation()}>
+							<div className="foro-modal-title">Responder</div>
+							<textarea
+								className="foro-input foro-textarea"
+								placeholder="Escribe tu respuesta..."
+								value={contenido}
+								onChange={(e) => setContenido(e.target.value)}
+							/>
+							{error && <p style={{ color: '#e74c3c', fontSize: 13 }}>{error}</p>}
+							<div className="foro-modal-btns">
+								<button
+									className="foro-btn-secondary"
+									onClick={() => {
+										setModalRespuesta(false);
+										setError('');
+									}}
+								>
+									Cancelar
+								</button>
+								<button
+									className="foro-btn"
+									onClick={handlePublicarRespuesta}
+									disabled={enviando}
+								>
+									{enviando ? 'Publicando...' : 'Responder'}
+								</button>
+							</div>
+						</div>
+					</div>
+				)}
+			</div>
+		</>
+	);
 }
