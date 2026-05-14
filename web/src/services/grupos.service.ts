@@ -76,8 +76,15 @@ class GruposService {
 		);
 	}
 
+	async iniciarTransferenciaAdministracion(grupoId: string): Promise<ApiResponse> {
+		return await apiClient.post(`/api/grupos/${grupoId}/administrador/iniciar`, {});
+	}
+
 	async cederAdministracion(grupoId: string, nuevoAdminId: string): Promise<ApiResponse> {
-		return await apiClient.patch(`/api/grupos/${grupoId}/administrador`, { nuevoAdminId });
+		// Primero iniciar la transferencia
+		await this.iniciarTransferenciaAdministracion(grupoId);
+		// Luego confirmar con el nuevo administrador
+		return await apiClient.patch(`/api/grupos/${grupoId}/administrador/confirmar`, { nuevoAdminId });
 	}
 }
 
