@@ -1,5 +1,5 @@
-/// <reference types="vitest" />
-import { defineConfig } from 'vite'
+// Cambia la importación de 'vite' a 'vitest/config'
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
@@ -12,10 +12,9 @@ export default defineConfig({
       allow: ['..'],
     },
   },
-  // Aquí va la configuración de Vitest
   test: {
-    globals: true, // Para usar describe, it, expect sin importarlos
-    environment: 'jsdom', // Simula el navegador para probar componentes de React
-    setupFiles: './src/setupTests.ts', // Archivo de configuración previa
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/setupTests.ts',
   },
 })
