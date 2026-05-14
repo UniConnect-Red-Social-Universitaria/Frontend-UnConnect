@@ -28,8 +28,8 @@ jobs:
       - name: Instalar dependencias
         run: npm install
 
-      # - name: Generar tipos de la API
-      #   run: npm run generate:api-types
+      - name: Compilar los tipos de la API
+        run: npm --workspace @uniconnect/api-types run build
 
       - name: Setup Flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
