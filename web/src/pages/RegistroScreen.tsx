@@ -1,50 +1,11 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
-import { jwtDecode } from 'jwt-decode';
+import { useAuth0Web } from '../hooks/useAuth0Web';
 import theme from '@uniconnect/theme';
 
 export default function RegistroScreen() {
 	const navigate = useNavigate();
-
-	const [error, setError] = useState('');
-	const allowedDomain = 'ucaldas.edu.co';
-	const GOOGLE_CLIENT_ID =
-		'962671967940-0ui1kavjc190n9iaj8kc0vsn9h81ppsu.apps.googleusercontent.com';
-
-	const handleGoogleSuccess = (credentialResponse: any) => {
-		if (!credentialResponse.credential) {
-			setError('Error al recibir credenciales de Google.');
-			return;
-		}
-
-		try {
-			const decoded: any = jwtDecode(credentialResponse.credential);
-			const userEmail = String(decoded.email || '')
-				.trim()
-				.toLowerCase();
-
-			if (!userEmail.toLowerCase().endsWith(`@${allowedDomain}`)) {
-				setError(`Solo se permiten correos que terminen en @${allowedDomain}`);
-				return;
-			}
-
-			// Redirigimos al formulario de completar registro pasando los datos de Google
-			navigate('/completar-registro', {
-				state: {
-					googleData: {
-						nombre: decoded.given_name || decoded.name?.split(' ')[0] || '',
-						apellido:
-							decoded.family_name || decoded.name?.split(' ').slice(1).join(' ') || '',
-						correo: userEmail,
-						googleIdToken: credentialResponse.credential,
-					},
-				},
-			});
-		} catch (err) {
-			setError('Error al decodificar la información de Google.');
-		}
-	};
+	const { initiateLogin, loading, error } = useAuth0Web();
+	const allowedDomain = import.meta.env.VITE_ALLOWED_DOMAIN || 'ucaldas.edu.co';
 
 	return (
 		<div style={s.screen}>
@@ -69,22 +30,8 @@ export default function RegistroScreen() {
 					justify-content: center;
 					gap: 10px;
 				}
-				.uc-btn-primary:hover { background: #00284d; }
-				.uc-input {
-					width: 100%;
-					padding: 12px 14px;
-					border: 1.5px solid #c5d3df;
-					border-radius: 8px;
-					font-size: 15px;
-					font-family: 'Inter', sans-serif;
-					color: #00284d;
-					background: #fff;
-					outline: none;
-					transition: border-color 0.2s;
-					margin-bottom: 4px;
-				}
-				.uc-input:focus { border-color: #003e70; }
-				.uc-input.error { border-color: #e74c3c; }
+				.uc-btn-primary:hover:not(:disabled) { background: #00284d; }
+				.uc-btn-primary:disabled { opacity: 0.65; cursor: not-allowed; }
 				.error-text {
 					margin: 0 0 16px 0;
 					font-size: 14px;
@@ -96,6 +43,7 @@ export default function RegistroScreen() {
 					from { opacity: 0; transform: translateY(20px); }
 					to   { opacity: 1; transform: translateY(0); }
 				}
+				@keyframes spin { to { transform: rotate(360deg); } }
 			`}</style>
 
 			{/* Header */}
@@ -133,33 +81,39 @@ export default function RegistroScreen() {
 							<p style={s.infoTitle}>Acceso exclusivo para estudiantes</p>
 							<p style={s.infoDesc}>
 								Solo se admiten cuentas con correo <strong>@{allowedDomain}</strong>.
-								Necesitarás completar tu perfil académico (carrera, semestre y materias)
-								en el siguiente paso.
+								Serás redirigido a Auth0 para autenticarte con tu cuenta institucional de
+								Google. Después completarás tu perfil académico.
 							</p>
 						</div>
 					</div>
 
-					<div
-						style={{
-							display: 'flex',
-							justifyContent: 'center',
-							marginBottom: '16px',
-							flexDirection: 'column',
-							alignItems: 'center',
-						}}
+					{error && <p className="error-text">{error}</p>}
+
+					<button
+						className="uc-btn-primary"
+						onClick={initiateLogin}
+						disabled={loading}
 					>
-						{error && <p className="error-text">{error}</p>}
-						<GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-							<GoogleLogin
-								onSuccess={handleGoogleSuccess}
-								onError={() => setError('Error al iniciar sesión con Google.')}
-								theme="filled_blue"
-								shape="pill"
-								text="continue_with"
-								width={300}
+						{loading ? (
+							<span
+								style={{
+									display: 'inline-block',
+									width: 18,
+									height: 18,
+									border: '2.5px solid rgba(255,255,255,0.4)',
+									borderTopColor: '#fff',
+									borderRadius: '50%',
+									animation: 'spin 0.7s linear infinite',
+									verticalAlign: 'middle',
+								}}
 							/>
-						</GoogleOAuthProvider>
-					</div>
+						) : (
+							<>
+								<span style={{ fontSize: 18 }}>🔐</span>
+								Continuar con cuenta institucional
+							</>
+						)}
+					</button>
 
 					{/* Volver */}
 					<div style={s.footer}>

@@ -38,6 +38,7 @@ type RootStackParamList = {
 		nombreGrupo: string;
 		creadorId: string;
 		administradorId: string;
+		materiaId: string;
 		materiaNombre: string;
 		miembrosIds: string[];
 	};
@@ -208,6 +209,7 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 													nombreGrupo: grupo.nombre,
 													creadorId: grupo.creadorId,
 													administradorId: grupo.administradorId,
+													materiaId: grupo.materia.id,
 													materiaNombre: grupo.materia.nombre,
 													miembrosIds: grupo.miembros.map((m: any) => m.id),
 												})

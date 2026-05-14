@@ -17,6 +17,7 @@ const NAV_ITEMS: NavItem[] = [
 	{ path: '/contactos',    label: 'Contactos',      icon: '💬', activeIcon: '💬' },
 	{ path: '/solicitudes',  label: 'Solicitudes',    icon: '📨', activeIcon: '📨' },
 	{ path: '/notificaciones', label: 'Notificaciones', icon: '🔔', activeIcon: '🔔' },
+	{ path: '/sesiones',      label: 'Sesiones',       icon: '📚', activeIcon: '📚' },
 	{ path: '/editar-perfil',label: 'Perfil',         icon: '👤', activeIcon: '👤' },
 ];
 

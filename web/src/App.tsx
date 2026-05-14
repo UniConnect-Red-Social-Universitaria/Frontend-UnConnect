@@ -22,6 +22,8 @@ const SolicitudesGrupoScreen = lazy(() => import('./pages/SolicitudesGrupoScreen
 const DetalleGrupoScreen = lazy(() => import('./pages/DetalleGrupoScreen'));
 const MensajeDirectoScreen = lazy(() => import('./pages/MensajeDirectoScreen'));
 const MensajeGrupoScreen = lazy(() => import('./pages/MensajeGrupoScreen'));
+const ForoScreen = lazy(() => import('./pages/ForoScreen'));
+const SesionesEstudioScreen = lazy(() => import('./pages/SesionesEstudioScreen'));
 
 function PageLoader() {
 	return (
@@ -78,6 +80,8 @@ function AppRoutes() {
 					<Route path="/solicitudes-grupo" element={<SolicitudesGrupoScreen />} />
 					<Route path="/mensajes/directo/:contactoId" element={<MensajeDirectoScreen />} />
 					<Route path="/mensajes/grupo/:grupoId" element={<MensajeGrupoScreen />} />
+					<Route path="/foro/:materiaId" element={<ForoScreen />} />
+					<Route path="/sesiones" element={<SesionesEstudioScreen />} />
 				</Route>
 
 				{/* Fallback */}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { PollCard, PollCreateModal, SecondaryButton } from '@uniconnect/ui';
 import { useChatGrupo } from '../hooks/useChatGrupo';
 import { clearUnreadGroupChatNotification } from '../services/notificaciones-chat.service';
 import { gruposService } from '../services/grupos.service';
@@ -8,6 +9,7 @@ export default function MensajeGrupoScreen() {
 	const { grupoId } = useParams<{ grupoId: string }>();
 	const location = useLocation();
 	const navigate = useNavigate();
+	const [mostrarCrearEncuesta, setMostrarCrearEncuesta] = useState(false);
 	
 	const [nombreGrupo, setNombreGrupo] = useState<string>(
 		(location.state as any)?.nombreGrupo || 'Cargando grupo...'
@@ -26,8 +28,17 @@ export default function MensajeGrupoScreen() {
 	}, [grupoId, nombreGrupo]);
 
 	const {
-		mensajes, nuevoMensaje, setNuevoMensaje,
-		enviando, error, userId, scrollRef, handleEnviarMensaje
+		items,
+		nuevoMensaje,
+		setNuevoMensaje,
+		enviando,
+		error,
+		userId,
+		scrollRef,
+		handleEnviarMensaje,
+		handleVotarEncuesta,
+		votandoEncuestaId,
+		handleCrearEncuesta,
 	} = useChatGrupo({ grupoId: grupoId! });
 
 	if (!grupoId) return null;
@@ -40,6 +51,7 @@ export default function MensajeGrupoScreen() {
 				.uc-chat-container { display: flex; flex-direction: column; height: calc(100vh - 120px); max-height: 800px; background: #fff; border-radius: 16px; border: 1px solid #e8eef4; box-shadow: 0 10px 30px rgba(0,62,112,0.08); overflow: hidden; margin-top: 10px; }
 				@media (max-width: 768px) { .uc-chat-container { height: calc(100vh - 150px); margin-top: 0; border-radius: 12px; border: none; box-shadow: none; } }
 				.uc-msg-scroll { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; background: #f8fafc; }
+				.uc-polls { display: flex; flex-direction: column; gap: 12px; margin-bottom: 4px; }
 				.uc-msg { max-width: 75%; padding: 12px 16px; border-radius: 14px; position: relative; animation: fadeUp 0.2s ease; word-wrap: break-word; }
 				.uc-msg.mine { align-self: flex-end; background: #003e70; color: #fff; border-bottom-right-radius: 4px; }
 				.uc-msg.other { align-self: flex-start; background: #fff; color: #00284d; border: 1px solid #e2e8f0; border-bottom-left-radius: 4px; }
@@ -57,28 +69,39 @@ export default function MensajeGrupoScreen() {
 
 			<div style={s.content}>
 				<div style={s.headerRow}>
-					<div 
-						style={{ cursor: 'pointer' }} 
+					<div
+						style={{ cursor: 'pointer', flex: 1, minWidth: 0 }}
 						onClick={() => navigate(`/grupos/${grupoId}`)}
 						title="Ver detalles del grupo"
 					>
 						<h1 style={s.pageTitle}>{nombreGrupo}</h1>
 						<p style={s.pageSubtitle}>Chat de Grupo • Toca para ver detalles</p>
 					</div>
+					<SecondaryButton title="Nueva encuesta" onPress={() => setMostrarCrearEncuesta(true)} />
 				</div>
 
 				<div className="uc-chat-container">
 					<div className="uc-msg-scroll" ref={scrollRef}>
-						{mensajes.map(m => {
-							const isMine = m.emisorId === userId;
+						{items.map((item) => {
+							if (item._type === 'encuesta') {
+								return (
+									<PollCard
+										key={item.id}
+										encuesta={item}
+										onVote={handleVotarEncuesta}
+										voting={votandoEncuestaId === item.id}
+									/>
+								);
+							}
+							const isMine = item.emisorId === userId;
 							return (
-								<div key={m.id} className={`uc-msg ${isMine ? 'mine' : 'other'}`}>
-									{!isMine && m.emisor && (
-										<span className="uc-msg-author">{m.emisor.nombre} {m.emisor.apellido}</span>
+								<div key={item.id} className={`uc-msg ${isMine ? 'mine' : 'other'}`}>
+									{!isMine && item.emisor && (
+										<span className="uc-msg-author">{item.emisor.nombre} {item.emisor.apellido}</span>
 									)}
-									<p className="uc-msg-text">{m.contenido}</p>
+									<p className="uc-msg-text">{item.contenido}</p>
 									<div className="uc-msg-time">
-										{new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+										{new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
 									</div>
 								</div>
 							);
@@ -102,6 +125,16 @@ export default function MensajeGrupoScreen() {
 					</div>
 				</div>
 			</div>
+
+			<PollCreateModal
+				visible={mostrarCrearEncuesta}
+				title="Crear encuesta en el grupo"
+				subtitle={`La encuesta se publicará en ${nombreGrupo}.`}
+				onClose={() => setMostrarCrearEncuesta(false)}
+				onSubmit={async (payload) => {
+					await handleCrearEncuesta(payload);
+				}}
+			/>
 		</div>
 	);
 }

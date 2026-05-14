@@ -8,9 +8,10 @@ import {
 	KeyboardAvoidingView,
 	Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { RouteProp, useFocusEffect, useRoute } from '@react-navigation/native';
 import type { RootStackParamList } from '../navigation/RootNavigator';
-import { PrimaryButton, Screen, Text, Title } from '@uniconnect/ui';
+import { PollCard, PollCreateModal, PrimaryButton, SecondaryButton, Screen, Text, Title } from '@uniconnect/ui';
 
 import { useChatGrupo } from '../hooks/useChatGrupo';
 import { clearUnreadGroupChatNotification } from '../services/notificaciones-chat.service';
@@ -24,6 +25,7 @@ export default function MensajeGrupoScreen() {
 	const route = useRoute<MensajeGrupoScreenRouteProp>();
 	const { grupoId, nombreGrupo, userId: userIdParam } = route.params;
 	const [mostrarMiembros, setMostrarMiembros] = useState(false);
+	const [mostrarEncuestaVisible, setMostrarEncuestaVisible] = useState(false);
 
 	useFocusEffect(
 		React.useCallback(() => {
@@ -33,17 +35,32 @@ export default function MensajeGrupoScreen() {
 	);
 
 	const {
-		mensajes,
+		items,
 		nuevoMensaje,
 		setNuevoMensaje,
 		enviando,
 		error,
 		userId,
+		votandoEncuestaId,
 		flatListRef,
 		handleEnviarMensaje,
+		handleVotarEncuesta,
+		handleCrearEncuesta,
 	} = useChatGrupo({ grupoId, userIdParam });
 
 	const renderItem = ({ item }: { item: any }) => {
+		if (item._type === 'encuesta') {
+			return (
+				<View style={{ marginVertical: 6, marginHorizontal: 4 }}>
+					<PollCard
+						encuesta={item}
+						onVote={handleVotarEncuesta}
+						voting={votandoEncuestaId === item.id}
+					/>
+				</View>
+			);
+		}
+
 		const esMio = item.emisorId === userId;
 
 		return (
@@ -74,10 +91,22 @@ export default function MensajeGrupoScreen() {
 
 	return (
 		<Screen style={styles.container}>
-			<TouchableOpacity style={styles.header} onPress={() => setMostrarMiembros(true)}>
-				<Title style={styles.title}>{nombreGrupo}</Title>
-				<Text style={styles.subtitle}>Chat de Grupo</Text>
-			</TouchableOpacity>
+			<View style={styles.header}>
+				<View style={styles.chatHeaderRow}>
+					<TouchableOpacity style={styles.headerContent} onPress={() => setMostrarMiembros(true)}>
+					<Title style={styles.title}>{nombreGrupo}</Title>
+					<Text style={styles.subtitle}>Chat de Grupo</Text>
+					</TouchableOpacity>
+					<TouchableOpacity
+						style={styles.pollHeaderButton}
+						onPress={() => setMostrarEncuestaVisible(true)}
+						accessibilityRole="button"
+						accessibilityLabel="Nueva encuesta"
+					>
+						<Ionicons name="stats-chart-outline" size={26} color="#002855" />
+					</TouchableOpacity>
+				</View>
+			</View>
 
 			<KeyboardAvoidingView
 				style={{ flex: 1 }}
@@ -87,9 +116,9 @@ export default function MensajeGrupoScreen() {
 				<View style={styles.chatWrapper}>
 					<FlatList
 						ref={flatListRef}
-						data={mensajes}
+						data={items}
 						renderItem={renderItem}
-						keyExtractor={(item) => item.id}
+						keyExtractor={(item) => `${item._type}-${item.id}`}
 						style={styles.list}
 						contentContainerStyle={styles.chatContainer}
 						showsVerticalScrollIndicator={false}
@@ -136,6 +165,15 @@ export default function MensajeGrupoScreen() {
 				onClose={() => setMostrarMiembros(false)}
 				grupoId={grupoId!}
 				nombreGrupo={nombreGrupo!}
+			/>
+			<PollCreateModal
+				visible={mostrarEncuestaVisible}
+				title="Crear encuesta en el grupo"
+				subtitle={`La encuesta se publicará en ${nombreGrupo}.`}
+				onClose={() => setMostrarEncuestaVisible(false)}
+				onSubmit={async (payload) => {
+					await handleCrearEncuesta(payload);
+				}}
 			/>
 		</Screen>
 	);
