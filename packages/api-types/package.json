@@ -13,7 +13,8 @@
   },
   "scripts": {
     "generate": "openapi-typescript ../../../uniconnect-backend/openapi.json -o src/schema.d.ts",
-    "generate:zod": "ts-node --esm src/generate-zod.ts"
+    "generate:zod": "ts-node --esm src/generate-zod.ts",
+    "build": "tsc"
   },
   "devDependencies": {
     "openapi-typescript": "^7.0.0",
