@@ -1,20 +1,22 @@
 {
-	"name": "uniconnect-frontend",
-	"private": true,
-	"workspaces": [
-		"app",
-		"web",
-		"packages/*"
-	],
-	"scripts": {
-		"dev:app": "npm --workspace uniconnect-app run start",
-		"dev:web": "npm --workspace web run dev",
-		"build:web": "npm --workspace web run build",
-		"test:app": "npm --workspace uniconnect-app run test",
-		"generate:api-types": "npm --workspace @uniconnect/api-types run generate"
-	},
-	"overrides": {
-		"react": "19.1.0",
-		"react-dom": "19.1.0"
-	}
+    "name": "uniconnect-frontend",
+    "private": true,
+    "workspaces": [
+        "app",
+        "web",
+        "packages/*"
+    ],
+    "scripts": {
+        "dev:app": "npm --workspace uniconnect-app run start",
+        "dev:web": "npm --workspace web run dev",
+        "build:web": "npm --workspace web run build",
+        "test:app": "npm --workspace uniconnect-app run test",
+        "generate:api-types": "npm --workspace @uniconnect/api-types run generate",
+        "test:web": "npm --workspace web run test",
+        "test:all": "npm run test:app && npm run test:web"
+    },
+    "overrides": {
+        "react": "19.1.0",
+        "react-dom": "19.1.0"
+    }
 }

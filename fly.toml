@@ -3,7 +3,7 @@ app = 'uniconnect-frontend'
 primary_region = 'gru'
 
 [build]
-  dockerfile = "app/Dockerfile"
+  dockerfile = "web/Dockerfile"
   [build.args]
     EXPO_PUBLIC_API_URL            = "https://uniconnect-backend.fly.dev"
     EXPO_PUBLIC_ALLOWED_DOMAIN     = "ucaldas.edu.co"

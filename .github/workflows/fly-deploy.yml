@@ -1,19 +1,26 @@
-name: Deploy Frontend to Fly.io
+name: Deploy Web to Fly.io
 
 on:
   push:
     branches:
       - main
+    # Opcional: Solo desplegar si hay cambios en web/ o fly.toml
+    paths:
+      - 'web/**'
+      - 'fly.toml'
+      - '.github/workflows/fly-deploy.yml'
 
 jobs:
   deploy:
-    name: Deploy
+    name: Deploy Web
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout del código
+        uses: actions/checkout@v4
 
-      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Setup Flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Deploy to Fly.io
         run: |
