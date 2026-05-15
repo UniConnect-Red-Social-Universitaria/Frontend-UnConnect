@@ -42,23 +42,6 @@ export const useChatDirecto = ({ contactoId, userIdParam }: UseChatDirectoProps)
 				const token = localStorage.getItem('userToken');
 				const platform = 'web';
 
-				if (!socketRef.current) {
-					socketRef.current = io(API_URL, {
-						auth: { token, platform },
-						transports: ['websocket'],
-						reconnection: true,
-						reconnectionDelay: 1000,
-						reconnectionDelayMax: 5000,
-						reconnectionAttempts: Infinity,
-					});
-				} else {
-					socketRef.current.auth = { token, platform };
-					socketRef.current.connect();
-				}
-
-				socketRef.current.off('mensaje:nuevo');
-				socketRef.current.off('mensaje:enviado');
-
 				const manejarMensajeSocket = (msg: any) => {
 					const esMensajeRelevante =
 						(msg.emisorId === userId && msg.receptorId === contactoId) ||
@@ -74,8 +57,59 @@ export const useChatDirecto = ({ contactoId, userIdParam }: UseChatDirectoProps)
 					}
 				};
 
+				const manejarReaccionAgregada = (data: any) => {
+					setMensajes((prev) =>
+						prev.map((m) => {
+							if (m.id === data.mensajeId) {
+								const reacciones = m.reacciones || [];
+								const existe = reacciones.some((r: any) => r.usuarioId === data.usuarioId && r.emoji === data.emoji);
+								if (existe) return m;
+								return { ...m, reacciones: [...reacciones, data] };
+							}
+							return m;
+						})
+					);
+				};
+
+				const manejarReaccionRemovida = (data: any) => {
+					setMensajes((prev) =>
+						prev.map((m) => {
+							if (m.id === data.mensajeId) {
+								const reacciones = (m.reacciones || []).filter(
+									(r: any) => !(r.emoji === data.emoji && r.usuarioId === data.usuarioId)
+								);
+								return { ...m, reacciones };
+							}
+							return m;
+						})
+					);
+				};
+
+				if (!socketRef.current) {
+					socketRef.current = io(API_URL, {
+						auth: { token, platform },
+						transports: ['websocket'],
+						reconnection: true,
+						reconnectionDelay: 1000,
+						reconnectionDelayMax: 5000,
+						reconnectionAttempts: Infinity,
+					});
+				} else {
+					socketRef.current.auth = { token, platform };
+					if (!socketRef.current.connected) {
+						socketRef.current.connect();
+					}
+				}
+
+				socketRef.current.off('mensaje:nuevo');
+				socketRef.current.off('mensaje:enviado');
+				socketRef.current.off('mensaje:reaccion:agregada');
+				socketRef.current.off('mensaje:reaccion:removida');
+
 				socketRef.current.on('mensaje:nuevo', manejarMensajeSocket);
 				socketRef.current.on('mensaje:enviado', manejarMensajeSocket);
+				socketRef.current.on('mensaje:reaccion:agregada', manejarReaccionAgregada);
+				socketRef.current.on('mensaje:reaccion:removida', manejarReaccionRemovida);
 			} catch (err: any) {
 				console.error("Error cargando mensajes", err);
 			}
@@ -84,7 +118,11 @@ export const useChatDirecto = ({ contactoId, userIdParam }: UseChatDirectoProps)
 		inicializarChat();
 
 		return () => {
-			socketRef.current?.disconnect();
+			if (socketRef.current) {
+				socketRef.current.off("mensaje:reaccion:agregada");
+				socketRef.current.off("mensaje:reaccion:removida");
+				socketRef.current.disconnect();
+			}
 		};
 	}, [contactoId, userId]);
 
@@ -121,6 +159,24 @@ export const useChatDirecto = ({ contactoId, userIdParam }: UseChatDirectoProps)
 		}
 	};
 
+	const handleReaccionar = async (mensajeId: string, emoji: string) => {
+		try {
+			const mensaje = mensajes.find(m => m.id === mensajeId);
+			if (!mensaje) return;
+			const yaReacciono = mensaje.reacciones?.some((r: any) => r.emoji === emoji && r.usuarioId === userId);
+			
+			const { agregarReaccion, removerReaccion } = await import('../services/mensajes.service');
+			
+			if (yaReacciono) {
+				await removerReaccion(mensajeId, emoji, false);
+			} else {
+				await agregarReaccion(mensajeId, emoji, false);
+			}
+		} catch (err: any) {
+			console.error("Error al reaccionar", err);
+		}
+	};
+
 	return {
 		mensajes,
 		nuevoMensaje,
@@ -130,5 +186,6 @@ export const useChatDirecto = ({ contactoId, userIdParam }: UseChatDirectoProps)
 		userId,
 		scrollRef,
 		handleEnviarMensaje,
+		handleReaccionar,
 	};
 };

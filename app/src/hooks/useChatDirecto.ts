@@ -52,6 +52,34 @@ export const useChatDirecto = ({
         // Detectar plataforma: 'web' si Platform.OS es 'web', 'mobile' si es 'android' o 'ios'
         const platform = Platform.OS === 'web' ? 'web' : 'mobile';
         
+        const manejarReaccionAgregada = (data: any) => {
+          setMensajes((prev) =>
+            prev.map((m) => {
+              if (m.id === data.mensajeId) {
+                const reacciones = m.reacciones || [];
+                const existe = reacciones.some((r: any) => r.usuarioId === data.usuarioId && r.emoji === data.emoji);
+                if (existe) return m;
+                return { ...m, reacciones: [...reacciones, data] };
+              }
+              return m;
+            })
+          );
+        };
+
+        const manejarReaccionRemovida = (data: any) => {
+          setMensajes((prev) =>
+            prev.map((m) => {
+              if (m.id === data.mensajeId) {
+                const reacciones = (m.reacciones || []).filter(
+                  (r: any) => !(r.emoji === data.emoji && r.usuarioId === data.usuarioId)
+                );
+                return { ...m, reacciones };
+              }
+              return m;
+            })
+          );
+        };
+
         if (!socketRef.current) {
           socketRef.current = io(resolverApiBaseUrl(), {
             auth: { token, platform },
@@ -63,11 +91,18 @@ export const useChatDirecto = ({
           });
         } else {
           socketRef.current.auth = { token, platform };
-          socketRef.current.connect();
+          if (!socketRef.current.connected) {
+            socketRef.current.connect();
+          }
         }
 
         socketRef.current.off("mensaje:nuevo");
         socketRef.current.off("mensaje:enviado");
+        socketRef.current.off("mensaje:reaccion:agregada");
+        socketRef.current.off("mensaje:reaccion:removida");
+        socketRef.current.off("connect");
+        socketRef.current.off("disconnect");
+        socketRef.current.off("connect_error");
 
         const manejarMensajeSocket = (msg: any) => {
           const esMensajeRelevante =
@@ -90,8 +125,9 @@ export const useChatDirecto = ({
 
         socketRef.current.on("mensaje:nuevo", manejarMensajeSocket);
         socketRef.current.on("mensaje:enviado", manejarMensajeSocket);
+        socketRef.current.on("mensaje:reaccion:agregada", manejarReaccionAgregada);
+        socketRef.current.on("mensaje:reaccion:removida", manejarReaccionRemovida);
         
-        // Log para debugging
         socketRef.current.on("connect", () => {
           console.log(`[Chat Directo] Socket conectado (${platform})`);
         });
@@ -112,7 +148,11 @@ export const useChatDirecto = ({
     inicializarChat();
 
     return () => {
-      socketRef.current?.disconnect();
+      if (socketRef.current) {
+        socketRef.current.off("mensaje:reaccion:agregada");
+        socketRef.current.off("mensaje:reaccion:removida");
+        socketRef.current.disconnect();
+      }
     };
   }, [contactoId, userId]);
 
@@ -148,6 +188,24 @@ export const useChatDirecto = ({
     }
   };
 
+  const handleReaccionar = async (mensajeId: string, emoji: string) => {
+    try {
+      const mensaje = mensajes.find(m => m.id === mensajeId);
+      if (!mensaje) return;
+      const yaReacciono = mensaje.reacciones?.some((r: any) => r.emoji === emoji && r.usuarioId === userId);
+      
+      const { agregarReaccion, removerReaccion } = require('../services/mensajes.service');
+      
+      if (yaReacciono) {
+        await removerReaccion(mensajeId, emoji, false);
+      } else {
+        await agregarReaccion(mensajeId, emoji, false);
+      }
+    } catch (err: any) {
+      console.error("Error al reaccionar", err);
+    }
+  };
+
   return {
     mensajes,
     nuevoMensaje,
@@ -157,5 +215,6 @@ export const useChatDirecto = ({
     userId,
     flatListRef,
     handleEnviarMensaje,
+    handleReaccionar,
   };
 };

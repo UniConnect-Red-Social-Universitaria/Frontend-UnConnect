@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
 	View,
 	Text as RNText,
@@ -6,6 +6,7 @@ import {
 	TextInput,
 	KeyboardAvoidingView,
 	Platform,
+	TouchableOpacity,
 } from 'react-native';
 import { RouteProp, useFocusEffect, useRoute } from '@react-navigation/native';
 import type { RootStackParamList } from '../navigation/RootNavigator';
@@ -21,6 +22,8 @@ type MensajeDirectoScreenRouteProp = RouteProp<RootStackParamList, 'MensajeDirec
 export default function MensajeDirectoScreen() {
 	const route = useRoute<MensajeDirectoScreenRouteProp>();
 	const { contactoId, nombre, correo, userId: userIdParam } = route.params;
+
+	const [reactionMsgId, setReactionMsgId] = useState<string | null>(null);
 
 	useFocusEffect(
 		React.useCallback(() => {
@@ -38,26 +41,60 @@ export default function MensajeDirectoScreen() {
 		userId,
 		flatListRef,
 		handleEnviarMensaje,
+		handleReaccionar,
 	} = useChatDirecto({ contactoId, userIdParam });
 
-	const renderItem = ({ item }: { item: any }) => (
-		<View
-			style={[
-				styles.msgBubble,
-				item.emisorId === userId ? styles.msgBubbleYo : styles.msgBubbleOtro,
-			]}
-		>
-			<Text style={[styles.msgText, item.emisorId === userId && { color: '#fff' }]}>
-				{item.contenido}
-			</Text>
-			<Text style={styles.msgDate}>
-				{new Date(item.createdAt).toLocaleTimeString([], {
-					hour: '2-digit',
-					minute: '2-digit',
-				})}
-			</Text>
-		</View>
-	);
+	const onReactionSelect = (emoji: string) => {
+		if (reactionMsgId) {
+			handleReaccionar(reactionMsgId, emoji);
+			setReactionMsgId(null);
+		}
+	};
+
+	const renderItem = ({ item }: { item: any }) => {
+		const esMio = item.emisorId === userId;
+
+		const bubbleStyle = [
+			styles.msgBubble, 
+			esMio ? styles.msgBubbleYo : styles.msgBubbleOtro
+		];
+
+		return (
+			<TouchableOpacity 
+				activeOpacity={0.8}
+				onLongPress={() => {
+					setReactionMsgId(item.id);
+				}}
+				style={bubbleStyle}
+			>
+				<Text style={[styles.msgText, esMio && { color: '#fff' }]}>{item.contenido}</Text>
+				
+				<View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
+					<Text style={styles.msgDate}>
+						{new Date(item.createdAt).toLocaleTimeString([], {
+							hour: '2-digit',
+							minute: '2-digit',
+						})}
+					</Text>
+				</View>
+
+				{item.reacciones && item.reacciones.length > 0 && (
+					<View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 4, backgroundColor: 'rgba(255,255,255,0.2)', padding: 4, borderRadius: 8, alignSelf: 'flex-start' }}>
+						{Array.from(new Set(item.reacciones.map((r: any) => r.emoji))).map((emoji: any, index) => {
+							const count = item.reacciones.filter((r: any) => r.emoji === emoji).length;
+							const didIReact = item.reacciones.some((r: any) => r.emoji === emoji && r.usuarioId === userId);
+							return (
+								<TouchableOpacity key={index} onPress={() => handleReaccionar(item.id, emoji)} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 6, backgroundColor: didIReact ? 'rgba(0,40,85,0.2)' : 'transparent', borderRadius: 10, paddingHorizontal: 4 }}>
+									<RNText style={{ fontSize: 14 }}>{emoji}</RNText>
+									{count > 1 && <RNText style={{ fontSize: 10, marginLeft: 2 }}>{count}</RNText>}
+								</TouchableOpacity>
+							);
+						})}
+					</View>
+				)}
+			</TouchableOpacity>
+		);
+	};
 
 	return (
 		<Screen style={styles.container}>
@@ -91,6 +128,15 @@ export default function MensajeDirectoScreen() {
 							<Text style={{ color: 'red', marginBottom: 4, textAlign: 'center' }}>
 								{error}
 							</Text>
+						)}
+
+						{reactionMsgId && (
+							<View style={{ flexDirection: 'row', backgroundColor: '#fff', borderRadius: 20, padding: 8, marginBottom: 8, alignSelf: 'center', shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.1, elevation: 4 }}>
+								<TouchableOpacity onPress={() => onReactionSelect('👍')} style={{ marginHorizontal: 8 }}><RNText style={{ fontSize: 24 }}>👍</RNText></TouchableOpacity>
+								<TouchableOpacity onPress={() => onReactionSelect('❤️')} style={{ marginHorizontal: 8 }}><RNText style={{ fontSize: 24 }}>❤️</RNText></TouchableOpacity>
+								<TouchableOpacity onPress={() => onReactionSelect('😂')} style={{ marginHorizontal: 8 }}><RNText style={{ fontSize: 24 }}>😂</RNText></TouchableOpacity>
+								<TouchableOpacity onPress={() => setReactionMsgId(null)} style={{ marginHorizontal: 8 }}><RNText style={{ fontSize: 24, color: '#94a3b8' }}>✕</RNText></TouchableOpacity>
+							</View>
 						)}
 
 						<View style={styles.inputRow}>
