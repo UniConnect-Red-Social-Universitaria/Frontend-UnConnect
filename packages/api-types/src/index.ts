@@ -1,7 +1,6 @@
 // Tipos TypeScript autogenerados desde openapi.json (no editar manualmente)
 export type { paths, components, operations } from './schema.js';
 
-// Schemas Zod + tipos inferidos
 export {
   ForoPreguntaSchema,
   ForoRespuestaSchema,

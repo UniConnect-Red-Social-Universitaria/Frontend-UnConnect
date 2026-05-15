@@ -1,8 +1,9 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "NodeNext",
-    "lib": ["ES2020"],
+    "module": "NodeNext",             
+    "moduleResolution": "NodeNext",  
+    "composite": true,                
     "declaration": true,
     "emitDeclarationOnly": false,
     "declarationMap": true,
@@ -13,7 +14,6 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "moduleResolution": "NodeNext",
     "allowSyntheticDefaultImports": true
   },
   "include": ["src"],
