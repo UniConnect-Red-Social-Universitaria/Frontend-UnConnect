@@ -3,18 +3,21 @@
 # Etapa 1: Construcción
 FROM node:20-alpine AS builder
 WORKDIR /app
-# Copiar package.json (ajusta las rutas si usas un workspace en la raíz)
-COPY package*.json ./
-RUN npm install
+
 COPY . .
-# Construir el proyecto Vite
-RUN npm run build
+
+RUN npm install
+
+RUN npm --workspace @uniconnect/api-types run build
+
+RUN npm run build:web
 
 # Etapa 2: Servidor Web (Nginx)
 FROM nginx:alpine
-# Copiar los archivos construidos desde la etapa anterior
-COPY --from=builder /app/dist /usr/share/nginx/html
-# Copiar configuración personalizada de nginx si la tienes (opcional)
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+
+COPY --from=builder /app/web/dist /usr/share/nginx/html
+
+
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
