@@ -7,6 +7,7 @@ import { useGrupoArchivos } from '../hooks/useGrupoArchivos';
 import { useMiembrosGrupo } from '../hooks/useMiembrosGrupo';
 import { AgregarMiembroModal } from '../components/AgregarMiembroModal';
 import { TransferirAdminModal } from '../components/TransferirAdminModal';
+import { RecursosTab } from '../components/RecursosTab';
 import { authService } from '../services/auth.service';
 import { gruposService } from '../services/grupos.service';
 import { showToast } from '../utils/toast';
@@ -224,7 +225,10 @@ export function DetalleGrupoScreen({ route, navigation }: Props) {
 					data={archivosFiltrados}
 					keyExtractor={(item) => item.id}
 					ListHeaderComponent={
-						<Text style={styles.sectionTitle}>Archivos del grupo</Text>
+						<>
+							<RecursosTab grupoId={grupoId} />
+							<Text style={styles.sectionTitle}>Archivos del grupo</Text>
+						</>
 					}
 					ListEmptyComponent={
 						<Text style={styles.emptyText}>
