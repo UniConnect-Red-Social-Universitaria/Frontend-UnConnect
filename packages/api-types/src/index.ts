@@ -1,5 +1,5 @@
 // Tipos TypeScript autogenerados desde openapi.json (no editar manualmente)
-export type { paths, components, operations } from './schema';
+export type { paths, components, operations } from './schema.js';
 
 // Schemas Zod + tipos inferidos
 export {
@@ -17,7 +17,7 @@ export {
   EncuestaTargetSchema,
   EncuestaOpcionSchema,
   EncuestaSchema,
-} from './schemas';
+} from './schemas.js';
 
 export type {
   Evento,
@@ -34,4 +34,4 @@ export type {
   ForoRespuesta,
   SesionEstudio,
   SerieEstudio,
-} from './schemas';
+} from './schemas.js';
