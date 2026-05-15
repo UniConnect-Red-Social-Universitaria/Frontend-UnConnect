@@ -3,16 +3,17 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
-      "default": "./src/index.ts"
+      "types": "./dist/index.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     }
   },
   "scripts": {
-    "generate": "openapi-typescript ../../../uniconnect-backend/openapi.json -o src/schema.d.ts",
+    "generate": "openapi-typescript ../../../uniconnect-backend/openapi.json -o src/schema.ts",
     "generate:zod": "ts-node --esm src/generate-zod.ts",
     "build": "tsc"
   },

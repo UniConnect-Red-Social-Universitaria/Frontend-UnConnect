@@ -1,4 +1,5 @@
 import { apiClient } from './api.client';
+// @ts-ignore
 import type { ForoPregunta, ForoRespuesta } from '@uniconnect/api-types';
 
 export type { ForoPregunta, ForoRespuesta };

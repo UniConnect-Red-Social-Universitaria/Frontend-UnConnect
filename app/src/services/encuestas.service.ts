@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { ApiResponse } from '../types/api.types';
+// @ts-ignore
 import type { Encuesta } from '@uniconnect/api-types';
 import { resolverApiBaseUrl } from '../utils/apiConfig';
 

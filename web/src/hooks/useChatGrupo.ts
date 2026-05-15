@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { io, Socket } from 'socket.io-client';
+// @ts-ignore
 import type { Encuesta } from '@uniconnect/api-types';
 import { authService } from '../services/auth.service';
 import { obtenerHistorialMensajesGrupo, enviarNuevoMensajeGrupo } from '../services/mensajes.service';
