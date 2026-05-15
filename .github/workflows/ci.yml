@@ -1,0 +1,44 @@
+name: CI (App & Web)
+
+on:
+  pull_request:
+    branches: [ "main", "developer" ]
+  push:
+    branches: [ "main", "developer" ]
+
+jobs:
+  build-and-test:
+    name: Build and Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm' 
+
+      - name: Instalar dependencias (Raíz / Workspaces)
+        run: npm install
+
+      - name: Compilar los tipos de la API
+        run: npm --workspace @uniconnect/api-types run build
+
+      - name: Setup Flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Correr todas las pruebas (App y Web)
+        run: npm run test:all
+
+      # --- Verificaciones para WEB ---
+      - name: Construir Web
+        working-directory: ./web
+        run: npm run build
+
+      # --- Verificaciones para APP (Expo) ---
+      - name: Chequeo de tipos / Lint en App (Opcional pero recomendado)
+        working-directory: ./app
+        run: npx tsc --noEmit || echo "Configura tsc en app si quieres tipado estricto"

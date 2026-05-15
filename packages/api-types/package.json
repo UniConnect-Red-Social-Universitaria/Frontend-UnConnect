@@ -1,0 +1,27 @@
+{
+  "name": "@uniconnect/api-types",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "generate": "openapi-typescript ../../../uniconnect-backend/openapi.json -o src/schema.ts",
+    "generate:zod": "ts-node --esm src/generate-zod.ts",
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "zod": "^3.23.0"
+  }
+}
