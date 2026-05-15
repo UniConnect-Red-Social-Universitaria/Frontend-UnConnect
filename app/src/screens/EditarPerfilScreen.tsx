@@ -8,21 +8,30 @@ import {
 	TextInput,
 	View,
 	Text as RNText,
+	Pressable,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { PrimaryButton, Screen, SecondaryButton, Text, Title } from '@uniconnect/ui';
 import { MultiSelect } from 'react-native-element-dropdown';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { globalStyles } from '../styles/global';
 import theme from '../styles/theme';
-import { materiasService, usuariosService } from '../services';
-import { Materia, Usuario } from '../types/api.types';
+import { materiasService, usuariosService, authService } from '../services';
+import { Materia, Usuario, PerfilEnriquecido, Insignia } from '../types/api.types';
 import { showToast } from '../utils/toast';
 
 type EditarPerfilScreenNavigationProp = StackNavigationProp<
 	RootStackParamList,
 	'EditarPerfil'
 >;
+
+const INSIGNIA_INFO: Record<Insignia, { emoji: string; label: string; desc: string; color: string }> = {
+	'fundador': { emoji: '🏆', label: 'Fundador', desc: 'Ha creado grupos de estudio', color: '#f59e0b' },
+	'participante-activo': { emoji: '⭐', label: 'Participante Activo', desc: 'Participa en 3 o más grupos', color: '#3b82f6' },
+	'comunicador': { emoji: '💬', label: 'Comunicador', desc: 'Ha enviado 10 o más mensajes', color: '#10b981' },
+	'colaborador': { emoji: '🤝', label: 'Colaborador', desc: 'Activo en grupos y mensajes', color: '#8b5cf6' },
+};
 
 const styles = StyleSheet.create({
 	scrollContainer: {
@@ -119,6 +128,89 @@ const styles = StyleSheet.create({
 		color: theme.colors.primaryDark,
 		fontWeight: '600',
 	},
+	verMasBtn: { 
+		flexDirection: 'row', 
+		alignItems: 'center', 
+		justifyContent: 'center',
+		gap: 6,
+		marginTop: 14, 
+		paddingVertical: 8, 
+		paddingHorizontal: 16,
+		backgroundColor: theme.colors.primary,
+		borderRadius: 20,
+		borderWidth: 1,
+		borderColor: theme.colors.primary,
+	},
+	verMasText: { 
+		color: '#fff', 
+		fontSize: 13, 
+		fontWeight: '600',
+	},
+	section: { 
+		backgroundColor: '#fff', 
+		borderRadius: 14, 
+		padding: 18, 
+		borderWidth: 1, 
+		borderColor: '#e8eef4',
+		marginTop: 16,
+	},
+	sectionTitle: { 
+		fontSize: 11, 
+		fontWeight: '700', 
+		color: '#7a9ab5', 
+		letterSpacing: 1, 
+		marginBottom: 14,
+		textTransform: 'uppercase',
+	},
+	statsRow: { 
+		flexDirection: 'row', 
+		gap: 10,
+	},
+	statBox: { 
+		flex: 1, 
+		backgroundColor: '#f8fafc', 
+		borderRadius: 10, 
+		padding: 14, 
+		alignItems: 'center', 
+		borderWidth: 1, 
+		borderColor: '#e8eef4',
+	},
+	statNum: { 
+		fontSize: 26, 
+		fontWeight: '700', 
+		color: theme.colors.primary,
+	},
+	statLabel: { 
+		fontSize: 11, 
+		color: '#7a9ab5', 
+		fontWeight: '500', 
+		textAlign: 'center', 
+		marginTop: 4,
+	},
+	badge: { 
+		flexDirection: 'row', 
+		alignItems: 'center', 
+		gap: 14, 
+		padding: 14, 
+		borderRadius: 12, 
+		borderWidth: 1.5, 
+		marginBottom: 8,
+	},
+	badgeEmoji: { 
+		fontSize: 24,
+	},
+	badgeInfo: { 
+		flex: 1,
+	},
+	badgeLabel: { 
+		fontSize: 14, 
+		fontWeight: '700',
+	},
+	badgeDesc: { 
+		fontSize: 12, 
+		marginTop: 2, 
+		opacity: 0.8,
+	},
 	loadingContainer: {
 		flex: 1,
 		alignItems: 'center',
@@ -139,6 +231,8 @@ export default function EditarPerfilScreen({
 	const [selectedMateriasIds, setSelectedMateriasIds] = useState<string[]>([]);
 	const [cargando, setCargando] = useState(true);
 	const [guardando, setGuardando] = useState(false);
+	const [expandido, setExpandido] = useState(false);
+	const [perfil, setPerfil] = useState<PerfilEnriquecido | null>(null);
 	const [errores, setErrores] = useState({
 		semestre: '',
 		materias: '',
@@ -147,13 +241,16 @@ export default function EditarPerfilScreen({
 	const cargarPerfilAcademico = useCallback(async () => {
 		setCargando(true);
 		try {
-			const [perfilData, materiasData] = await Promise.all([
+			const usuarioId = await authService.obtenerIdUsuarioActual();
+			const [perfilData, materiasData, perfilEnriquecido] = await Promise.all([
 				usuariosService.getPerfil(),
 				materiasService.getMaterias(),
+				usuarioId ? usuariosService.getPerfilEnriquecido(usuarioId) : Promise.resolve(null),
 			]);
 
 			setNombre(`${perfilData.nombre || ''} ${perfilData.apellido || ''}`.trim());
 			setSemestre(perfilData.semestre ? String(perfilData.semestre) : '');
+			setPerfil(perfilEnriquecido || null);
 
 			// Resolver nombres→IDs usando el catálogo y eliminar duplicados
 			const catalogoIds = new Set((materiasData || []).map((m) => String(m.id)));
@@ -320,6 +417,77 @@ export default function EditarPerfilScreen({
 									</Text>
 								)}
 							</View>
+
+							<Pressable 
+								style={styles.verMasBtn}
+								onPress={() => setExpandido(!expandido)}
+							>
+								<Text style={styles.verMasText}>
+									{expandido ? 'Ver Menos' : 'Ver Más'}
+								</Text>
+								<Ionicons 
+									name={expandido ? 'chevron-up' : 'chevron-down'} 
+									size={16} 
+									color="#fff" 
+								/>
+							</Pressable>
+
+							{expandido && perfil && (
+								<>
+									<View style={styles.section}>
+										<Text style={styles.sectionTitle}>Estadísticas</Text>
+										<View style={styles.statsRow}>
+											<View style={styles.statBox}>
+												<RNText style={styles.statNum}>
+													{perfil.estadisticas?.gruposCreados || 0}
+												</RNText>
+												<Text style={styles.statLabel}>Grupos creados</Text>
+											</View>
+											<View style={styles.statBox}>
+												<RNText style={styles.statNum}>
+													{perfil.estadisticas?.gruposParticipa || 0}
+												</RNText>
+												<Text style={styles.statLabel}>Grupos activos</Text>
+											</View>
+											<View style={styles.statBox}>
+												<RNText style={styles.statNum}>
+													{perfil.estadisticas?.mensajesEnviados || 0}
+												</RNText>
+												<Text style={styles.statLabel}>Mensajes</Text>
+											</View>
+										</View>
+									</View>
+
+									{perfil.insignias && perfil.insignias.length > 0 && (
+										<View style={styles.section}>
+											<Text style={styles.sectionTitle}>Insignias</Text>
+											{perfil.insignias.map((insignia, idx) => {
+												const info = INSIGNIA_INFO[insignia];
+												if (!info) return null;
+												return (
+													<View 
+														key={idx}
+														style={[
+															styles.badge,
+															{ borderColor: info.color, backgroundColor: `${info.color}11` }
+														]}
+													>
+														<RNText style={styles.badgeEmoji}>{info.emoji}</RNText>
+														<View style={styles.badgeInfo}>
+															<RNText style={[styles.badgeLabel, { color: info.color }]}>
+																{info.label}
+															</RNText>
+															<RNText style={[styles.badgeDesc, { color: info.color }]}>
+																{info.desc}
+															</RNText>
+														</View>
+													</View>
+												);
+											})}
+										</View>
+									)}
+								</>
+							)}
 						</View>
 
 						<View style={styles.buttonRow}>
@@ -341,7 +509,7 @@ export default function EditarPerfilScreen({
 
 							<SecondaryButton
 								style={[styles.button, styles.buttonSecondary]}
-								onPress={() => navigation.goBack()}
+								onPress={() => navigation.navigate('Principal')}
 								disabled={guardando}
 							>
 								<RNText style={styles.buttonSecondaryText}>Volver</RNText>

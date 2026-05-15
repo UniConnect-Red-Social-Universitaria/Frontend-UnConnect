@@ -12,6 +12,7 @@ export { materiasService } from './materias.service';
 export { encuestasService } from './encuestas.service';
 export { default as notificacionesService } from './notificaciones.service';
 export { onboardingService } from './onboarding.service';
+export { perfilService } from './perfil.service';
 
 // Re-exportar tipos para conveniencia
 export type {
@@ -26,6 +27,10 @@ export type {
     LoginRequest,
     RegistroRequest,
     LoginResponse,
+    PerfilBaseDTO,
+    PerfilEnriquecido,
+    EstadisticasPerfil,
+    Insignia,
 } from '../types/api.types';
 
 export type { CrearGrupoRequest } from './grupos.service';
