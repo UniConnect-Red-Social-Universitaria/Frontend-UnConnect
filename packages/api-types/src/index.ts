@@ -20,7 +20,6 @@ export {
 } from './schemas';
 
 export type {
-  // Dejamos solo los que SÍ están funcionando bien en tu schemas.ts
   Evento,
   Usuario,
   Grupo,
@@ -30,14 +29,9 @@ export type {
   EncuestaTargetType,
   EncuestaTarget,
   EncuestaOpcion,
+  Encuesta,
+  ForoPregunta,
+  ForoRespuesta,
+  SesionEstudio,
+  SerieEstudio,
 } from './schemas';
-
-// =========================================================
-// PARCHES TEMPORALES PARA PASAR EL BUILD EN GITHUB ACTIONS
-// TODO: Revisar por qué estos no se exportaban desde ./schemas
-// =========================================================
-export type Encuesta = any;
-export type ForoPregunta = any;
-export type ForoRespuesta = any;
-export type SesionEstudio = any;
-export type SerieEstudio = any;
