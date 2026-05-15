@@ -2,7 +2,6 @@
     "name": "uniconnect-frontend",
     "private": true,
     "workspaces": [
-        "app",
         "web",
         "packages/*"
     ],
