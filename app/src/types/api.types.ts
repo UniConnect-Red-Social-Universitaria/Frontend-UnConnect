@@ -103,3 +103,22 @@ export interface CatalogoData {
     carreras: Carrera[];
     materias: MateriaCatalogo[];
 }
+
+export type Insignia = 'fundador' | 'participante-activo' | 'comunicador' | 'colaborador';
+
+export interface EstadisticasPerfil {
+    gruposCreados: number;
+    gruposParticipa: number;
+    mensajesEnviados: number;
+}
+
+export interface PerfilEnriquecido {
+    id: string;
+    nombre: string;
+    apellido: string;
+    carrera: string;
+    semestre: number | null;
+    asignaturasActivas: string[];
+    estadisticas: EstadisticasPerfil;
+    insignias: Insignia[];
+}

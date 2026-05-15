@@ -24,6 +24,7 @@ const MensajeDirectoScreen = lazy(() => import('./pages/MensajeDirectoScreen'));
 const MensajeGrupoScreen = lazy(() => import('./pages/MensajeGrupoScreen'));
 const ForoScreen = lazy(() => import('./pages/ForoScreen'));
 const SesionesEstudioScreen = lazy(() => import('./pages/SesionesEstudioScreen'));
+const PerfilEstudianteScreen = lazy(() => import('./pages/PerfilEstudianteScreen'));
 
 function PageLoader() {
 	return (
@@ -82,6 +83,7 @@ function AppRoutes() {
 					<Route path="/mensajes/grupo/:grupoId" element={<MensajeGrupoScreen />} />
 					<Route path="/foro/:materiaId" element={<ForoScreen />} />
 					<Route path="/sesiones" element={<SesionesEstudioScreen />} />
+					<Route path="/perfil/:id" element={<PerfilEstudianteScreen />} />
 				</Route>
 
 				{/* Fallback */}

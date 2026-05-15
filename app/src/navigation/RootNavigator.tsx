@@ -22,6 +22,7 @@ import NotificacionesScreen from '../screens/NotificacionesScreen';
 import SolicitudesGrupoScreen from '../screens/SolicitudesGrupoScreen';
 import ForoScreen from '../screens/ForoScreen';
 import SesionesEstudioScreen from '../screens/SesionesEstudioScreen';
+import PerfilEstudianteScreen from '../screens/PerfilEstudianteScreen';
 import { resolverApiBaseUrl } from '../utils/apiConfig';
 import { authService } from '../services';
 import { notifyIncomingMessage } from '../services/notificaciones.service';
@@ -74,6 +75,7 @@ export type RootStackParamList = {
 		materiaNombre: string;
 	};
 	SesionesEstudio: undefined;
+	PerfilEstudiante: { usuarioId: string; nombre: string };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -566,6 +568,7 @@ export default function RootNavigator() {
 				<Stack.Screen name="SolicitudesGrupo" component={SolicitudesGrupoScreen} />
 				<Stack.Screen name="Foro" component={ForoScreen} />
 				<Stack.Screen name="SesionesEstudio" component={SesionesEstudioScreen} />
+				<Stack.Screen name="PerfilEstudiante" component={PerfilEstudianteScreen} />
 				<Stack.Screen name="MensajeDirecto" component={MensajeDirectoScreen} />
 				<Stack.Screen name="DetalleGrupo" component={DetalleGrupoScreen} />
 				<Stack.Screen name="MensajeGrupo" component={MensajeGrupoScreen} />

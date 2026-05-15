@@ -164,6 +164,7 @@ export default function ContactScreen() {
 												<p style={s.contactEmail}>{u.correo}</p>
 											</div>
 											<div style={{ display: 'flex', gap: 8 }}>
+												<button className="uc-btn-sm outline" onClick={() => navigate(`/perfil/${u.id}`)}>👤 Perfil</button>
 												<button className="uc-btn-sm outline" onClick={() => navigate(`/mensajes/directo/${u.id}`)}>💬 Mensaje</button>
 												{!esContacto && (
 													<button className="uc-btn-sm primary" onClick={() => handleEnviarSolicitud(u.id)} disabled={sendingTo === u.id}>
@@ -238,9 +239,10 @@ export default function ContactScreen() {
 												<p style={s.contactName}>{c.nombre} {c.apellido ?? ''}</p>
 												<p style={s.contactEmail}>{c.correo}</p>
 											</div>
-											<button className="uc-btn-sm primary" onClick={() => navigate(`/mensajes/directo/${c.id}`)}>
-												💬 Mensaje
-											</button>
+											<div style={{ display: 'flex', gap: 8 }}>
+											<button className="uc-btn-sm outline" onClick={() => navigate(`/perfil/${c.id}`)}>👤 Perfil</button>
+											<button className="uc-btn-sm primary" onClick={() => navigate(`/mensajes/directo/${c.id}`)}>💬 Mensaje</button>
+										</div>
 										</div>
 									))}
 								</div>

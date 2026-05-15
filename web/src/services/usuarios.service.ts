@@ -1,9 +1,14 @@
 import { apiClient } from '../api/apiClient';
-import type { Usuario, Contacto, SolicitudPendiente, ApiResponse } from '../types/api.types';
+import type { Usuario, Contacto, SolicitudPendiente, ApiResponse, PerfilEnriquecido } from '../types/api.types';
 
 class UsuariosService {
 	async getPerfil(): Promise<Usuario> {
 		const response = await apiClient.get<Usuario>('/api/usuarios/perfil');
+		return response.data!;
+	}
+
+	async getPerfilEnriquecido(id: string): Promise<PerfilEnriquecido> {
+		const response = await apiClient.get<PerfilEnriquecido>(`/api/usuarios/perfil/${id}?vista=completa`);
 		return response.data!;
 	}
 

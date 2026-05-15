@@ -201,22 +201,30 @@ export default function ContactScreen() {
 				<Text style={styles.name}>{item.nombre || 'Nombre no disponible'}</Text>
 				<Text style={styles.email}>{item.correo || 'Correo no disponible'}</Text>
 			</View>
-			<PrimaryButton
-				style={styles.messageButton}
-				onPress={() => {
-					if (item.id) {
-						navigation.navigate('MensajeDirecto', {
-							contactoId: item.id,
-							nombre: item.nombre,
-							correo: item.correo,
-						});
-					} else {
-						Alert.alert('Error', 'No se pudo obtener el ID del contacto');
-					}
-				}}
-			>
-				<Text style={styles.messageButtonText}>Enviar Mensaje</Text>
-			</PrimaryButton>
+			<View style={{ flexDirection: 'row', gap: 8 }}>
+				<PrimaryButton
+					style={[styles.messageButton, { backgroundColor: '#e8f0fe' }]}
+					onPress={() => navigation.navigate('PerfilEstudiante', { usuarioId: item.id, nombre: item.nombre })}
+				>
+					<Ionicons name="person-outline" size={16} color="#003e70" />
+				</PrimaryButton>
+				<PrimaryButton
+					style={styles.messageButton}
+					onPress={() => {
+						if (item.id) {
+							navigation.navigate('MensajeDirecto', {
+								contactoId: item.id,
+								nombre: item.nombre,
+								correo: item.correo,
+							});
+						} else {
+							Alert.alert('Error', 'No se pudo obtener el ID del contacto');
+						}
+					}}
+				>
+					<Text style={styles.messageButtonText}>Mensaje</Text>
+				</PrimaryButton>
+			</View>
 		</View>
 	);
 
@@ -230,6 +238,12 @@ export default function ContactScreen() {
 					<Text style={styles.email}>{item.correo || 'Correo no disponible'}</Text>
 				</View>
 				<View style={styles.searchResultActions}>
+					<PrimaryButton
+						style={[styles.searchResultMessageButton, { backgroundColor: '#e8f0fe' }]}
+						onPress={() => navigation.navigate('PerfilEstudiante', { usuarioId: item.id, nombre: item.nombre })}
+					>
+						<Ionicons name="person-outline" size={16} color="#003e70" />
+					</PrimaryButton>
 					<PrimaryButton
 						style={styles.searchResultMessageButton}
 						onPress={() => {
