@@ -100,7 +100,7 @@ export function createApiClient({ baseUrl, storage }) {
 
 			return data;
 		} catch (error) {
-			console.error(`[API ${options.method || 'GET'} ${endpoint}]`, error);
+			console.log(`[API ${options.method || 'GET'} ${endpoint}]`, error.message);
 
 			if (isProbablyNetworkError(error)) {
 				throw new Error('Error de conexión con el servidor. Revisa tu internet.');
@@ -152,7 +152,7 @@ export function createApiClient({ baseUrl, storage }) {
 
 			return data;
 		} catch (error) {
-			console.error(`[API PUBLIC ${options.method || 'GET'} ${endpoint}]`, error);
+			console.log(`[API PUBLIC ${options.method || 'GET'} ${endpoint}]`, error.message);
 
 			if (isProbablyNetworkError(error)) {
 				throw new Error('Error de conexión con el servidor. Revisa tu internet.');
