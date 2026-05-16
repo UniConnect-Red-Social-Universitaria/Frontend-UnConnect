@@ -7,38 +7,80 @@ on:
     branches: [ "main", "developer" ]
 
 jobs:
-  build-and-test:
-    name: Build and Lint
+  lint-and-type-check:
+    name: Lint & Type Check
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
-      - name: Checkout del código
+      - name: 🛒 Checkout code
         uses: actions/checkout@v4
 
-      - name: Configurar Node.js
+      - name: 🔧 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm' 
+          cache: 'npm'
 
-      - name: Instalar dependencias (Raíz / Workspaces)
-        run: npm install
+      - name: 📦 Install dependencies
+        run: npm ci
 
-      - name: Compilar los tipos de la API
+      - name: 🏗️ Build API types
         run: npm --workspace @uniconnect/api-types run build
 
-      - name: Setup Flyctl
-        uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: 🔍 Lint Web (ESLint)
+        working-directory: ./web
+        run: npm run lint
 
-      - name: Correr todas las pruebas (App y Web)
-        run: npm run test:all
+      - name: ✅ Type check Web
+        working-directory: ./web
+        run: npx tsc --noEmit
 
-      # --- Verificaciones para WEB ---
-      - name: Construir Web
+      - name: ✅ Type check App
+        working-directory: ./app
+        run: npx tsc --noEmit || echo "Configure tsc in app if you want strict typing"
+
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: lint-and-type-check
+
+    steps:
+      - name: 🛒 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🏗️ Build API types
+        run: npm --workspace @uniconnect/api-types run build
+
+      - name: 🧪 Run all tests with coverage
+        run: npm run test:all -- --coverage
+
+      - name: 🏗️ Build Web (Vite)
         working-directory: ./web
         run: npm run build
 
-      # --- Verificaciones para APP (Expo) ---
-      - name: Chequeo de tipos / Lint en App (Opcional pero recomendado)
-        working-directory: ./app
-        run: npx tsc --noEmit || echo "Configura tsc en app si quieres tipado estricto"
+      - name: 📤 Upload coverage reports (Web)
+        if: always()
+        uses: codecov/codecov-action@v3
+        with:
+          flags: web-tests
+          files: ./web/coverage/coverage-final.json
+          fail_ci_if_error: false
+
+      - name: 📤 Upload coverage reports (App)
+        if: always()
+        uses: codecov/codecov-action@v3
+        with:
+          flags: app-tests
+          files: ./app/coverage/coverage-final.json
+          fail_ci_if_error: false
