@@ -24,7 +24,7 @@ function getTypeConfig(tipo: string, resourceType?: string): { icon: string; lab
 
 function RecursoCard({ recurso, currentUserId, onDelete }: { recurso: Recurso, currentUserId: string | null, onDelete: (id: string, e: React.MouseEvent) => void }) {
     const [imgError, setImgError] = useState(false);
-    const og  = recurso.metadata?.openGraph as any;
+    const og = recurso.metadata?.openGraph as Record<string, any>;
     const etiquetas  = recurso.metadata?.etiquetas  || [];
     const domain     = og?.domain || recurso.metadata?.domain || (recurso.contenido ? getDomain(recurso.contenido) : '');
     const resourceType = og?.resourceType || recurso.metadata?.resourceType;
@@ -126,12 +126,7 @@ export default function RecursosTab({ grupoId }: { grupoId: string }) {
     const [saving,     setSaving]     = useState(false);
     const [userId,     setUserId]     = useState<string | null>(null);
 
-    useEffect(() => { 
-        cargarRecursos(); 
-        authService.obtenerIdUsuarioActual().then(id => setUserId(id));
-    }, [grupoId]);
-
-    const cargarRecursos = async () => {
+    const cargarRecursos = React.useCallback(async () => {
         try {
             setLoading(true);
             const data = await recursosService.getRecursos(grupoId);
@@ -141,7 +136,12 @@ export default function RecursosTab({ grupoId }: { grupoId: string }) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [grupoId]);
+
+    useEffect(() => { 
+        cargarRecursos(); 
+        authService.obtenerIdUsuarioActual().then(id => setUserId(id));
+    }, [cargarRecursos]);
 
     const handleCrear = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -183,7 +183,7 @@ export default function RecursosTab({ grupoId }: { grupoId: string }) {
     const recursosFiltrados = recursos.filter(r => {
         const matchTipo = filtroTipo === 'TODOS' || r.tipo === filtroTipo;
         const q = busqueda.toLowerCase();
-        const og = r.metadata?.openGraph as any;
+        const og = r.metadata?.openGraph as Record<string, any>;
         const matchText = !q || [r.titulo, og?.title, og?.domain, r.metadata?.domain]
             .some(s => s?.toLowerCase().includes(q));
         return matchTipo && matchText;

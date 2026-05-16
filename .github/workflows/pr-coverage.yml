@@ -6,6 +6,10 @@ on:
       - main
       - developer
 
+permissions:
+  pull-requests: write
+  contents: read
+
 jobs:
   coverage-comment:
     name: Coverage Report Comment

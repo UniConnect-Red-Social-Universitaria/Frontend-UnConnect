@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 // @ts-ignore
 import type { Encuesta } from '@uniconnect/api-types';
@@ -6,7 +6,7 @@ import { authService } from '../services/auth.service';
 import { obtenerHistorialMensajesGrupo, enviarNuevoMensajeGrupo } from '../services/mensajes.service';
 import { encuestasService } from '../services/encuestas.service';
 
-const API_URL = `${(import.meta as any).env?.VITE_API_URL || 'http://localhost:3000'}`;
+const API_URL = `${import.meta.env?.VITE_API_URL || 'http://localhost:3000'}`;
 
 interface UseChatGrupoProps {
 	grupoId: string;
@@ -24,6 +24,14 @@ export const useChatGrupo = ({ grupoId, userIdParam }: UseChatGrupoProps) => {
 
 	const socketRef = useRef<Socket | null>(null);
 	const scrollRef = useRef<HTMLDivElement>(null);
+
+	const scrollToBottom = useCallback(() => {
+		setTimeout(() => {
+			if (scrollRef.current) {
+				scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+			}
+		}, 100);
+	}, []);
 
 	const upsertEncuestaLocal = (encuesta: Encuesta) => {
 		setEncuestas((prev) => {
@@ -212,13 +220,7 @@ export const useChatGrupo = ({ grupoId, userIdParam }: UseChatGrupoProps) => {
 		throw new Error(data.message || 'Error al crear la encuesta');
 	};
 
-	const scrollToBottom = () => {
-		setTimeout(() => {
-			if (scrollRef.current) {
-				scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-			}
-		}, 100);
-	};
+
 
 	const handleEnviarMensaje = async () => {
 		if (!nuevoMensaje.trim()) return;

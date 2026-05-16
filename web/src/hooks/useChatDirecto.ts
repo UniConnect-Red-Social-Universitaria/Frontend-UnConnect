@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { authService } from '../services/auth.service';
 import { obtenerHistorialMensajes, enviarNuevoMensaje } from '../services/mensajes.service';
 
-const API_URL = `${(import.meta as any).env?.VITE_API_URL || 'http://localhost:3000'}`;
+const API_URL = `${import.meta.env?.VITE_API_URL || 'http://localhost:3000'}`;
 
 interface UseChatDirectoProps {
 	contactoId: string;
@@ -19,6 +19,14 @@ export const useChatDirecto = ({ contactoId, userIdParam }: UseChatDirectoProps)
 
 	const socketRef = useRef<Socket | null>(null);
 	const scrollRef = useRef<HTMLDivElement>(null);
+
+	const scrollToBottom = useCallback(() => {
+		setTimeout(() => {
+			if (scrollRef.current) {
+				scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+			}
+		}, 100);
+	}, []);
 
 	useEffect(() => {
 		if (!userIdParam) {
@@ -126,13 +134,7 @@ export const useChatDirecto = ({ contactoId, userIdParam }: UseChatDirectoProps)
 		};
 	}, [contactoId, userId]);
 
-	const scrollToBottom = () => {
-		setTimeout(() => {
-			if (scrollRef.current) {
-				scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-			}
-		}, 100);
-	};
+
 
 	const handleEnviarMensaje = async () => {
 		if (!nuevoMensaje.trim()) return;
