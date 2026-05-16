@@ -231,27 +231,31 @@ export function CrearEventoModal({ visible, onClose, onSuccess }: CrearEventoMod
 
 					{/* --- Selector de Categoría (usando tus estilos de chip) --- */}
 					<Text style={styles.labelCategoria}>Categoría del evento:</Text>
-					<View style={styles.chipRow}>
-						{CATEGORIAS_CREACION.map((cat) => (
-							<Pressable
-								key={cat.value}
-								onPress={() => actualizarCampo('categoria', cat.value)}
-								style={[
-									styles.chip,
-									formulario.categoria === cat.value && styles.chipActivo,
-								]}
-							>
-								<Text
-									style={[
-										styles.chipText,
-										formulario.categoria === cat.value && styles.chipTextoActivo,
-									]}
-								>
-									{cat.label}
-								</Text>
-							</Pressable>
-						))}
-					</View>
+<View style={styles.chipRow}>
+  {CATEGORIAS_CREACION.map((cat) => (
+    <Pressable
+      key={cat.value}
+      onPress={() => actualizarCampo('categoria', cat.value)}
+      style={[
+        styles.chip,
+        formulario.categoria === cat.value
+          ? styles.chipActivo
+          : null,
+      ]}
+    >
+      <Text
+        style={[
+          styles.chipText,
+          formulario.categoria === cat.value
+            ? styles.chipTextoActivo
+            : null,
+        ]}
+      >
+        {cat.label}
+      </Text>
+    </Pressable>
+  ))}
+</View>
 
 					{Platform.OS === 'web' ? (
 						<input

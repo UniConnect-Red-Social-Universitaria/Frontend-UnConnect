@@ -27,7 +27,10 @@ export default function SolicitudesScreen() {
 		}
 	}, []);
 
-	useEffect(() => { cargarSolicitudes(); }, [cargarSolicitudes]);
+	useEffect(() => {
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  cargarSolicitudes();
+}, [cargarSolicitudes]);
 
 	const procesarSolicitud = async (solicitud: SolicitudPendiente, action: 'aceptar' | 'rechazar') => {
 		setProcessingId(solicitud.solicitudId);

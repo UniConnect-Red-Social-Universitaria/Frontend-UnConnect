@@ -139,8 +139,11 @@ export default function RecursosTab({ grupoId }: { grupoId: string }) {
     }, [grupoId]);
 
     useEffect(() => { 
-        cargarRecursos(); 
-        authService.obtenerIdUsuarioActual().then(id => setUserId(id));
+        const init = async () => {
+            await cargarRecursos();
+            authService.obtenerIdUsuarioActual().then(id => setUserId(id));
+        };
+        init();
     }, [cargarRecursos]);
 
     const handleCrear = async (e: React.FormEvent) => {

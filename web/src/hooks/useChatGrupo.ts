@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
-// @ts-ignore
+// @ts-expect-error - La biblioteca no tiene tipos, pero funciona correctamente
 import type { Encuesta } from '@uniconnect/api-types';
 import { authService } from '../services/auth.service';
 import { obtenerHistorialMensajesGrupo, enviarNuevoMensajeGrupo } from '../services/mensajes.service';
