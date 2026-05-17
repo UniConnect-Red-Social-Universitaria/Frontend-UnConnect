@@ -25,6 +25,8 @@ export interface Grupo {
 	maxIntegrantes: number;
 	creadorId: string;
 	administradorId?: string;
+	estado?: string;
+	candidatoAdminId?: string | null;
 	createdAt?: string;
 	miembros?: Usuario[];
 	cantidadMiembros?: number;

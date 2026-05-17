@@ -24,6 +24,9 @@ export interface Grupo {
     materia?: Materia;
     maxIntegrantes: number;
     creadorId: string;
+    administradorId?: string;
+    estado?: string;
+    candidatoAdminId?: string | null;
     createdAt?: string;
     miembros?: Usuario[];
 }

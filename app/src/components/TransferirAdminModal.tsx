@@ -64,17 +64,17 @@ export function TransferirAdminModal({
 	};
 
 	const confirmarTransferencia = (miembro: Miembro) => {
-		const mensaje = `¿Estás seguro de transferir la administración del grupo "${nombreGrupo}" a ${miembro.nombre} ${miembro.apellido}?\n\nEsta acción no se puede deshacer fácilmente.`;
+		const mensaje = `¿Nominar a ${miembro.nombre} ${miembro.apellido} como candidato a administrador del grupo "${nombreGrupo}"?\n\nEl candidato deberá aceptar para que la transferencia sea efectiva.`;
 
 		if (Platform.OS === 'web') {
 			if (window.confirm(mensaje)) {
 				ejecutarTransferencia(miembro.id);
 			}
 		} else {
-			Alert.alert('Transferir administración', mensaje, [
+			Alert.alert('Nominar candidato', mensaje, [
 				{ text: 'Cancelar', style: 'cancel' },
 				{
-					text: 'Transferir',
+					text: 'Nominar',
 					style: 'destructive',
 					onPress: () => ejecutarTransferencia(miembro.id),
 				},
@@ -82,15 +82,15 @@ export function TransferirAdminModal({
 		}
 	};
 
-	const ejecutarTransferencia = async (nuevoAdminId: string) => {
-		setTransfiriendo(nuevoAdminId);
+	const ejecutarTransferencia = async (candidatoId: string) => {
+		setTransfiriendo(candidatoId);
 		try {
-			await gruposService.cederAdministracion(grupoId, nuevoAdminId);
-			showToast.success('Administración transferida correctamente');
+			await gruposService.iniciarTransferencia(grupoId, candidatoId);
+			showToast.success('Candidato nominado. Esperando su respuesta.');
 			onClose();
 			onTransferido();
 		} catch (err: any) {
-			showToast.error(err.message || 'Error al transferir administración');
+			showToast.error(err.message || 'Error al nominar candidato');
 		} finally {
 			setTransfiriendo(null);
 		}
@@ -121,7 +121,7 @@ export function TransferirAdminModal({
 						<ActivityIndicator size="small" color="#FFF" />
 					) : (
 						<Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>
-							Hacer admin
+							Nominar
 						</Text>
 					)}
 				</PrimaryButton>
@@ -143,7 +143,7 @@ export function TransferirAdminModal({
 						<View style={styles.header}>
 							<View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
 								<Ionicons name="swap-horizontal" size={20} color="#D97706" />
-								<Text style={styles.headerTitle}>Transferir Admin</Text>
+								<Text style={styles.headerTitle}>Nominar candidato</Text>
 							</View>
 							<Pressable onPress={onClose} style={styles.closeButton}>
 								<Text style={styles.closeButtonText}>✕</Text>
@@ -159,8 +159,7 @@ export function TransferirAdminModal({
 								lineHeight: 18,
 							}}
 						>
-							Selecciona al miembro que será el nuevo administrador de "{nombreGrupo}". Tú
-							pasarás a ser miembro normal.
+							Selecciona al miembro que deseas nominar como candidato a administrador de "{nombreGrupo}". Deberá aceptar la transferencia para que sea efectiva.
 						</Text>
 
 						{/* Contenido */}
