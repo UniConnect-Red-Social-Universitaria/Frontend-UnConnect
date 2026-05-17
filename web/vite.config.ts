@@ -1,8 +1,6 @@
-// Cambia la importación de 'vite' a 'vitest/config'
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
   server: {
@@ -16,5 +14,8 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/setupTests.ts',
+    coverage: {
+      reporter: ['text', 'json-summary'],
+    },
   },
 })
