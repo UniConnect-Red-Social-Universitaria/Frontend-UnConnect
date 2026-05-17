@@ -133,7 +133,7 @@ export function DetalleGrupoScreen({ route, navigation }: Props) {
 					style={styles.actionButton}
 					onPress={() => navigation.navigate('Foro', { materiaId, materiaNombre })}
 				>
-					<Text style={styles.actionButtonText}>🗣️ Foro</Text>
+					<Text style={styles.actionButtonText}>Foro</Text>
 				</PrimaryButton>
 
 				<PrimaryButton
