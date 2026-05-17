@@ -10,7 +10,8 @@ RUN npm install
 
 RUN npm --workspace @uniconnect/api-types run build
 
-RUN npm run build:web
+ARG VITE_API_URL
+RUN VITE_API_URL=$VITE_API_URL npm run build:web
 
 # Etapa 2: Servidor Web (Nginx)
 FROM nginx:alpine
