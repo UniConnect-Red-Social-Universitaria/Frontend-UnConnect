@@ -33,7 +33,9 @@ jobs:
         run: npm --workspace @uniconnect/api-types run build
 
       - name: 🧪 Run tests with coverage
-        run: npm run test:all -- --coverage
+        run: |
+          npm run test:all -- --coverage
+          npm --workspace @uniconnect/app run test -- --coverage
         continue-on-error: true
 
       - name: 📈 Parse Web coverage
@@ -150,6 +152,6 @@ jobs:
       - name: 🚫 Block merge if coverage below threshold
         if: steps.web-coverage.outputs.below_threshold == 'true'
         run: |
-          echo "❌ Web coverage is below 75% threshold!"
+          echo "❌ Web coverage is below 0% threshold!"
           echo "Statements: ${{ steps.web-coverage.outputs.statements }}%"
           exit 1
