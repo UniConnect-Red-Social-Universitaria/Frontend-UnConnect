@@ -52,7 +52,8 @@ jobs:
             echo "functions=$FUNCTIONS" >> $GITHUB_OUTPUT
             echo "lines=$LINES" >> $GITHUB_OUTPUT
 
-            if (( $(echo "$STATEMENTS < 75" | bc -l) )); then
+            TOTAL=$(jq -r '.total.statements.total' ./web/coverage/coverage-summary.json)
+            if [ "$TOTAL" -gt 0 ] 2>/dev/null && (( $(echo "$STATEMENTS < 75" | bc -l) )); then
               echo "below_threshold=true" >> $GITHUB_OUTPUT
             fi
           else
