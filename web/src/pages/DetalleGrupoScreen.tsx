@@ -5,6 +5,7 @@ import { authService } from '../services/auth.service';
 import { archivosService } from '../services/archivos.service';
 import { usuariosService } from '../services/usuarios.service';
 import type { Grupo, Usuario } from '../types/api.types';
+import RecursosTab from '../components/RecursosTab';
 
 export default function DetalleGrupoScreen() {
 	const { grupoId } = useParams<{ grupoId: string }>();
@@ -336,7 +337,7 @@ export default function DetalleGrupoScreen() {
 
 						<div style={{ marginTop: 32 }}>
 							<h3 style={{ margin: '0 0 16px', color: '#00284d', fontSize: 18 }}>
-								Archivos del grupo
+								Biblioteca de Recursos</h3></div><div style={{marginTop: 32}}><RecursosTab grupoId={grupoId!} /></div><div style={{marginTop: 32}}><h3 style={{ margin: '0 0 16px', color: '#00284d', fontSize: 18 }}>Archivos del grupo
 							</h3>
 							<input
 								className="uc-input"

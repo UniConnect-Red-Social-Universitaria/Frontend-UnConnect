@@ -93,7 +93,12 @@ export default function EventosScreen() {
 				await apiClient.post('/api/eventos/suscripciones', { categoria: cat });
 			}
 			const next = new Set(categoriasSuscritas);
-			suscrito ? next.delete(cat) : next.add(cat);
+			if (suscrito) {
+				next.delete(cat);
+			} else {
+				next.add(cat);
+			}
+
 			setCategoriasSuscritas(next);
 			localStorage.setItem(SUSCRIPCIONES_KEY, JSON.stringify(Array.from(next)));
 			showMsg(suscrito ? `Desuscrito de eventos ${cat}` : `Suscrito a eventos ${cat}`);

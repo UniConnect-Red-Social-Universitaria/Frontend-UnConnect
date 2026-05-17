@@ -1,12 +1,12 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
-// @ts-ignore
+// @ts-expect-error - La biblioteca no tiene tipos, pero funciona correctamente
 import type { Encuesta } from '@uniconnect/api-types';
 import { authService } from '../services/auth.service';
 import { obtenerHistorialMensajesGrupo, enviarNuevoMensajeGrupo } from '../services/mensajes.service';
 import { encuestasService } from '../services/encuestas.service';
 
-const API_URL = `${(import.meta as any).env?.VITE_API_URL || 'http://localhost:3000'}`;
+const API_URL = `${import.meta.env?.VITE_API_URL || 'http://localhost:3000'}`;
 
 interface UseChatGrupoProps {
 	grupoId: string;
@@ -24,6 +24,14 @@ export const useChatGrupo = ({ grupoId, userIdParam }: UseChatGrupoProps) => {
 
 	const socketRef = useRef<Socket | null>(null);
 	const scrollRef = useRef<HTMLDivElement>(null);
+
+	const scrollToBottom = useCallback(() => {
+		setTimeout(() => {
+			if (scrollRef.current) {
+				scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+			}
+		}, 100);
+	}, []);
 
 	const upsertEncuestaLocal = (encuesta: Encuesta) => {
 		setEncuestas((prev) => {
@@ -83,6 +91,35 @@ export const useChatGrupo = ({ grupoId, userIdParam }: UseChatGrupoProps) => {
 					scrollToBottom();
 				};
 
+				const manejarReaccionAgregada = (data: any) => {
+					setMensajes((prev) =>
+						prev.map((m) => {
+							if (m.id === data.mensajeId) {
+								const reacciones = m.reacciones || [];
+								// Evitar duplicados
+								const existe = reacciones.some((r: any) => r.usuarioId === data.usuarioId && r.emoji === data.emoji);
+								if (existe) return m;
+								return { ...m, reacciones: [...reacciones, data] };
+							}
+							return m;
+						})
+					);
+				};
+
+				const manejarReaccionRemovida = (data: any) => {
+					setMensajes((prev) =>
+						prev.map((m) => {
+							if (m.id === data.mensajeId) {
+								const reacciones = (m.reacciones || []).filter(
+									(r: any) => !(r.emoji === data.emoji && r.usuarioId === data.usuarioId)
+								);
+								return { ...m, reacciones };
+							}
+							return m;
+						})
+					);
+				};
+
 				if (!socketRef.current) {
 					socketRef.current = io(API_URL, {
 						auth: { token, platform },
@@ -94,16 +131,34 @@ export const useChatGrupo = ({ grupoId, userIdParam }: UseChatGrupoProps) => {
 					});
 				} else {
 					socketRef.current.auth = { token, platform };
-					socketRef.current.connect();
+					if (!socketRef.current.connected) {
+						socketRef.current.connect();
+					}
 				}
 
-				socketRef.current.on('connect', () => {
-					socketRef.current?.emit('grupo:suscribir', grupoId);
-				});
+				// Limpiar listeners anteriores para evitar duplicados
+				socketRef.current.off('connect');
+				socketRef.current.off('grupo:mensaje:nuevo');
+				socketRef.current.off('encuesta:nueva');
+				socketRef.current.off('encuesta:actualizada');
+				socketRef.current.off('grupo:reaccion:agregada');
+				socketRef.current.off('grupo:reaccion:removida');
 
+				const suscribir = () => {
+					console.log(`[Chat Grupo] Suscribiendo al grupo ${grupoId}`);
+					socketRef.current?.emit('grupo:suscribir', grupoId);
+				};
+
+				if (socketRef.current.connected) {
+					suscribir();
+				}
+
+				socketRef.current.on('connect', suscribir);
 				socketRef.current.on('grupo:mensaje:nuevo', manejarMensajeSocket);
 				socketRef.current.on('encuesta:nueva', manejarEncuestaSocket);
 				socketRef.current.on('encuesta:actualizada', manejarEncuestaSocket);
+				socketRef.current.on('grupo:reaccion:agregada', manejarReaccionAgregada);
+				socketRef.current.on('grupo:reaccion:removida', manejarReaccionRemovida);
 			} catch (err: any) {
 				console.error("Error cargando mensajes del grupo", err);
 			}
@@ -117,6 +172,8 @@ export const useChatGrupo = ({ grupoId, userIdParam }: UseChatGrupoProps) => {
 				socketRef.current.off('grupo:mensaje:nuevo');
 				socketRef.current.off('encuesta:nueva');
 				socketRef.current.off('encuesta:actualizada');
+				socketRef.current.off('grupo:reaccion:agregada');
+				socketRef.current.off('grupo:reaccion:removida');
 				socketRef.current.disconnect();
 			}
 		};
@@ -163,13 +220,7 @@ export const useChatGrupo = ({ grupoId, userIdParam }: UseChatGrupoProps) => {
 		throw new Error(data.message || 'Error al crear la encuesta');
 	};
 
-	const scrollToBottom = () => {
-		setTimeout(() => {
-			if (scrollRef.current) {
-				scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-			}
-		}, 100);
-	};
+
 
 	const handleEnviarMensaje = async () => {
 		if (!nuevoMensaje.trim()) return;
@@ -205,6 +256,24 @@ export const useChatGrupo = ({ grupoId, userIdParam }: UseChatGrupoProps) => {
 		);
 	}, [mensajes, encuestas]);
 
+	const handleReaccionar = async (mensajeId: string, emoji: string) => {
+		try {
+			const mensaje = mensajes.find(m => m.id === mensajeId);
+			if (!mensaje) return;
+			const yaReacciono = mensaje.reacciones?.some((r: any) => r.emoji === emoji && r.usuarioId === userId);
+			
+			const { agregarReaccion, removerReaccion } = await import('../services/mensajes.service');
+			
+			if (yaReacciono) {
+				await removerReaccion(mensajeId, emoji, true);
+			} else {
+				await agregarReaccion(mensajeId, emoji, true);
+			}
+		} catch (err: any) {
+			console.error("Error al reaccionar", err);
+		}
+	};
+
 	return {
 		items,
 		mensajes,
@@ -219,5 +288,6 @@ export const useChatGrupo = ({ grupoId, userIdParam }: UseChatGrupoProps) => {
 		handleEnviarMensaje,
 		handleVotarEncuesta,
 		handleCrearEncuesta,
+		handleReaccionar,
 	};
 };

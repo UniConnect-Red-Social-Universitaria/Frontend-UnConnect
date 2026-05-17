@@ -32,6 +32,7 @@ export default function PerfilEstudianteScreen({ navigation, route }: Props) {
 	const [perfil, setPerfil] = useState<PerfilEnriquecido | null>(null);
 	const [cargando, setCargando] = useState(true);
 	const [error, setError] = useState('');
+	const [expandido, setExpandido] = useState(false);
 
 	useEffect(() => {
 		usuariosService.getPerfilEnriquecido(usuarioId)
@@ -78,50 +79,69 @@ export default function PerfilEstudianteScreen({ navigation, route }: Props) {
 						{perfil.semestre && (
 							<Text style={s.semestre}>Semestre {perfil.semestre}</Text>
 						)}
+						
+						{/* Botón Ver Más */}
+						<Pressable 
+							style={s.verMasBtn}
+							onPress={() => setExpandido(!expandido)}
+						>
+							<Text style={s.verMasText}>
+								{expandido ? 'Ver Menos' : 'Ver Más'}
+							</Text>
+							<Ionicons 
+								name={expandido ? 'chevron-up' : 'chevron-down'} 
+								size={20} 
+								color="#fff" 
+							/>
+						</Pressable>
 					</View>
 
 					{/* Estadísticas */}
-					<View style={s.section}>
-						<Text style={s.sectionTitle}>ESTADÍSTICAS</Text>
-						<View style={s.statsRow}>
-							<View style={s.statBox}>
-								<Text style={s.statNum}>{perfil.estadisticas.gruposCreados}</Text>
-								<Text style={s.statLabel}>Grupos{'\n'}creados</Text>
-							</View>
-							<View style={s.statBox}>
-								<Text style={s.statNum}>{perfil.estadisticas.gruposParticipa}</Text>
-								<Text style={s.statLabel}>Grupos en{'\n'}los que participa</Text>
-							</View>
-							<View style={s.statBox}>
-								<Text style={s.statNum}>{perfil.estadisticas.mensajesEnviados}</Text>
-								<Text style={s.statLabel}>Mensajes{'\n'}enviados</Text>
+					{expandido && (
+						<View style={s.section}>
+							<Text style={s.sectionTitle}>ESTADÍSTICAS</Text>
+							<View style={s.statsRow}>
+								<View style={s.statBox}>
+									<Text style={s.statNum}>{perfil.estadisticas.gruposCreados}</Text>
+									<Text style={s.statLabel}>Grupos{'\n'}creados</Text>
+								</View>
+								<View style={s.statBox}>
+									<Text style={s.statNum}>{perfil.estadisticas.gruposParticipa}</Text>
+									<Text style={s.statLabel}>Grupos en{'\n'}los que participa</Text>
+								</View>
+								<View style={s.statBox}>
+									<Text style={s.statNum}>{perfil.estadisticas.mensajesEnviados}</Text>
+									<Text style={s.statLabel}>Mensajes{'\n'}enviados</Text>
+								</View>
 							</View>
 						</View>
-					</View>
+					)}
 
 					{/* Insignias */}
-					<View style={s.section}>
-						<Text style={s.sectionTitle}>INSIGNIAS</Text>
-						{perfil.insignias.length === 0 ? (
-							<Text style={s.emptyText}>Aún no ha obtenido insignias.</Text>
-						) : (
-							perfil.insignias.map((insignia) => {
-								const info = INSIGNIA_INFO[insignia];
-								return (
-									<View
-										key={insignia}
-										style={[s.badge, { borderColor: info.color + '55', backgroundColor: info.color + '18' }]}
-									>
-										<Text style={s.badgeEmoji}>{info.emoji}</Text>
-										<View style={s.badgeInfo}>
-											<Text style={[s.badgeLabel, { color: info.color }]}>{info.label}</Text>
-											<Text style={[s.badgeDesc, { color: info.color }]}>{info.desc}</Text>
+					{expandido && (
+						<View style={s.section}>
+							<Text style={s.sectionTitle}>INSIGNIAS</Text>
+							{perfil.insignias.length === 0 ? (
+								<Text style={s.emptyText}>Aún no ha obtenido insignias.</Text>
+							) : (
+								perfil.insignias.map((insignia) => {
+									const info = INSIGNIA_INFO[insignia];
+									return (
+										<View
+											key={insignia}
+											style={[s.badge, { borderColor: info.color + '55', backgroundColor: info.color + '18' }]}
+										>
+											<Text style={s.badgeEmoji}>{info.emoji}</Text>
+											<View style={s.badgeInfo}>
+												<Text style={[s.badgeLabel, { color: info.color }]}>{info.label}</Text>
+												<Text style={[s.badgeDesc, { color: info.color }]}>{info.desc}</Text>
+											</View>
 										</View>
-									</View>
-								);
-							})
-						)}
-					</View>
+									);
+								})
+							)}
+						</View>
+					)}
 
 					{/* Materias */}
 					{perfil.asignaturasActivas.length > 0 && (
@@ -171,4 +191,22 @@ const s = StyleSheet.create({
 	materiasWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 	materiaChip: { backgroundColor: '#eef2f6', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6 },
 	materiaText: { fontSize: 13, fontWeight: '500', color: theme.colors.primary },
+	verMasBtn: { 
+		flexDirection: 'row', 
+		alignItems: 'center', 
+		justifyContent: 'center',
+		gap: 6,
+		marginTop: 14, 
+		paddingVertical: 8, 
+		paddingHorizontal: 16,
+		backgroundColor: 'rgba(255,255,255,0.2)',
+		borderRadius: 20,
+		borderWidth: 1,
+		borderColor: 'rgba(255,255,255,0.3)',
+	},
+	verMasText: { 
+		color: '#fff', 
+		fontSize: 13, 
+		fontWeight: '600',
+	},
 });

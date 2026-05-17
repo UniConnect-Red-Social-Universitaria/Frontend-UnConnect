@@ -11,6 +11,7 @@ export default function MensajeDirectoScreen() {
 	const [contactoInfo, setContactoInfo] = useState<{ nombre: string; correo: string } | null>(
 		location.state as any || null
 	);
+	const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
 
 	useEffect(() => {
 		if (contactoId) clearUnreadDirectChatNotification(contactoId);
@@ -28,7 +29,7 @@ export default function MensajeDirectoScreen() {
 
 	const {
 		mensajes, nuevoMensaje, setNuevoMensaje,
-		enviando, error, userId, scrollRef, handleEnviarMensaje
+		enviando, error, userId, scrollRef, handleEnviarMensaje, handleReaccionar
 	} = useChatDirecto({ contactoId: contactoId! });
 
 	if (!contactoId) return null;
@@ -52,6 +53,9 @@ export default function MensajeDirectoScreen() {
 				.uc-btn-send { padding: 0 24px; background: #003e70; color: #fff; border: none; border-radius: 24px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
 				.uc-btn-send:hover:not(:disabled) { background: #00284d; }
 				.uc-btn-send:disabled { opacity: 0.6; cursor: not-allowed; }
+				.reaction-picker { position: absolute; right: -30px; top: 10px; background: #fff; border-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex; gap: 4px; padding: 4px 8px; z-index: 10; border: 1px solid #e2e8f0; }
+				.reaction-picker span { cursor: pointer; transition: transform 0.1s; }
+				.reaction-picker span:hover { transform: scale(1.2); }
 				@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 			`}</style>
 
@@ -67,12 +71,55 @@ export default function MensajeDirectoScreen() {
 					<div className="uc-msg-scroll" ref={scrollRef}>
 						{mensajes.map(m => {
 							const isMine = m.emisorId === userId;
+
+							const isMention = m.menciones?.some((ment: any) => ment.usuarioMencionadoId === userId);
+							const borderStyle = isMention && !isMine ? { border: '2px solid #ffd700' } : {};
+
 							return (
-								<div key={m.id} className={`uc-msg ${isMine ? 'mine' : 'other'}`}>
+								<div 
+									key={m.id} 
+									className={`uc-msg ${isMine ? 'mine' : 'other'}`} 
+									style={borderStyle}
+									onMouseEnter={() => setHoveredMsgId(m.id)}
+									onMouseLeave={() => setHoveredMsgId(null)}
+								>
 									<p className="uc-msg-text">{m.contenido}</p>
 									<div className="uc-msg-time">
 										{new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
 									</div>
+									{hoveredMsgId === m.id && (
+										<div className="reaction-picker" style={isMine ? { right: 'auto', left: '-30px' } : {}}>
+											<span onClick={() => handleReaccionar(m.id, '👍')}>👍</span>
+											<span onClick={() => handleReaccionar(m.id, '❤️')}>❤️</span>
+											<span onClick={() => handleReaccionar(m.id, '😂')}>😂</span>
+										</div>
+									)}
+									{m.reacciones && m.reacciones.length > 0 && (
+										<div style={{ display: 'flex', flexWrap: 'wrap', marginTop: 4, gap: 4 }}>
+											{Array.from(new Set(m.reacciones.map((r: any) => r.emoji))).map((emoji: any, index) => {
+												const count = m.reacciones.filter((r: any) => r.emoji === emoji).length;
+												const didIReact = m.reacciones.some((r: any) => r.emoji === emoji && r.usuarioId === userId);
+												return (
+													<span 
+														key={index} 
+														onClick={() => handleReaccionar(m.id, emoji)}
+														style={{ 
+															cursor: 'pointer', 
+															fontSize: 12, 
+															backgroundColor: didIReact ? 'rgba(0,40,85,0.2)' : 'rgba(255,255,255,0.2)', 
+															padding: '2px 6px', 
+															borderRadius: 10,
+															display: 'inline-flex',
+															alignItems: 'center',
+															gap: 2
+														}}>
+														<span>{emoji}</span>
+														{count > 1 && <span>{count}</span>}
+													</span>
+												);
+											})}
+										</div>
+									)}
 								</div>
 							);
 						})}

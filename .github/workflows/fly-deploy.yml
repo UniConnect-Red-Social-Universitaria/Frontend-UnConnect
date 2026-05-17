@@ -6,39 +6,220 @@ on:
       - main
     paths:
       - 'web/**'
-      - 'packages/**' # Agregamos esto por si cambian los tipos
+      - 'packages/**'
       - 'fly.toml'
       - '.github/workflows/fly-deploy.yml'
 
 jobs:
-  deploy:
-    name: Deploy Web
+  build-and-deploy:
+    name: Build & Deploy Web
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: deploy-web-group
+      cancel-in-progress: false
 
     steps:
-      - name: Checkout del código
+      - name: 🛒 Checkout code
         uses: actions/checkout@v4
 
-      - name: Configurar Node.js
+      - name: 🔧 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
-      - name: Instalar dependencias
-        run: npm install
+      - name: 📦 Install dependencies
+        run: npm ci
 
-      - name: Compilar los tipos de la API
+      - name: 🏗️ Build API types
         run: npm --workspace @uniconnect/api-types run build
 
-      - name: Setup Flyctl
+      - name: 🔧 Setup Flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
 
-      - name: Deploy to Fly.io
+      - name: 📸 Get current release
+        id: get-release
+        run: |
+          CURRENT_RELEASE=$(flyctl releases list --json | jq -r '.[0].id' 2>/dev/null || echo "unknown")
+          echo "previous_release=$CURRENT_RELEASE" >> $GITHUB_OUTPUT
+          echo "Previous release: $CURRENT_RELEASE"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        continue-on-error: true
+
+      - name: 🚀 Deploy Web to Fly.io
+        id: deploy
         run: |
           flyctl deploy --remote-only \
             --build-arg EXPO_PUBLIC_API_URL="https://uniconnect-backend.fly.dev" \
             --build-arg EXPO_PUBLIC_ALLOWED_DOMAIN="ucaldas.edu.co" \
             --build-arg EXPO_PUBLIC_AUTH0_CONNECTION="google-oauth2"
+          
+          NEW_RELEASE=$(flyctl releases list --json | jq -r '.[0].id' 2>/dev/null || echo "unknown")
+          echo "new_release=$NEW_RELEASE" >> $GITHUB_OUTPUT
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: 🏥 Verify deployment health
+        id: health-check
+        run: |
+          echo "⏳ Waiting 10 seconds for deployment..."
+          sleep 10
+          
+          APP_URL=$(flyctl info -j | jq -r '.app' 2>/dev/null || echo "unknown")
+          
+          # Check if app is responding
+          HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://${APP_URL}.fly.dev/" 2>/dev/null || echo "000")
+          echo "health_status=$HEALTH_STATUS" >> $GITHUB_OUTPUT
+          
+          if [[ "$HEALTH_STATUS" == "200" || "$HEALTH_STATUS" == "301" || "$HEALTH_STATUS" == "302" ]]; then
+            echo "✅ Health check passed! Status: $HEALTH_STATUS"
+          else
+            echo "❌ Health check failed! Status: $HEALTH_STATUS"
+            exit 1
+          fi
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        continue-on-error: true
+
+      - name: 📤 Get deployment info
+        id: deploy-info
+        if: success()
+        run: |
+          APP_URL=$(flyctl info -j | jq -r '.app' 2>/dev/null || echo "unknown")
+          COMMIT_MSG=$(git log -1 --pretty=%B | head -n 1)
+          COMMIT_AUTHOR=$(git log -1 --pretty=%an)
+          
+          echo "app_url=$APP_URL" >> $GITHUB_OUTPUT
+          echo "commit_msg=$COMMIT_MSG" >> $GITHUB_OUTPUT
+          echo "commit_author=$COMMIT_AUTHOR" >> $GITHUB_OUTPUT
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: ✅ Success - Slack Notification
+        if: success()
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "text": "✅ Frontend Deployment Successful",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "✅ Frontend (Web) Deployment Successful"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Environment:*\nProduction"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Status:*\n✅ Success"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Author:*\n${{ steps.deploy-info.outputs.commit_author }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Commit:*\n<${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*URL:*\nhttps://${{ steps.deploy-info.outputs.app_url }}.fly.dev"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Release:*\n${{ steps.deploy.outputs.new_release }}"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+        continue-on-error: true
+
+  rollback-on-failure:
+    name: Rollback on Failure
+    runs-on: ubuntu-latest
+    needs: build-and-deploy
+    if: failure()
+    timeout-minutes: 10
+
+    steps:
+      - name: 🔧 Setup Flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: 🔄 Rollback Web
+        id: rollback
+        run: |
+          echo "🔄 Starting rollback process..."
+          
+          RELEASES=$(flyctl releases list --json | jq -r '.[0:2] | .[] | .id')
+          CURRENT=$(echo "$RELEASES" | head -n 1)
+          PREVIOUS=$(echo "$RELEASES" | tail -n 1)
+          
+          echo "Current: $CURRENT"
+          echo "Rollback target: $PREVIOUS"
+          
+          if [ ! -z "$PREVIOUS" ] && [ "$PREVIOUS" != "null" ]; then
+            flyctl releases rollback $PREVIOUS --force
+            echo "✅ Rolled back to $PREVIOUS"
+            echo "rollback_release=$PREVIOUS" >> $GITHUB_OUTPUT
+          else
+            echo "❌ No previous release!"
+            exit 1
+          fi
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: ❌ Failure Notification - Slack
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "text": "❌ Frontend Deployment FAILED & Rolled Back",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "❌ Frontend (Web) Deployment Failed"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Environment:*\nProduction"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Status:*\n❌ FAILED"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Action:*\n🔄 Rolled back to: ${{ steps.rollback.outputs.rollback_release }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Logs:*\n<${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|View Details>"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+        continue-on-error: true

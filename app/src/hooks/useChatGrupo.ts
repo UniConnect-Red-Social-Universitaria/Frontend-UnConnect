@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { FlatList, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import io from "socket.io-client";
-// @ts-ignore
+// @ts-expect-error - La biblioteca no tiene tipos, pero funciona correctamente
 import type { Encuesta } from "@uniconnect/api-types";
 
 import { resolverApiBaseUrl } from "../utils/apiConfig";
@@ -103,6 +103,35 @@ export const useChatGrupo = ({ grupoId, userIdParam }: UseChatGrupoProps) => {
           );
         };
 
+        const manejarReaccionAgregada = (data: any) => {
+          setMensajes((prev) =>
+            prev.map((m) => {
+              if (m.id === data.mensajeId) {
+                const reacciones = m.reacciones || [];
+                // Evitar duplicados
+                const existe = reacciones.some((r: any) => r.usuarioId === data.usuarioId && r.emoji === data.emoji);
+                if (existe) return m;
+                return { ...m, reacciones: [...reacciones, data] };
+              }
+              return m;
+            })
+          );
+        };
+
+        const manejarReaccionRemovida = (data: any) => {
+          setMensajes((prev) =>
+            prev.map((m) => {
+              if (m.id === data.mensajeId) {
+                const reacciones = (m.reacciones || []).filter(
+                  (r: any) => !(r.emoji === data.emoji && r.usuarioId === data.usuarioId)
+                );
+                return { ...m, reacciones };
+              }
+              return m;
+            })
+          );
+        };
+
         if (!socketRef.current) {
           socketRef.current = io(resolverApiBaseUrl(), {
             auth: { token, platform },
@@ -114,21 +143,39 @@ export const useChatGrupo = ({ grupoId, userIdParam }: UseChatGrupoProps) => {
           });
         } else {
           socketRef.current.auth = { token, platform };
-          socketRef.current.connect();
+          if (!socketRef.current.connected) {
+            socketRef.current.connect();
+          }
         }
 
-        // Escuchar conexión establecida para emitir suscripción
-        socketRef.current.on("connect", () => {
-          console.log(`[Chat Grupo] Socket conectado (${platform})`);
-          // Emitir evento de suscripción al grupo
+        // Limpiar listeners anteriores para evitar duplicados
+        socketRef.current.off("connect");
+        socketRef.current.off("grupo:mensaje:nuevo");
+        socketRef.current.off("encuesta:nueva");
+        socketRef.current.off("encuesta:actualizada");
+        socketRef.current.off("grupo:reaccion:agregada");
+        socketRef.current.off("grupo:reaccion:removida");
+        socketRef.current.off("disconnect");
+        socketRef.current.off("connect_error");
+
+        const suscribir = () => {
+          console.log(`[Chat Grupo] Suscribiendo al grupo ${grupoId} (${platform})`);
           socketRef.current.emit("grupo:suscribir", grupoId, (ack: any) => {
             console.log(`[Chat Grupo] Suscripción confirmada para ${grupoId}:`, ack);
           });
-        });
+        };
 
+        if (socketRef.current.connected) {
+          suscribir();
+        }
+
+        // Escuchar conexión establecida para emitir suscripción
+        socketRef.current.on("connect", suscribir);
         socketRef.current.on("grupo:mensaje:nuevo", manejarMensajeSocket);
         socketRef.current.on("encuesta:nueva", manejarEncuestaSocket);
         socketRef.current.on("encuesta:actualizada", manejarEncuestaSocket);
+        socketRef.current.on("grupo:reaccion:agregada", manejarReaccionAgregada);
+        socketRef.current.on("grupo:reaccion:removida", manejarReaccionRemovida);
 
         // Log para debugging
         socketRef.current.on("disconnect", () => {
@@ -157,6 +204,8 @@ export const useChatGrupo = ({ grupoId, userIdParam }: UseChatGrupoProps) => {
         socketRef.current.off("grupo:mensaje:nuevo");
         socketRef.current.off("encuesta:nueva");
         socketRef.current.off("encuesta:actualizada");
+        socketRef.current.off("grupo:reaccion:agregada");
+        socketRef.current.off("grupo:reaccion:removida");
         socketRef.current.disconnect();
       }
     };
@@ -246,6 +295,24 @@ export const useChatGrupo = ({ grupoId, userIdParam }: UseChatGrupoProps) => {
     );
   }, [mensajes, encuestas]);
 
+  const handleReaccionar = async (mensajeId: string, emoji: string) => {
+    try {
+      const mensaje = mensajes.find(m => m.id === mensajeId);
+      if (!mensaje) return;
+      const yaReacciono = mensaje.reacciones?.some((r: any) => r.emoji === emoji && r.usuarioId === userId);
+      
+      const { agregarReaccion, removerReaccion } = require('../services/mensajes.service');
+      
+      if (yaReacciono) {
+        await removerReaccion(mensajeId, emoji, true);
+      } else {
+        await agregarReaccion(mensajeId, emoji, true);
+      }
+    } catch (err: any) {
+      console.error("Error al reaccionar", err);
+    }
+  };
+
   return {
     items,
     mensajes,
@@ -260,5 +327,6 @@ export const useChatGrupo = ({ grupoId, userIdParam }: UseChatGrupoProps) => {
     handleEnviarMensaje,
     handleVotarEncuesta,
     handleCrearEncuesta,
+    handleReaccionar,
   };
 };

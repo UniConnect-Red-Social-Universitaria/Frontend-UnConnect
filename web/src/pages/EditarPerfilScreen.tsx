@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import theme from '@uniconnect/theme';
 import { usuariosService } from '../services/usuarios.service';
 import { materiasService } from '../services/materias.service';
-import type { Materia } from '../types/api.types';
+import { authService } from '../services/auth.service';
+import type { Materia, PerfilEnriquecido, Insignia } from '../types/api.types';
 
 export default function EditarPerfilScreen() {
 	const navigate = useNavigate();
@@ -14,8 +15,17 @@ export default function EditarPerfilScreen() {
 	
 	const [cargando, setCargando] = useState(true);
 	const [guardando, setGuardando] = useState(false);
+	const [expandido, setExpandido] = useState(false);
+	const [perfil, setPerfil] = useState<PerfilEnriquecido | null>(null);
 	const [errores, setErrores] = useState({ semestre: '', materias: '' });
 	const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+
+	const INSIGNIA_INFO: Record<Insignia, { emoji: string; label: string; desc: string; color: string }> = {
+		'fundador': { emoji: '🏆', label: 'Fundador', desc: 'Ha creado grupos de estudio', color: '#f59e0b' },
+		'participante-activo': { emoji: '⭐', label: 'Participante Activo', desc: 'Participa en 3 o más grupos', color: '#3b82f6' },
+		'comunicador': { emoji: '💬', label: 'Comunicador', desc: 'Ha enviado 10 o más mensajes', color: '#10b981' },
+		'colaborador': { emoji: '🤝', label: 'Colaborador', desc: 'Activo en grupos y mensajes', color: '#8b5cf6' },
+	};
 
 	const showMsg = (msg: string, type: 'success' | 'error' = 'success') => {
 		setToast({ msg, type });
@@ -25,13 +35,16 @@ export default function EditarPerfilScreen() {
 	const cargarPerfilAcademico = useCallback(async () => {
 		setCargando(true);
 		try {
-			const [perfilData, materiasData] = await Promise.all([
+			const usuarioId = await authService.obtenerIdUsuarioActual();
+			const [perfilData, materiasData, perfilEnriquecido] = await Promise.all([
 				usuariosService.getPerfil(),
 				materiasService.getMaterias(),
+				usuarioId ? usuariosService.getPerfilEnriquecido(usuarioId) : Promise.resolve(null),
 			]);
 
 			setNombre(`${perfilData.nombre || ''} ${perfilData.apellido || ''}`.trim());
 			setSemestre(perfilData.semestre ? String(perfilData.semestre) : '');
+			setPerfil(perfilEnriquecido || null);
 
 			const catalogoIds = new Set((materiasData || []).map((m) => String(m.id)));
 			const idsResueltos = [
@@ -185,6 +198,62 @@ export default function EditarPerfilScreen() {
 							)}
 						</div>
 
+						<button 
+							style={s.verMasBtn}
+							onClick={() => setExpandido(!expandido)}
+							disabled={guardando}
+						>
+							{expandido ? 'Ver Menos ▲' : 'Ver Más ▼'}
+						</button>
+
+						{expandido && perfil && (
+							<>
+								<div style={s.section}>
+									<p style={s.sectionTitle}>Estadísticas</p>
+									<div style={s.statsRow}>
+										<div style={s.statBox}>
+											<div style={s.statNum}>{perfil.estadisticas?.gruposCreados || 0}</div>
+											<p style={s.statLabel}>Grupos creados</p>
+										</div>
+										<div style={s.statBox}>
+											<div style={s.statNum}>{perfil.estadisticas?.gruposParticipa || 0}</div>
+											<p style={s.statLabel}>Grupos activos</p>
+										</div>
+										<div style={s.statBox}>
+											<div style={s.statNum}>{perfil.estadisticas?.mensajesEnviados || 0}</div>
+											<p style={s.statLabel}>Mensajes</p>
+										</div>
+									</div>
+								</div>
+
+								{perfil.insignias && perfil.insignias.length > 0 && (
+									<div style={s.section}>
+										<p style={s.sectionTitle}>Insignias</p>
+										{perfil.insignias.map((insignia, idx) => {
+											const info = INSIGNIA_INFO[insignia];
+											if (!info) return null;
+											return (
+												<div 
+													key={idx}
+													style={{
+														...s.badge,
+														borderColor: info.color,
+														backgroundColor: `${info.color}15`,
+													}}
+												>
+													<span style={s.badgeEmoji}>{info.emoji}</span>
+													<div style={s.badgeInfo}>
+														<p style={{...s.badgeLabel, color: info.color}}>{info.label}</p>
+														<p style={{...s.badgeDesc, color: info.color}}>{info.desc}</p>
+													</div>
+												</div>
+											);
+										})}
+									</div>
+								)}
+							</>
+						)}
+
 						<div style={s.buttonRow}>
 							<button className="uc-btn-primary" onClick={handleGuardar} disabled={guardando}>
 								{guardando ? 'Guardando...' : 'Guardar cambios'}
@@ -201,7 +270,7 @@ export default function EditarPerfilScreen() {
 }
 
 const s: Record<string, React.CSSProperties> = {
-	page: { minHeight: '100%', backgroundColor: '#f0f4f8', fontFamily: "'Inter', sans-serif" },
+	page: { height: '100vh', overflowY: 'auto', backgroundColor: '#f0f4f8', fontFamily: "'Inter', sans-serif" },
 	content: { maxWidth: 500, margin: '0 auto', padding: '40px 20px', animation: 'fadeUp 0.3s ease' },
 	header: { textAlign: 'center', marginBottom: 28 },
 	title: { margin: '0 0 6px', fontSize: 24, fontWeight: 700, color: '#00284d' },
@@ -214,4 +283,84 @@ const s: Record<string, React.CSSProperties> = {
 	buttonRow: { display: 'flex', gap: 12, marginTop: 12 },
 	centered: { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '64px 0' },
 	spinner: { width: 36, height: 36, border: '3px solid #dce6ef', borderTopColor: theme.colors.primary, borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
+	verMasBtn: {
+		width: '100%',
+		padding: '10px 14px',
+		marginTop: 14,
+		backgroundColor: theme.colors.primary,
+		color: '#fff',
+		border: `1.5px solid ${theme.colors.primary}`,
+		borderRadius: 20,
+		fontSize: 13,
+		fontWeight: 600,
+		cursor: 'pointer',
+		fontFamily: "'Inter', sans-serif",
+		transition: 'all 0.2s',
+	} as React.CSSProperties,
+	section: {
+		backgroundColor: '#fff',
+		borderRadius: 12,
+		padding: '16px',
+		marginTop: 16,
+		border: '1px solid #e8eef4',
+	} as React.CSSProperties,
+	sectionTitle: {
+		fontSize: 11,
+		fontWeight: 700,
+		color: '#7a9ab5',
+		letterSpacing: 1,
+		marginBottom: 12,
+		textTransform: 'uppercase',
+		margin: 0,
+	} as React.CSSProperties,
+	statsRow: {
+		display: 'flex',
+		gap: 10,
+	} as React.CSSProperties,
+	statBox: {
+		flex: 1,
+		backgroundColor: '#f8fafc',
+		borderRadius: 10,
+		padding: 12,
+		textAlign: 'center',
+		border: '1px solid #e8eef4',
+	} as React.CSSProperties,
+	statNum: {
+		fontSize: 24,
+		fontWeight: 700,
+		color: theme.colors.primary,
+		margin: 0,
+	} as React.CSSProperties,
+	statLabel: {
+		fontSize: 11,
+		color: '#7a9ab5',
+		fontWeight: 500,
+		textAlign: 'center',
+		marginTop: 4,
+		margin: '4px 0 0',
+	} as React.CSSProperties,
+	badge: {
+		display: 'flex',
+		alignItems: 'center',
+		gap: 12,
+		padding: 12,
+		borderRadius: 10,
+		border: '1.5px solid',
+		marginBottom: 8,
+	} as React.CSSProperties,
+	badgeEmoji: {
+		fontSize: 22,
+	} as React.CSSProperties,
+	badgeInfo: {},
+	badgeLabel: {
+		fontSize: 14,
+		fontWeight: 700,
+		margin: 0,
+	} as React.CSSProperties,
+	badgeDesc: {
+		fontSize: 12,
+		marginTop: 2,
+		opacity: 0.8,
+		margin: '2px 0 0',
+	} as React.CSSProperties,
 };

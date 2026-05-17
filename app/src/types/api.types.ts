@@ -112,13 +112,16 @@ export interface EstadisticasPerfil {
     mensajesEnviados: number;
 }
 
-export interface PerfilEnriquecido {
+export interface PerfilBaseDTO {
     id: string;
     nombre: string;
     apellido: string;
     carrera: string;
     semestre: number | null;
     asignaturasActivas: string[];
+}
+
+export interface PerfilEnriquecido extends PerfilBaseDTO {
     estadisticas: EstadisticasPerfil;
     insignias: Insignia[];
 }

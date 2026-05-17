@@ -1,0 +1,155 @@
+name: PR - Coverage Report (Frontend)
+
+on:
+  pull_request:
+    branches:
+      - main
+      - developer
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  coverage-comment:
+    name: Coverage Report Comment
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 🛒 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🏗️ Build API types
+        run: npm --workspace @uniconnect/api-types run build
+
+      - name: 🧪 Run tests with coverage
+        run: npm run test:all -- --coverage
+        continue-on-error: true
+
+      - name: 📈 Parse Web coverage
+        id: web-coverage
+        run: |
+          if [ -f ./web/coverage/coverage-summary.json ]; then
+            STATEMENTS=$(jq -r '.total.statements.pct' ./web/coverage/coverage-summary.json)
+            BRANCHES=$(jq -r '.total.branches.pct' ./web/coverage/coverage-summary.json)
+            FUNCTIONS=$(jq -r '.total.functions.pct' ./web/coverage/coverage-summary.json)
+            LINES=$(jq -r '.total.lines.pct' ./web/coverage/coverage-summary.json)
+            
+            echo "statements=$STATEMENTS" >> $GITHUB_OUTPUT
+            echo "branches=$BRANCHES" >> $GITHUB_OUTPUT
+            echo "functions=$FUNCTIONS" >> $GITHUB_OUTPUT
+            echo "lines=$LINES" >> $GITHUB_OUTPUT
+            
+            if (( $(echo "$STATEMENTS < 75" | bc -l) )); then
+              echo "below_threshold=true" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "No web coverage found"
+            echo "statements=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📈 Parse App coverage
+        id: app-coverage
+        run: |
+          if [ -f ./app/coverage/coverage-summary.json ]; then
+            STATEMENTS=$(jq -r '.total.statements.pct' ./app/coverage/coverage-summary.json)
+            BRANCHES=$(jq -r '.total.branches.pct' ./app/coverage/coverage-summary.json)
+            FUNCTIONS=$(jq -r '.total.functions.pct' ./app/coverage/coverage-summary.json)
+            LINES=$(jq -r '.total.lines.pct' ./app/coverage/coverage-summary.json)
+            
+            echo "statements=$STATEMENTS" >> $GITHUB_OUTPUT
+            echo "branches=$BRANCHES" >> $GITHUB_OUTPUT
+            echo "functions=$FUNCTIONS" >> $GITHUB_OUTPUT
+            echo "lines=$LINES" >> $GITHUB_OUTPUT
+          else
+            echo "No app coverage found"
+            echo "statements=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 💬 Post coverage comment
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const webStmt = ${{ steps.web-coverage.outputs.statements || 0 }};
+            const webBranches = ${{ steps.web-coverage.outputs.branches || 0 }};
+            const webFunctions = ${{ steps.web-coverage.outputs.functions || 0 }};
+            const webLines = ${{ steps.web-coverage.outputs.lines || 0 }};
+            
+            const appStmt = ${{ steps.app-coverage.outputs.statements || 0 }};
+            const appBranches = ${{ steps.app-coverage.outputs.branches || 0 }};
+            const appFunctions = ${{ steps.app-coverage.outputs.functions || 0 }};
+            const appLines = ${{ steps.app-coverage.outputs.lines || 0 }};
+            
+            const threshold = 75;
+            
+            const webBelowThreshold = webStmt < threshold;
+            const appBelowThreshold = appStmt < threshold;
+            
+            const comment = `## 📊 Frontend Code Coverage Report
+            
+            ### 🌐 Web Coverage
+            ${webStmt > 0 ? `
+            | Metric | Coverage | Status |
+            |--------|----------|--------|
+            | Statements | ${webStmt.toFixed(2)}% | ${webStmt >= threshold ? '✅' : '❌'} |
+            | Branches | ${webBranches.toFixed(2)}% | ${webBranches >= threshold ? '✅' : '❌'} |
+            | Functions | ${webFunctions.toFixed(2)}% | ${webFunctions >= threshold ? '✅' : '❌'} |
+            | Lines | ${webLines.toFixed(2)}% | ${webLines >= threshold ? '✅' : '❌'} |
+            ` : '⚠️ No coverage data available'}
+            
+            ### 📱 App Coverage
+            ${appStmt > 0 ? `
+            | Metric | Coverage | Status |
+            |--------|----------|--------|
+            | Statements | ${appStmt.toFixed(2)}% | ${appStmt >= threshold ? '✅' : '❌'} |
+            | Branches | ${appBranches.toFixed(2)}% | ${appBranches >= threshold ? '✅' : '❌'} |
+            | Functions | ${appFunctions.toFixed(2)}% | ${appFunctions >= threshold ? '✅' : '❌'} |
+            | Lines | ${appLines.toFixed(2)}% | ${appLines >= threshold ? '✅' : '❌'} |
+            ` : '⚠️ No coverage data available'}
+            
+            **Threshold**: ${threshold}%
+            
+            ---
+            💡 *To improve coverage, add unit tests for uncovered lines and branches.*`;
+            
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const existingComment = comments.find(c => c.body.includes('📊 Frontend Code Coverage Report'));
+            
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: comment,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment,
+              });
+            }
+
+      - name: 🚫 Block merge if coverage below threshold
+        if: steps.web-coverage.outputs.below_threshold == 'true'
+        run: |
+          echo "❌ Web coverage is below 75% threshold!"
+          echo "Statements: ${{ steps.web-coverage.outputs.statements }}%"
+          exit 1

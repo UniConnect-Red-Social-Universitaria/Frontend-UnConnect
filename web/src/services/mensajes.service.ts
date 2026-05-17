@@ -55,3 +55,33 @@ export const enviarNuevoMensajeGrupo = async (grupoId: string, contenido: string
 	});
 	return res.json();
 };
+
+export const agregarReaccion = async (mensajeId: string, emoji: string, esGrupo: boolean = true) => {
+	const token = getToken();
+	if (!token) throw new Error('No autenticado.');
+
+	const res = await fetch(`${API_URL}/mensajes/${mensajeId}/reacciones`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`,
+		},
+		body: JSON.stringify({ emoji, esGrupo }),
+	});
+	return res.json();
+};
+
+export const removerReaccion = async (mensajeId: string, emoji: string, esGrupo: boolean = true) => {
+	const token = getToken();
+	if (!token) throw new Error('No autenticado.');
+
+	const res = await fetch(`${API_URL}/mensajes/${mensajeId}/reacciones`, {
+		method: 'DELETE',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`,
+		},
+		body: JSON.stringify({ emoji, esGrupo }),
+	});
+	return res.json();
+};
