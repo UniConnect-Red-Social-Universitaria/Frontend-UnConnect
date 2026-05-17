@@ -1,5 +1,5 @@
 import { apiClient } from "./api.client";
-import { Grupo, Materia, ApiResponse } from "../types/api.types";
+import { Grupo, ApiResponse } from "../types/api.types";
 
 export interface CrearGrupoRequest {
   nombre: string;
@@ -152,26 +152,20 @@ class GruposService {
     );
   }
 
-  /**
-   * Iniciar transferencia de administración del grupo
-   */
-  async iniciarTransferenciaAdministracion(grupoId: string): Promise<ApiResponse> {
-    return await apiClient.post(`/api/grupos/${grupoId}/administrador/iniciar`, {});
+  async iniciarTransferencia(grupoId: string, candidatoId: string): Promise<ApiResponse> {
+    return await apiClient.post(`/api/grupos/${grupoId}/administrador/iniciar`, { candidatoId });
   }
 
-  /**
-   * Transferir administración del grupo a otro miembro (solo admin)
-   */
-  async cederAdministracion(
-    grupoId: string,
-    nuevoAdminId: string,
-  ): Promise<ApiResponse> {
-    // Primero iniciar la transferencia
-    await this.iniciarTransferenciaAdministracion(grupoId);
-    // Luego confirmar con el nuevo administrador
-    return await apiClient.patch(`/api/grupos/${grupoId}/administrador/confirmar`, {
-      nuevoAdminId,
-    });
+  async aceptarTransferencia(grupoId: string): Promise<ApiResponse> {
+    return await apiClient.post(`/api/grupos/${grupoId}/administrador/aceptar`, {});
+  }
+
+  async rechazarTransferencia(grupoId: string): Promise<ApiResponse> {
+    return await apiClient.post(`/api/grupos/${grupoId}/administrador/rechazar`, {});
+  }
+
+  async cancelarTransferencia(grupoId: string): Promise<ApiResponse> {
+    return await apiClient.delete(`/api/grupos/${grupoId}/administrador/cancelar`);
   }
 }
 

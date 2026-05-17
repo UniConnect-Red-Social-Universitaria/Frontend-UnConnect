@@ -29,10 +29,16 @@ export default function DetalleGrupoScreen() {
 
 	const [showTransferModal, setShowTransferModal] = useState(false);
 	const [transferindoId, setTransferindoId] = useState<string | null>(null);
+	const [cancelandoTransferencia, setCancelandoTransferencia] = useState(false);
+	const [aceptandoTransferencia, setAceptandoTransferencia] = useState(false);
+	const [rechazandoTransferencia, setRechazandoTransferencia] = useState(false);
 	const [confirmAction, setConfirmAction] = useState<
 		| { kind: 'abandonar' }
 		| { kind: 'transferir'; miembroId: string }
 		| { kind: 'transferir-por-error' }
+		| { kind: 'cancelar-transferencia' }
+		| { kind: 'aceptar-transferencia' }
+		| { kind: 'rechazar-transferencia' }
 		| null
 	>(null);
 
@@ -188,15 +194,63 @@ export default function DetalleGrupoScreen() {
 		setConfirmAction(null);
 		setTransferindoId(miembroId);
 		try {
-			await gruposService.cederAdministracion(grupoId, miembroId);
-			showMsg('Administración transferida');
+			await gruposService.iniciarTransferencia(grupoId, miembroId);
+			showMsg('Candidato nominado. Esperando su respuesta.');
 			setShowTransferModal(false);
 			const g = await gruposService.getGrupo(grupoId);
 			setGrupo(g);
-		} catch {
-			showMsg('Error al transferir', 'error');
+		} catch (err: any) {
+			showMsg(err.message || 'Error al nominar candidato', 'error');
 		} finally {
 			setTransferindoId(null);
+		}
+	};
+
+	const confirmarCancelTransferencia = async () => {
+		if (!grupoId) return;
+		setConfirmAction(null);
+		setCancelandoTransferencia(true);
+		try {
+			await gruposService.cancelarTransferencia(grupoId);
+			showMsg('Nominación cancelada');
+			const g = await gruposService.getGrupo(grupoId);
+			setGrupo(g);
+		} catch (err: any) {
+			showMsg(err.message || 'Error al cancelar', 'error');
+		} finally {
+			setCancelandoTransferencia(false);
+		}
+	};
+
+	const confirmarAceptarTransferencia = async () => {
+		if (!grupoId) return;
+		setConfirmAction(null);
+		setAceptandoTransferencia(true);
+		try {
+			await gruposService.aceptarTransferencia(grupoId);
+			showMsg('Has aceptado la administración del grupo');
+			const g = await gruposService.getGrupo(grupoId);
+			setGrupo(g);
+		} catch (err: any) {
+			showMsg(err.message || 'Error al aceptar', 'error');
+		} finally {
+			setAceptandoTransferencia(false);
+		}
+	};
+
+	const confirmarRechazarTransferencia = async () => {
+		if (!grupoId) return;
+		setConfirmAction(null);
+		setRechazandoTransferencia(true);
+		try {
+			await gruposService.rechazarTransferencia(grupoId);
+			showMsg('Has rechazado la administración del grupo');
+			const g = await gruposService.getGrupo(grupoId);
+			setGrupo(g);
+		} catch (err: any) {
+			showMsg(err.message || 'Error al rechazar', 'error');
+		} finally {
+			setRechazandoTransferencia(false);
 		}
 	};
 
@@ -315,11 +369,40 @@ export default function DetalleGrupoScreen() {
 									>
 										+ Miembro
 									</button>
+									{grupo.estado !== 'PENDIENTE_TRANSFERENCIA' && (
+										<button
+											className="uc-btn warning"
+											onClick={() => setShowTransferModal(true)}
+										>
+											Nominar candidato
+										</button>
+									)}
+									{grupo.estado === 'PENDIENTE_TRANSFERENCIA' && (
+										<button
+											className="uc-btn outline"
+											onClick={() => setConfirmAction({ kind: 'cancelar-transferencia' })}
+											disabled={cancelandoTransferencia}
+										>
+											{cancelandoTransferencia ? '...' : 'Cancelar nominación'}
+										</button>
+									)}
+								</>
+							)}
+							{grupo.candidatoAdminId === userId && grupo.estado === 'PENDIENTE_TRANSFERENCIA' && (
+								<>
 									<button
-										className="uc-btn warning"
-										onClick={() => setShowTransferModal(true)}
+										className="uc-btn success"
+										onClick={() => setConfirmAction({ kind: 'aceptar-transferencia' })}
+										disabled={aceptandoTransferencia}
 									>
-										Transferir
+										{aceptandoTransferencia ? '...' : 'Aceptar admin'}
+									</button>
+									<button
+										className="uc-btn danger"
+										onClick={() => setConfirmAction({ kind: 'rechazar-transferencia' })}
+										disabled={rechazandoTransferencia}
+									>
+										{rechazandoTransferencia ? '...' : 'Rechazar admin'}
 									</button>
 								</>
 							)}
@@ -447,14 +530,14 @@ export default function DetalleGrupoScreen() {
 				<div className="uc-modal-overlay" onClick={() => setShowTransferModal(false)}>
 					<div className="uc-modal" onClick={(e) => e.stopPropagation()}>
 						<h2 style={{ margin: '0 0 16px', fontSize: 18, color: '#00284d' }}>
-							Transferir administración
+							Nominar candidato a administrador
 						</h2>
 						<p style={{ color: '#7a9ab5', fontSize: 14, marginBottom: 16 }}>
-							Elige a un miembro del grupo para que sea el nuevo administrador.
+							Elige al miembro que deseas nominar. Deberá aceptar la transferencia para que sea efectiva.
 						</p>
 						{grupo?.miembros?.filter((m) => m.id !== userId).length === 0 ? (
 							<p style={{ color: '#e74c3c' }}>
-								No hay otros miembros a los que transferir.
+								No hay otros miembros a los que nominar.
 							</p>
 						) : (
 							grupo?.miembros
@@ -475,7 +558,7 @@ export default function DetalleGrupoScreen() {
 											onClick={() => handleTransferAdmin(m.id)}
 											disabled={transferindoId === m.id}
 										>
-											{transferindoId === m.id ? '...' : 'Elegir'}
+											{transferindoId === m.id ? '...' : 'Nominar'}
 										</button>
 									</div>
 								))
@@ -501,9 +584,11 @@ export default function DetalleGrupoScreen() {
 					>
 						<h2 style={{ margin: '0 0 12px', fontSize: 18, color: '#00284d' }}>
 							{confirmAction.kind === 'abandonar' && 'Salir del grupo'}
-							{confirmAction.kind === 'transferir' && 'Confirmar transferencia'}
-							{confirmAction.kind === 'transferir-por-error' &&
-								'Transferir administración'}
+							{confirmAction.kind === 'transferir' && 'Confirmar nominación'}
+							{confirmAction.kind === 'transferir-por-error' && 'Nominar candidato'}
+							{confirmAction.kind === 'cancelar-transferencia' && 'Cancelar nominación'}
+							{confirmAction.kind === 'aceptar-transferencia' && 'Aceptar administración'}
+							{confirmAction.kind === 'rechazar-transferencia' && 'Rechazar administración'}
 						</h2>
 						<p
 							style={{
@@ -516,9 +601,15 @@ export default function DetalleGrupoScreen() {
 							{confirmAction.kind === 'abandonar' &&
 								'¿Seguro que quieres abandonar este grupo?'}
 							{confirmAction.kind === 'transferir' &&
-								'¿Seguro que deseas transferir la administración a este miembro?'}
+								'¿Seguro que deseas nominar a este miembro como candidato a administrador? Deberá aceptar para que la transferencia sea efectiva.'}
 							{confirmAction.kind === 'transferir-por-error' &&
-								'Para salir, primero debes transferir la administración a otro miembro del grupo.'}
+								'Para salir, primero debes nominar a otro miembro como candidato a administrador.'}
+							{confirmAction.kind === 'cancelar-transferencia' &&
+								'¿Seguro que deseas cancelar la nominación? El candidato ya no podrá aceptar ni rechazar.'}
+							{confirmAction.kind === 'aceptar-transferencia' &&
+								'¿Aceptas convertirte en el nuevo administrador de este grupo?'}
+							{confirmAction.kind === 'rechazar-transferencia' &&
+								'¿Seguro que deseas rechazar la administración? El administrador actual conservará su rol.'}
 						</p>
 						<div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
 							<button className="uc-btn outline" onClick={() => setConfirmAction(null)}>
@@ -539,7 +630,7 @@ export default function DetalleGrupoScreen() {
 									onClick={confirmarTransferencia}
 									disabled={transferindoId === confirmAction.miembroId}
 								>
-									{transferindoId === confirmAction.miembroId ? '...' : 'Aceptar'}
+									{transferindoId === confirmAction.miembroId ? '...' : 'Nominar'}
 								</button>
 							)}
 							{confirmAction.kind === 'transferir-por-error' && (
@@ -550,7 +641,34 @@ export default function DetalleGrupoScreen() {
 										setShowTransferModal(true);
 									}}
 								>
-									Ir a transferir
+									Ir a nominar
+								</button>
+							)}
+							{confirmAction.kind === 'cancelar-transferencia' && (
+								<button
+									className="uc-btn danger"
+									onClick={confirmarCancelTransferencia}
+									disabled={cancelandoTransferencia}
+								>
+									{cancelandoTransferencia ? '...' : 'Cancelar nominación'}
+								</button>
+							)}
+							{confirmAction.kind === 'aceptar-transferencia' && (
+								<button
+									className="uc-btn success"
+									onClick={confirmarAceptarTransferencia}
+									disabled={aceptandoTransferencia}
+								>
+									{aceptandoTransferencia ? '...' : 'Aceptar'}
+								</button>
+							)}
+							{confirmAction.kind === 'rechazar-transferencia' && (
+								<button
+									className="uc-btn danger"
+									onClick={confirmarRechazarTransferencia}
+									disabled={rechazandoTransferencia}
+								>
+									{rechazandoTransferencia ? '...' : 'Rechazar'}
 								</button>
 							)}
 						</div>

@@ -5,7 +5,7 @@ primary_region = 'gru'
 [build]
   dockerfile = "web/Dockerfile"
   [build.args]
-    EXPO_PUBLIC_API_URL            = "https://uniconnect-backend.fly.dev"
+    VITE_API_URL                   = "https://uniconnect-backend.fly.dev"
     EXPO_PUBLIC_ALLOWED_DOMAIN     = "ucaldas.edu.co"
     EXPO_PUBLIC_AUTH0_CONNECTION   = "google-oauth2"
     # Las siguientes se pasan via `fly secrets set` antes del deploy

@@ -6,7 +6,6 @@
 		"module": "esnext",
 		"types": ["vite/client"],
 		"skipLibCheck": true,
-		"baseUrl": ".",
 		"paths": {
 			"@uniconnect/api-types": ["../packages/api-types/dist/index.d.ts"]
 		},
