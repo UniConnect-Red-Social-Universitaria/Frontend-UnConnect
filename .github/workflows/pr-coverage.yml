@@ -1,6 +1,10 @@
-name: PR - Coverage Report (Frontend)
+name: PR & Push - Coverage Report (Frontend)
 
 on:
+  push:
+    branches:
+      - main
+      - developer
   pull_request:
     branches:
       - main
@@ -23,8 +27,8 @@ jobs:
       - name: 🔧 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: 📦 Install dependencies
         run: npm ci
@@ -35,7 +39,6 @@ jobs:
       - name: 🧪 Run tests with coverage
         run: |
           npm run test:all -- --coverage
-          npm --workspace @uniconnect/app run test -- --coverage
         continue-on-error: true
 
       - name: 📈 Parse Web coverage
@@ -83,23 +86,22 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const webStmt = ${{ steps.web-coverage.outputs.statements || 0 }};
-            const webBranches = ${{ steps.web-coverage.outputs.branches || 0 }};
-            const webFunctions = ${{ steps.web-coverage.outputs.functions || 0 }};
-            const webLines = ${{ steps.web-coverage.outputs.lines || 0 }};
-            
-            const appStmt = ${{ steps.app-coverage.outputs.statements || 0 }};
-            const appBranches = ${{ steps.app-coverage.outputs.branches || 0 }};
-            const appFunctions = ${{ steps.app-coverage.outputs.functions || 0 }};
-            const appLines = ${{ steps.app-coverage.outputs.lines || 0 }};
-            
+            // Envolvemos en comillas y convertimos a número. 
+            // Si llega "Unknown", Number('Unknown') da NaN, y NaN || 0 da como resultado 0.
+            const webStmt = Number('${{ steps.web-coverage.outputs.statements }}') || 0;
+            const webBranches = Number('${{ steps.web-coverage.outputs.branches }}') || 0;
+            const webFunctions = Number('${{ steps.web-coverage.outputs.functions }}') || 0;
+            const webLines = Number('${{ steps.web-coverage.outputs.lines }}') || 0;
+
+            const appStmt = Number('${{ steps.app-coverage.outputs.statements }}') || 0;
+            const appBranches = Number('${{ steps.app-coverage.outputs.branches }}') || 0;
+            const appFunctions = Number('${{ steps.app-coverage.outputs.functions }}') || 0;
+            const appLines = Number('${{ steps.app-coverage.outputs.lines }}') || 0;
+
             const threshold = 75;
-            
-            const webBelowThreshold = webStmt < threshold;
-            const appBelowThreshold = appStmt < threshold;
-            
+
             const comment = `## 📊 Frontend Code Coverage Report
-            
+
             ### 🌐 Web Coverage
             ${webStmt > 0 ? `
             | Metric | Coverage | Status |
@@ -109,7 +111,7 @@ jobs:
             | Functions | ${webFunctions.toFixed(2)}% | ${webFunctions >= threshold ? '✅' : '❌'} |
             | Lines | ${webLines.toFixed(2)}% | ${webLines >= threshold ? '✅' : '❌'} |
             ` : '⚠️ No coverage data available'}
-            
+
             ### 📱 App Coverage
             ${appStmt > 0 ? `
             | Metric | Coverage | Status |
@@ -119,32 +121,41 @@ jobs:
             | Functions | ${appFunctions.toFixed(2)}% | ${appFunctions >= threshold ? '✅' : '❌'} |
             | Lines | ${appLines.toFixed(2)}% | ${appLines >= threshold ? '✅' : '❌'} |
             ` : '⚠️ No coverage data available'}
-            
+
             **Threshold**: ${threshold}%
-            
+
             ---
             💡 *To improve coverage, add unit tests for uncovered lines and branches.*`;
-            
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-            
-            const existingComment = comments.find(c => c.body.includes('📊 Frontend Code Coverage Report'));
-            
-            if (existingComment) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existingComment.id,
-                body: comment,
-              });
-            } else {
-              await github.rest.issues.createComment({
+
+            if (context.eventName === 'pull_request') {
+              const { data: comments } = await github.rest.issues.listComments({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
+              });
+              
+              const existingComment = comments.find(c => c.body.includes('📊 Frontend Code Coverage Report'));
+              
+              if (existingComment) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existingComment.id,
+                  body: comment,
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: comment,
+                });
+              }
+            } else if (context.eventName === 'push') {
+              await github.rest.repos.createCommitComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                commit_sha: context.sha,
                 body: comment,
               });
             }
