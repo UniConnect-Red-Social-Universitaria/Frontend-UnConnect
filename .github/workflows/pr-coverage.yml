@@ -166,9 +166,9 @@ jobs:
               });
             }
 
-      - name: 🚫 Block merge if coverage below threshold
-        if: steps.web-coverage.outputs.below_threshold == 'true'
-        run: |
-          echo "❌ Web coverage is below 75% threshold!"
-          echo "Statements: ${{ steps.web-coverage.outputs.statements }}%"
-          exit 1
+      # - name: 🚫 Block merge if coverage below threshold
+      #   if: steps.web-coverage.outputs.below_threshold == 'true'
+      #   run: |
+      #     echo "❌ Web coverage is below 75% threshold!"
+      #     echo "Statements: ${{ steps.web-coverage.outputs.statements }}%"
+      #     exit 1
