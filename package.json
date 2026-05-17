@@ -13,7 +13,8 @@
         "test:app": "npm --workspace uniconnect-app run test",
         "generate:api-types": "npm --workspace @uniconnect/api-types run generate",
         "test:web": "npm --workspace web run test",
-        "test:all": "npm run test:app && npm run test:web"
+        "test:all": "npm run test --workspace uniconnect-app && npm run test --workspace web",
+        "test:coverage": "npm run test --workspace uniconnect-app -- --coverage && npm run test --workspace web -- --coverage"
     },
     "overrides": {
         "react": "19.1.0",

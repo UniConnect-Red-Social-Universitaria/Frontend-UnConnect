@@ -38,13 +38,14 @@ jobs:
 
       - name: 🧪 Run tests with coverage
         run: |
-          npm run test:all -- --coverage
+          npm run test:coverage
         continue-on-error: true
 
       - name: 📈 Parse Web coverage
         id: web-coverage
         run: |
           if [ -f ./web/coverage/coverage-summary.json ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
             STATEMENTS=$(jq -r 'if (.total.statements.pct | type) == "number" then .total.statements.pct else 0 end' ./web/coverage/coverage-summary.json)
             BRANCHES=$(jq -r 'if (.total.branches.pct | type) == "number" then .total.branches.pct else 0 end' ./web/coverage/coverage-summary.json)
             FUNCTIONS=$(jq -r 'if (.total.functions.pct | type) == "number" then .total.functions.pct else 0 end' ./web/coverage/coverage-summary.json)
@@ -60,6 +61,7 @@ jobs:
               echo "below_threshold=true" >> $GITHUB_OUTPUT
             fi
           else
+            echo "found=false" >> $GITHUB_OUTPUT
             echo "No web coverage found"
             echo "statements=0" >> $GITHUB_OUTPUT
           fi
@@ -68,6 +70,7 @@ jobs:
         id: app-coverage
         run: |
           if [ -f ./app/coverage/coverage-summary.json ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
             STATEMENTS=$(jq -r 'if (.total.statements.pct | type) == "number" then .total.statements.pct else 0 end' ./app/coverage/coverage-summary.json)
             BRANCHES=$(jq -r 'if (.total.branches.pct | type) == "number" then .total.branches.pct else 0 end' ./app/coverage/coverage-summary.json)
             FUNCTIONS=$(jq -r 'if (.total.functions.pct | type) == "number" then .total.functions.pct else 0 end' ./app/coverage/coverage-summary.json)
@@ -78,6 +81,7 @@ jobs:
             echo "functions=$FUNCTIONS" >> $GITHUB_OUTPUT
             echo "lines=$LINES" >> $GITHUB_OUTPUT
           else
+            echo "found=false" >> $GITHUB_OUTPUT
             echo "No app coverage found"
             echo "statements=0" >> $GITHUB_OUTPUT
           fi
@@ -87,8 +91,9 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            // Envolvemos en comillas y convertimos a número. 
-            // Si llega "Unknown", Number('Unknown') da NaN, y NaN || 0 da como resultado 0.
+            const webFound = '${{ steps.web-coverage.outputs.found }}' === 'true';
+            const appFound = '${{ steps.app-coverage.outputs.found }}' === 'true';
+
             const webStmt = Number('${{ steps.web-coverage.outputs.statements }}') || 0;
             const webBranches = Number('${{ steps.web-coverage.outputs.branches }}') || 0;
             const webFunctions = Number('${{ steps.web-coverage.outputs.functions }}') || 0;
@@ -104,7 +109,7 @@ jobs:
             const comment = `## 📊 Frontend Code Coverage Report
 
             ### 🌐 Web Coverage
-            ${webStmt > 0 ? `
+            ${webFound ? `
             | Metric | Coverage | Status |
             |--------|----------|--------|
             | Statements | ${webStmt.toFixed(2)}% | ${webStmt >= threshold ? '✅' : '❌'} |
@@ -114,7 +119,7 @@ jobs:
             ` : '⚠️ No coverage data available'}
 
             ### 📱 App Coverage
-            ${appStmt > 0 ? `
+            ${appFound ? `
             | Metric | Coverage | Status |
             |--------|----------|--------|
             | Statements | ${appStmt.toFixed(2)}% | ${appStmt >= threshold ? '✅' : '❌'} |
@@ -164,6 +169,6 @@ jobs:
       - name: 🚫 Block merge if coverage below threshold
         if: steps.web-coverage.outputs.below_threshold == 'true'
         run: |
-          echo "❌ Web coverage is below 0% threshold!"
+          echo "❌ Web coverage is below 75% threshold!"
           echo "Statements: ${{ steps.web-coverage.outputs.statements }}%"
           exit 1
