@@ -9,6 +9,7 @@ import {
 	View,
 	Text as RNText,
 	Pressable,
+	Switch,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PrimaryButton, Screen, SecondaryButton, Text, Title } from '@uniconnect/ui';
@@ -20,6 +21,15 @@ import theme from '../styles/theme';
 import { materiasService, usuariosService, authService } from '../services';
 import { Materia, Usuario, PerfilEnriquecido, Insignia } from '../types/api.types';
 import { showToast } from '../utils/toast';
+import {
+	getPreferenciasNotificaciones,
+	updatePreferenciaNotificacion,
+	CANALES,
+	type CanalNotificacion,
+	type TipoEvento,
+	updateMultiplesPreferencias,
+	TIPO_EVENTO_LABELS,
+} from '../services/notificaciones-preferencias.service';
 
 type EditarPerfilScreenNavigationProp = StackNavigationProp<
 	RootStackParamList,
@@ -218,6 +228,39 @@ const styles = StyleSheet.create({
 		padding: theme.spacing.xl,
 		gap: theme.spacing.sm,
 	},
+	notificacionesSection: {
+		backgroundColor: '#fff',
+		borderRadius: 14,
+		padding: 18,
+		borderWidth: 1,
+		borderColor: '#e8eef4',
+		marginTop: 16,
+	},
+	notificacionRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+		paddingVertical: 12,
+		borderBottomWidth: 1,
+		borderBottomColor: '#f0f4f8',
+	},
+	notificacionRowLast: {
+		borderBottomWidth: 0,
+	},
+	notificacionContent: {
+		flex: 1,
+		marginRight: 12,
+	},
+	notificacionLabel: {
+		fontSize: 15,
+		fontWeight: '600',
+		color: theme.colors.primaryDark,
+		marginBottom: 4,
+	},
+	notificacionEmoji: {
+		fontSize: 18,
+		marginRight: 8,
+	},
 });
 
 export default function EditarPerfilScreen({
@@ -233,6 +276,10 @@ export default function EditarPerfilScreen({
 	const [guardando, setGuardando] = useState(false);
 	const [expandido, setExpandido] = useState(false);
 	const [perfil, setPerfil] = useState<PerfilEnriquecido | null>(null);
+	const [preferenciasNotificaciones, setPreferenciasNotificaciones] = useState<
+		Record<CanalNotificacion, boolean>
+	>({ 'in-app': true, 'email': false, 'push': false });
+	const [cargandoNotificaciones, setCargandoNotificaciones] = useState(false);
 	const [errores, setErrores] = useState({
 		semestre: '',
 		materias: '',
@@ -268,16 +315,44 @@ export default function EditarPerfilScreen({
 			];
 			setSelectedMateriasIds(idsResueltos);
 			setMateriasCatalogo(materiasData || []);
-		} catch (error: any) {
-			showToast.error(error?.message || 'No se pudo cargar el perfil académico');
-		} finally {
-			setCargando(false);
-		}
-	}, []);
+		} catch (error) {
+            const errMsg = error instanceof Error ? error.message : 'No se pudo cargar el perfil académico';
+            showToast.error(errMsg);
+        } finally {
+            setCargando(false);
+        }
+    }, []);
+
+	const cargarPreferenciasNotificaciones = useCallback(async () => {
+        setCargandoNotificaciones(true);
+        try {
+            const preferencias = await getPreferenciasNotificaciones();
+            const canalMap: Record<CanalNotificacion, boolean> = {
+                'in-app': false,
+                'email': false,
+                'push': false,
+            };
+            
+            // Buscar la preferencia de "mensaje" (tipo de evento más general)
+            const prefMensaje = preferencias.find(p => p.tipoEvento === 'mensaje');
+            if (prefMensaje) {
+                prefMensaje.canales.forEach(canal => {
+                    canalMap[canal] = true;
+                });
+            }
+            
+            setPreferenciasNotificaciones(canalMap);
+        } catch (error) {
+            console.log('No se pudieron cargar preferencias:', error);
+        } finally {
+            setCargandoNotificaciones(false);
+        }
+    }, []);
 
 	useEffect(() => {
 		void cargarPerfilAcademico();
-	}, [cargarPerfilAcademico]);
+		void cargarPreferenciasNotificaciones();
+	}, [cargarPerfilAcademico, cargarPreferenciasNotificaciones]);
 
 	const validarFormulario = () => {
 		const nuevosErrores = {
@@ -303,35 +378,47 @@ export default function EditarPerfilScreen({
 		return esValido;
 	};
 
-	const handleGuardarCambios = async () => {
-		if (!validarFormulario()) {
-			showToast.error('Debes seleccionar al menos una materia.');
-			return;
-		}
+const handleGuardarCambios = async () => {
+    if (!validarFormulario()) {
+        showToast.error('Debes seleccionar al menos una materia.');
+        return;
+    }
 
-		setGuardando(true);
-		try {
-			const payload = {
-				semestre: Number(semestre),
-				materiasCursando: [...new Set(selectedMateriasIds)],
-			};
+    setGuardando(true);
+    try {
+        const payload = {
+            semestre: Number(semestre),
+            materiasCursando: [...new Set(selectedMateriasIds)],
+        };
 
-			const response = await usuariosService.updatePerfil(payload);
+        const canalesSeleccionados: CanalNotificacion[] = (
+            Object.entries(preferenciasNotificaciones) as [CanalNotificacion, boolean][]
+        )
+            .filter(([_, enabled]) => enabled)
+            .map(([canal]) => canal);
 
-			if (!response.success) {
-				showToast.error(response.message || 'No se pudieron guardar los cambios');
-				return;
-			}
+        // 👇 Lista idéntica extraída dinámicamente de las llaves del diccionario unificado
+        const tiposEvento: TipoEvento[] = Object.keys(TIPO_EVENTO_LABELS) as TipoEvento[];
 
-			showToast.success('Tu perfil académico se actualizó correctamente.');
-			await cargarPerfilAcademico();
-		} catch (error: any) {
-			showToast.error(error?.message || 'No se pudieron guardar los cambios');
-		} finally {
-			setGuardando(false);
-		}
-	};
+        // Guardamos todo en paralelo
+        const [responsePerfil] = await Promise.all([
+            usuariosService.updatePerfil(payload),
+            updateMultiplesPreferencias(tiposEvento, canalesSeleccionados)
+        ]);
 
+        if (!responsePerfil.success) {
+            showToast.error(responsePerfil.message || 'No se pudieron guardar los cambios');
+            return;
+        }
+
+        showToast.success('Tu perfil académico y preferencias se actualizaron correctamente.');
+        await cargarPerfilAcademico();
+    } catch (error: any) {
+        showToast.error(error?.message || 'No se pudieron guardar los cambios');
+    } finally {
+        setGuardando(false);
+    }
+};
 	if (cargando) {
 		return (
 			<Screen style={styles.loadingContainer}>
@@ -486,6 +573,41 @@ export default function EditarPerfilScreen({
 											})}
 										</View>
 									)}
+
+									<View style={styles.notificacionesSection}>
+										<Text style={styles.sectionTitle}>📬 Canales de Notificaciones</Text>
+										{CANALES.map((canal, idx) => (
+											<View 
+												key={canal.id}
+												style={[
+													styles.notificacionRow,
+													idx === CANALES.length - 1 && styles.notificacionRowLast,
+												]}
+											>
+												<View style={styles.notificacionContent}>
+													<Text style={styles.notificacionLabel}>
+														<RNText>{canal.emoji}</RNText> {canal.label}
+													</Text>
+												</View>
+												<Switch
+													value={preferenciasNotificaciones[canal.id]}
+													onValueChange={(valor) => {
+														setPreferenciasNotificaciones(prev => ({
+															...prev,
+															[canal.id]: valor,
+														}));
+													}}
+													trackColor={{ false: '#cbd5e1', true: '#10b981' }}
+													thumbColor={
+														preferenciasNotificaciones[canal.id]
+															? '#27ae60'
+															: '#f3f4f6'
+													}
+													disabled={guardando || cargandoNotificaciones}
+												/>
+											</View>
+										))}
+									</View>
 								</>
 							)}
 						</View>
