@@ -5,11 +5,11 @@ import { apiClient } from '../api/apiClient';
 type CategoriaEvento = 'academico' | 'cultural' | 'deportivo' | 'otro';
 
 const CATEGORIAS: { value: CategoriaEvento | 'todas'; label: string; icon: string }[] = [
-	{ value: 'todas',      label: 'Todas',      icon: '🗂️' },
-	{ value: 'academico',  label: 'Académico',  icon: '🎓' },
-	{ value: 'cultural',   label: 'Cultural',   icon: '🎭' },
-	{ value: 'deportivo',  label: 'Deportivo',  icon: '⚽' },
-	{ value: 'otro',       label: 'Otro',       icon: '📌' },
+	{ value: 'todas', label: 'Todas', icon: '🗂️' },
+	{ value: 'academico', label: 'Académico', icon: '🎓' },
+	{ value: 'cultural', label: 'Cultural', icon: '🎭' },
+	{ value: 'deportivo', label: 'Deportivo', icon: '⚽' },
+	{ value: 'otro', label: 'Otro', icon: '📌' },
 ];
 
 type Evento = {
@@ -25,14 +25,17 @@ type Evento = {
 function formatearFecha(fechaIso: string): string {
 	const fecha = new Date(fechaIso);
 	if (isNaN(fecha.getTime())) return 'Fecha inválida';
-	return new Intl.DateTimeFormat('es-CO', { dateStyle: 'full', timeStyle: 'short' }).format(fecha);
+	return new Intl.DateTimeFormat('es-CO', {
+		dateStyle: 'full',
+		timeStyle: 'short',
+	}).format(fecha);
 }
 
 const BADGE_COLORS: Record<CategoriaEvento, { bg: string; color: string }> = {
-	academico:  { bg: '#e8f0fe', color: '#1a73e8' },
-	cultural:   { bg: '#fce8b2', color: '#b06000' },
-	deportivo:  { bg: '#e6f4ea', color: '#1e8449' },
-	otro:       { bg: '#f0f4f8', color: '#4a6a85' },
+	academico: { bg: '#e8f0fe', color: '#1a73e8' },
+	cultural: { bg: '#fce8b2', color: '#b06000' },
+	deportivo: { bg: '#e6f4ea', color: '#1e8449' },
+	otro: { bg: '#f0f4f8', color: '#4a6a85' },
 };
 
 const SUSCRIPCIONES_KEY = 'uc_suscripciones_categorias';
@@ -42,12 +45,23 @@ export default function EventosScreen() {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [filtro, setFiltro] = useState<CategoriaEvento | 'todas'>('todas');
-	const [categoriasSuscritas, setCategoriasSuscritas] = useState<Set<CategoriaEvento>>(new Set());
+	const [categoriasSuscritas, setCategoriasSuscritas] = useState<Set<CategoriaEvento>>(
+		new Set()
+	);
 	const [showCrear, setShowCrear] = useState(false);
-	const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+	const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(
+		null
+	);
 
 	// Crear evento form
-	const [form, setForm] = useState({ titulo: '', descripcion: '', lugar: '', fechaEvento: '', horaEvento: '', categoria: 'academico' as CategoriaEvento });
+	const [form, setForm] = useState({
+		titulo: '',
+		descripcion: '',
+		lugar: '',
+		fechaEvento: '',
+		horaEvento: '',
+		categoria: 'academico' as CategoriaEvento,
+	});
 	const [creandoEvento, setCreandoEvento] = useState(false);
 	const [crearError, setCrearError] = useState('');
 
@@ -56,11 +70,46 @@ export default function EventosScreen() {
 		setTimeout(() => setToast(null), 3500);
 	};
 
+	const sincronizarSuscripcionesBackend = useCallback(async () => {
+		let categoriasLocales: CategoriaEvento[] = [];
+		try {
+			const raw = localStorage.getItem(SUSCRIPCIONES_KEY);
+			categoriasLocales = raw ? JSON.parse(raw) : [];
+		} catch {
+			categoriasLocales = [];
+		}
+
+		try {
+			const resp = await apiClient.get<{ success: boolean; data?: CategoriaEvento[] }>(
+				'/api/eventos/suscripciones'
+			);
+			const categoriasBackend = new Set(
+				(resp.data?.data ?? []).filter((cat): cat is CategoriaEvento =>
+					CATEGORIAS.some((item) => item.value === cat)
+				)
+			);
+
+			for (const categoria of categoriasLocales) {
+				if (!categoriasBackend.has(categoria)) {
+					await apiClient.post('/api/eventos/suscripciones', { categoria });
+					categoriasBackend.add(categoria);
+				}
+			}
+
+			const next = Array.from(categoriasBackend);
+			setCategoriasSuscritas(new Set(next));
+			localStorage.setItem(SUSCRIPCIONES_KEY, JSON.stringify(next));
+		} catch {
+			setCategoriasSuscritas(new Set(categoriasLocales));
+		}
+	}, []);
+
 	const cargarEventos = useCallback(async (cat?: CategoriaEvento | 'todas') => {
 		setLoading(true);
 		setError(null);
 		try {
-			const url = cat && cat !== 'todas' ? `/api/eventos?categoria=${cat}` : '/api/eventos';
+			const url =
+				cat && cat !== 'todas' ? `/api/eventos?categoria=${cat}` : '/api/eventos';
 			const resp = await apiClient.get<Evento[]>(url);
 			setEventos(resp.data ?? []);
 		} catch (err: any) {
@@ -71,13 +120,9 @@ export default function EventosScreen() {
 	}, []);
 
 	useEffect(() => {
-		// Cargar suscripciones guardadas
-		try {
-			const raw = localStorage.getItem(SUSCRIPCIONES_KEY);
-			if (raw) setCategoriasSuscritas(new Set(JSON.parse(raw)));
-		} catch {}
+		void sincronizarSuscripcionesBackend();
 		cargarEventos('todas');
-	}, [cargarEventos]);
+	}, [cargarEventos, sincronizarSuscripcionesBackend]);
 
 	const aplicarFiltro = async (cat: CategoriaEvento | 'todas') => {
 		setFiltro(cat);
@@ -110,14 +155,32 @@ export default function EventosScreen() {
 	const handleCrearEvento = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setCrearError('');
-		if (!form.titulo.trim()) { setCrearError('El título es obligatorio.'); return; }
-		if (!form.descripcion.trim()) { setCrearError('La descripción es obligatoria.'); return; }
-		if (!form.fechaEvento) { setCrearError('La fecha es obligatoria.'); return; }
-		if (!form.horaEvento) { setCrearError('La hora es obligatoria.'); return; }
+		if (!form.titulo.trim()) {
+			setCrearError('El título es obligatorio.');
+			return;
+		}
+		if (!form.descripcion.trim()) {
+			setCrearError('La descripción es obligatoria.');
+			return;
+		}
+		if (!form.fechaEvento) {
+			setCrearError('La fecha es obligatoria.');
+			return;
+		}
+		if (!form.horaEvento) {
+			setCrearError('La hora es obligatoria.');
+			return;
+		}
 
 		const fechaCompleta = new Date(`${form.fechaEvento}T${form.horaEvento}:00`);
-		if (isNaN(fechaCompleta.getTime())) { setCrearError('Fecha u hora inválida.'); return; }
-		if (fechaCompleta < new Date()) { setCrearError('La fecha debe ser futura.'); return; }
+		if (isNaN(fechaCompleta.getTime())) {
+			setCrearError('Fecha u hora inválida.');
+			return;
+		}
+		if (fechaCompleta < new Date()) {
+			setCrearError('La fecha debe ser futura.');
+			return;
+		}
 
 		setCreandoEvento(true);
 		try {
@@ -130,7 +193,14 @@ export default function EventosScreen() {
 			});
 			showMsg('Evento creado exitosamente');
 			setShowCrear(false);
-			setForm({ titulo: '', descripcion: '', lugar: '', fechaEvento: '', horaEvento: '', categoria: 'academico' });
+			setForm({
+				titulo: '',
+				descripcion: '',
+				lugar: '',
+				fechaEvento: '',
+				horaEvento: '',
+				categoria: 'academico',
+			});
 			await cargarEventos(filtro);
 		} catch (err: any) {
 			setCrearError(err.message || 'Error al crear el evento');
@@ -168,7 +238,21 @@ export default function EventosScreen() {
 			`}</style>
 
 			{toast && (
-				<div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999, backgroundColor: toast.type === 'error' ? '#c0392b' : '#27ae60', color: '#fff', padding: '12px 20px', borderRadius: 10, fontSize: 14, fontWeight: 500, boxShadow: '0 4px 16px rgba(0,0,0,0.18)' }}>
+				<div
+					style={{
+						position: 'fixed',
+						bottom: 24,
+						right: 24,
+						zIndex: 9999,
+						backgroundColor: toast.type === 'error' ? '#c0392b' : '#27ae60',
+						color: '#fff',
+						padding: '12px 20px',
+						borderRadius: 10,
+						fontSize: 14,
+						fontWeight: 500,
+						boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+					}}
+				>
 					{toast.msg}
 				</div>
 			)}
@@ -179,28 +263,40 @@ export default function EventosScreen() {
 						<h1 style={s.pageTitle}>Eventos</h1>
 						<p style={s.pageSubtitle}>Comunidad Universidad de Caldas</p>
 					</div>
-					<button className="uc-btn-primary" onClick={() => setShowCrear(true)}>+ Publicar evento</button>
+					<button className="uc-btn-primary" onClick={() => setShowCrear(true)}>
+						+ Publicar evento
+					</button>
 				</div>
 
 				{/* Filtros por categoría */}
 				<div style={s.filtrosWrap}>
 					<div style={s.chipRow}>
 						{CATEGORIAS.map((cat) => (
-							<button key={cat.value} className={`uc-chip${filtro === cat.value ? ' active' : ''}`} onClick={() => aplicarFiltro(cat.value)}>
+							<button
+								key={cat.value}
+								className={`uc-chip${filtro === cat.value ? ' active' : ''}`}
+								onClick={() => aplicarFiltro(cat.value)}
+							>
 								{cat.icon} {cat.label}
 							</button>
 						))}
 					</div>
 					{filtro !== 'todas' && (
-						<div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
+						<div
+							style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}
+						>
 							<span style={{ fontSize: 13, color: '#4a6a85' }}>
-								{categoriasSuscritas.has(filtro as CategoriaEvento) ? '✓ Suscrito a esta categoría' : 'Recibir notificaciones de esta categoría'}
+								{categoriasSuscritas.has(filtro as CategoriaEvento)
+									? '✓ Suscrito a esta categoría'
+									: 'Recibir notificaciones de esta categoría'}
 							</span>
 							<button
 								className={`uc-suscribir-btn${categoriasSuscritas.has(filtro as CategoriaEvento) ? ' suscrito' : ''}`}
 								onClick={() => toggleSuscripcion(filtro as CategoriaEvento)}
 							>
-								{categoriasSuscritas.has(filtro as CategoriaEvento) ? 'Desuscribirse' : 'Suscribirse 🔔'}
+								{categoriasSuscritas.has(filtro as CategoriaEvento)
+									? 'Desuscribirse'
+									: 'Suscribirse 🔔'}
 							</button>
 						</div>
 					)}
@@ -219,7 +315,9 @@ export default function EventosScreen() {
 						{eventos.length === 0 ? (
 							<div style={s.emptyState}>
 								<span style={{ fontSize: 44 }}>📅</span>
-								<p style={{ fontSize: 15, color: '#7a9ab5', margin: '12px 0 0' }}>No hay eventos próximos en este momento.</p>
+								<p style={{ fontSize: 15, color: '#7a9ab5', margin: '12px 0 0' }}>
+									No hay eventos próximos en este momento.
+								</p>
 							</div>
 						) : (
 							<div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -228,16 +326,48 @@ export default function EventosScreen() {
 									return (
 										<div key={ev.id} style={s.card}>
 											<div style={s.cardHeader}>
-												<h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#00284d', flex: 1 }}>{ev.titulo}</h3>
-												<span style={{ backgroundColor: badgeStyle.bg, color: badgeStyle.color, fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, whiteSpace: 'nowrap' }}>
-													{CATEGORIAS.find(c => c.value === ev.categoria)?.icon} {CATEGORIAS.find(c => c.value === ev.categoria)?.label}
+												<h3
+													style={{
+														margin: 0,
+														fontSize: 17,
+														fontWeight: 700,
+														color: '#00284d',
+														flex: 1,
+													}}
+												>
+													{ev.titulo}
+												</h3>
+												<span
+													style={{
+														backgroundColor: badgeStyle.bg,
+														color: badgeStyle.color,
+														fontSize: 11,
+														fontWeight: 700,
+														padding: '4px 10px',
+														borderRadius: 20,
+														whiteSpace: 'nowrap',
+													}}
+												>
+													{CATEGORIAS.find((c) => c.value === ev.categoria)?.icon}{' '}
+													{CATEGORIAS.find((c) => c.value === ev.categoria)?.label}
 												</span>
 											</div>
 											<p style={s.cardDate}>📅 {formatearFecha(ev.fechaEvento)}</p>
 											<p style={s.cardDesc}>{ev.descripcion}</p>
-											<div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 12 }}>
-												<span style={s.cardMeta}>📍 {ev.lugar?.trim() || 'Por definir'}</span>
-												<span style={s.cardMeta}>👤 Organiza: {ev.creador.nombre} {ev.creador.apellido}</span>
+											<div
+												style={{
+													display: 'flex',
+													gap: 16,
+													flexWrap: 'wrap',
+													marginTop: 12,
+												}}
+											>
+												<span style={s.cardMeta}>
+													📍 {ev.lugar?.trim() || 'Por definir'}
+												</span>
+												<span style={s.cardMeta}>
+													👤 Organiza: {ev.creador.nombre} {ev.creador.apellido}
+												</span>
 											</div>
 										</div>
 									);
@@ -252,45 +382,118 @@ export default function EventosScreen() {
 			{showCrear && (
 				<div className="uc-modal-overlay" onClick={() => setShowCrear(false)}>
 					<div className="uc-modal" onClick={(e) => e.stopPropagation()}>
-						<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-							<h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#00284d' }}>📅 Publicar evento</h2>
-							<button onClick={() => setShowCrear(false)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#7a9ab5' }}>✕</button>
+						<div
+							style={{
+								display: 'flex',
+								justifyContent: 'space-between',
+								alignItems: 'center',
+								marginBottom: 20,
+							}}
+						>
+							<h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#00284d' }}>
+								📅 Publicar evento
+							</h2>
+							<button
+								onClick={() => setShowCrear(false)}
+								style={{
+									background: 'none',
+									border: 'none',
+									fontSize: 22,
+									cursor: 'pointer',
+									color: '#7a9ab5',
+								}}
+							>
+								✕
+							</button>
 						</div>
 						<form onSubmit={handleCrearEvento}>
 							<div style={{ marginBottom: 14 }}>
 								<label style={s.label}>Título *</label>
-								<input className="uc-form-input" placeholder="Nombre del evento" value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} disabled={creandoEvento} />
+								<input
+									className="uc-form-input"
+									placeholder="Nombre del evento"
+									value={form.titulo}
+									onChange={(e) => setForm({ ...form, titulo: e.target.value })}
+									disabled={creandoEvento}
+								/>
 							</div>
 							<div style={{ marginBottom: 14 }}>
 								<label style={s.label}>Descripción *</label>
-								<textarea className="uc-form-textarea" placeholder="Describe el evento..." value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} disabled={creandoEvento} />
+								<textarea
+									className="uc-form-textarea"
+									placeholder="Describe el evento..."
+									value={form.descripcion}
+									onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
+									disabled={creandoEvento}
+								/>
 							</div>
 							<div style={{ display: 'flex', gap: 12, marginBottom: 14 }}>
 								<div style={{ flex: 1 }}>
 									<label style={s.label}>Fecha *</label>
-									<input type="date" className="uc-form-input" value={form.fechaEvento} onChange={(e) => setForm({ ...form, fechaEvento: e.target.value })} disabled={creandoEvento} />
+									<input
+										type="date"
+										className="uc-form-input"
+										value={form.fechaEvento}
+										onChange={(e) => setForm({ ...form, fechaEvento: e.target.value })}
+										disabled={creandoEvento}
+									/>
 								</div>
 								<div style={{ flex: 1 }}>
 									<label style={s.label}>Hora *</label>
-									<input type="time" className="uc-form-input" value={form.horaEvento} onChange={(e) => setForm({ ...form, horaEvento: e.target.value })} disabled={creandoEvento} />
+									<input
+										type="time"
+										className="uc-form-input"
+										value={form.horaEvento}
+										onChange={(e) => setForm({ ...form, horaEvento: e.target.value })}
+										disabled={creandoEvento}
+									/>
 								</div>
 							</div>
 							<div style={{ marginBottom: 14 }}>
 								<label style={s.label}>Lugar</label>
-								<input className="uc-form-input" placeholder="Aula, edificio, virtual..." value={form.lugar} onChange={(e) => setForm({ ...form, lugar: e.target.value })} disabled={creandoEvento} />
+								<input
+									className="uc-form-input"
+									placeholder="Aula, edificio, virtual..."
+									value={form.lugar}
+									onChange={(e) => setForm({ ...form, lugar: e.target.value })}
+									disabled={creandoEvento}
+								/>
 							</div>
 							<div style={{ marginBottom: 20 }}>
 								<label style={s.label}>Categoría</label>
-								<select className="uc-form-input" value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value as CategoriaEvento })} disabled={creandoEvento} style={{ cursor: 'pointer' }}>
-									{CATEGORIAS.filter(c => c.value !== 'todas').map((c) => (
-										<option key={c.value} value={c.value}>{c.icon} {c.label}</option>
+								<select
+									className="uc-form-input"
+									value={form.categoria}
+									onChange={(e) =>
+										setForm({ ...form, categoria: e.target.value as CategoriaEvento })
+									}
+									disabled={creandoEvento}
+									style={{ cursor: 'pointer' }}
+								>
+									{CATEGORIAS.filter((c) => c.value !== 'todas').map((c) => (
+										<option key={c.value} value={c.value}>
+											{c.icon} {c.label}
+										</option>
 									))}
 								</select>
 							</div>
-							{crearError && <p style={{ color: '#e74c3c', fontSize: 13, marginBottom: 12 }}>⚠️ {crearError}</p>}
+							{crearError && (
+								<p style={{ color: '#e74c3c', fontSize: 13, marginBottom: 12 }}>
+									⚠️ {crearError}
+								</p>
+							)}
 							<div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-								<button type="button" className="uc-btn-secondary" onClick={() => setShowCrear(false)} disabled={creandoEvento}>Cancelar</button>
-								<button type="submit" className="uc-btn-primary" disabled={creandoEvento}>{creandoEvento ? '...' : 'Publicar'}</button>
+								<button
+									type="button"
+									className="uc-btn-secondary"
+									onClick={() => setShowCrear(false)}
+									disabled={creandoEvento}
+								>
+									Cancelar
+								</button>
+								<button type="submit" className="uc-btn-primary" disabled={creandoEvento}>
+									{creandoEvento ? '...' : 'Publicar'}
+								</button>
 							</div>
 						</form>
 					</div>
@@ -301,21 +504,62 @@ export default function EventosScreen() {
 }
 
 const s: Record<string, React.CSSProperties> = {
-	page: { minHeight: '100%', backgroundColor: '#f0f4f8', fontFamily: "'Inter', sans-serif" },
+	page: {
+		minHeight: '100%',
+		backgroundColor: '#f0f4f8',
+		fontFamily: "'Inter', sans-serif",
+	},
 	content: { maxWidth: 760, margin: '0 auto', padding: '32px 20px 48px' },
-	pageHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 },
+	pageHeader: {
+		display: 'flex',
+		justifyContent: 'space-between',
+		alignItems: 'flex-start',
+		marginBottom: 24,
+		flexWrap: 'wrap',
+		gap: 12,
+	},
 	pageTitle: { margin: '0 0 4px', fontSize: 26, fontWeight: 700, color: '#00284d' },
 	pageSubtitle: { margin: 0, fontSize: 14, color: '#7a9ab5' },
 	filtrosWrap: { marginBottom: 24 },
 	chipRow: { display: 'flex', gap: 8, flexWrap: 'wrap' },
-	centered: { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '64px 0' },
-	spinner: { width: 36, height: 36, border: '3px solid #dce6ef', borderTopColor: theme.colors.primary, borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
-	errorBox: { backgroundColor: '#fdf0f0', border: '1px solid #f5c6cb', borderRadius: 10, padding: '14px 18px', color: '#c0392b', fontSize: 14 },
+	centered: {
+		display: 'flex',
+		flexDirection: 'column',
+		alignItems: 'center',
+		padding: '64px 0',
+	},
+	spinner: {
+		width: 36,
+		height: 36,
+		border: '3px solid #dce6ef',
+		borderTopColor: theme.colors.primary,
+		borderRadius: '50%',
+		animation: 'spin 0.8s linear infinite',
+	},
+	errorBox: {
+		backgroundColor: '#fdf0f0',
+		border: '1px solid #f5c6cb',
+		borderRadius: 10,
+		padding: '14px 18px',
+		color: '#c0392b',
+		fontSize: 14,
+	},
 	emptyState: { textAlign: 'center', padding: '64px 0' },
-	card: { backgroundColor: '#fff', border: '1px solid #e8eef4', borderRadius: 14, padding: '20px 22px' },
+	card: {
+		backgroundColor: '#fff',
+		border: '1px solid #e8eef4',
+		borderRadius: 14,
+		padding: '20px 22px',
+	},
 	cardHeader: { display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 10 },
 	cardDate: { margin: '0 0 8px', fontSize: 13, color: '#1a73e8', fontWeight: 600 },
 	cardDesc: { margin: '0', fontSize: 14, color: '#4a6a85', lineHeight: 1.5 },
 	cardMeta: { fontSize: 13, color: '#7a9ab5' },
-	label: { display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 600, color: '#00284d' },
+	label: {
+		display: 'block',
+		marginBottom: 6,
+		fontSize: 13,
+		fontWeight: 600,
+		color: '#00284d',
+	},
 };
