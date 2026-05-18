@@ -1,27 +1,48 @@
 {
-  "cli": {
-    "version": ">= 16.17.4",
-    "appVersionSource": "remote"
-  },
-  "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal"
-    },
-    "preview": {
-      "distribution": "internal",
-      "android": {
-        "buildType": "apk"
-      }
-    },
-    "production": {
-      "autoIncrement": true,
-      "android": {
-        "buildType": "app-bundle"
-      }
-    }
-  },
-  "submit": {
-    "production": {}
-  }
+	"cli": {
+		"version": ">= 16.17.4",
+		"appVersionSource": "remote"
+	},
+	"build": {
+		"development": {
+			"developmentClient": true,
+			"distribution": "internal",
+			"env": {
+				"EXPO_PUBLIC_API_URL": "https://uniconnect-backend.fly.dev",
+				"EXPO_PUBLIC_ALLOWED_DOMAIN": "ucaldas.edu.co",
+				"EXPO_PUBLIC_AUTH0_DOMAIN": "dev-tu-tenant.us.auth0.com",
+				"EXPO_PUBLIC_AUTH0_CLIENT_ID": "tu_client_id_auth0",
+				"EXPO_PUBLIC_AUTH0_CONNECTION": "google-oauth2"
+			}
+		},
+		"preview": {
+			"distribution": "internal",
+			"android": {
+				"buildType": "apk"
+			},
+			"env": {
+				"EXPO_PUBLIC_API_URL": "https://uniconnect-backend.fly.dev",
+				"EXPO_PUBLIC_ALLOWED_DOMAIN": "ucaldas.edu.co",
+				"EXPO_PUBLIC_AUTH0_DOMAIN": "dev-tu-tenant.us.auth0.com",
+				"EXPO_PUBLIC_AUTH0_CLIENT_ID": "tu_client_id_auth0",
+				"EXPO_PUBLIC_AUTH0_CONNECTION": "google-oauth2"
+			}
+		},
+		"production": {
+			"autoIncrement": true,
+			"android": {
+				"buildType": "app-bundle"
+			},
+			"env": {
+				"EXPO_PUBLIC_API_URL": "https://uniconnect-backend.fly.dev",
+				"EXPO_PUBLIC_ALLOWED_DOMAIN": "ucaldas.edu.co",
+				"EXPO_PUBLIC_AUTH0_DOMAIN": "dev-tu-tenant.us.auth0.com",
+				"EXPO_PUBLIC_AUTH0_CLIENT_ID": "tu_client_id_auth0",
+				"EXPO_PUBLIC_AUTH0_CONNECTION": "google-oauth2"
+			}
+		}
+	},
+	"submit": {
+		"production": {}
+	}
 }
