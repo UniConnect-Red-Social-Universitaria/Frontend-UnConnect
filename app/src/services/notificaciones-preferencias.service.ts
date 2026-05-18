@@ -43,9 +43,15 @@ export const CANALES: { id: CanalNotificacion; label: string; emoji: string }[] 
 
 export async function getPreferenciasNotificaciones(): Promise<PreferenciaNotificacion[]> {
     try {
-        const res = await apiClient.get<PreferenciasResponse>('/api/notificaciones/preferencias');
-        // Soporta la lectura tanto si viene en res.data.preferencias o res.data.data
-        return res.data?.preferencias ?? (res.data as any)?.data ?? getDefaultPreferencias();
+        const res = await apiClient.get<any>('/api/notificaciones/preferencias');
+        const data = res.data?.data;
+        if (Array.isArray(data)) {
+            return data.map((p: any) => ({
+                tipoEvento: p.tipoEvento as TipoEvento,
+                canales: (p.canalesActivos ?? p.canales ?? []) as CanalNotificacion[],
+            }));
+        }
+        return getDefaultPreferencias();
     } catch {
         return getDefaultPreferencias();
     }

@@ -27,8 +27,14 @@ export const CANALES: { id: CanalNotificacion; label: string; emoji: string }[] 
 export async function getPreferenciasNotificaciones(): Promise<PreferenciaNotificacion[]> {
     try {
         const res = await apiClient.get('/api/notificaciones/preferencias');
-        // 2. Corregir la lectura: Axios envuelve en 'data', y tu backend envía { success, data }
-        return res.data?.data ?? getDefaultPreferencias();
+        const data = res.data?.data;
+        if (Array.isArray(data)) {
+            return data.map((p: any) => ({
+                tipoEvento: p.tipoEvento as TipoEvento,
+                canales: (p.canalesActivos ?? p.canales ?? []) as CanalNotificacion[],
+            }));
+        }
+        return getDefaultPreferencias();
     } catch {
         return getDefaultPreferencias();
     }
