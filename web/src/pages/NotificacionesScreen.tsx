@@ -104,7 +104,8 @@ export default function NotificacionesScreen() {
 		if (item.kind === 'grupo-event') {
 			await clearUnreadGroupEventNotification(item.id);
 			if (item.tipo === 'solicitud-ingreso') navigate('/solicitudes-grupo');
-			else navigate('/grupos');
+			else if (item.tipo === 'evento-nuevo') navigate('/eventos');
+			else if (item.tipo !== 'notificacion-general') navigate('/grupos');
 			return;
 		}
 		if (item.kind === 'direct') {

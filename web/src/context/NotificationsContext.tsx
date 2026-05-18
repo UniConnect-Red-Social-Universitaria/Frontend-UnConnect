@@ -250,6 +250,42 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 			);
 		});
 
+		socket.on('evento:nuevo:categoria', async (payload: any) => {
+			if (payload?.creadorId === userId) return;
+
+			const titulo = payload?.titulo || 'Nuevo Evento';
+			const categoria = payload?.categoria || 'general';
+
+			await upsertUnreadGroupEventNotification({
+				id: `evento-${payload?.id ?? Date.now()}`,
+				tipo: 'evento-nuevo',
+				grupoId: String(categoria),
+				grupoNombre: titulo,
+				mensaje: `Se ha creado un nuevo evento de categoría ${categoria}: ${titulo}.`,
+				createdAt: new Date().toISOString(),
+			});
+
+			await incrementUnreadNotificationsCount();
+			addToast(`Nuevo evento de categoría ${categoria}: ${titulo}`);
+		});
+
+		socket.on('notificacion:nueva', async (payload: any) => {
+			const titulo = payload?.titulo || 'Notificación';
+			const mensaje = payload?.mensaje || 'Tienes una nueva notificación.';
+
+			await upsertUnreadGroupEventNotification({
+				id: `notif-${Date.now()}-${Math.random()}`,
+				tipo: 'notificacion-general',
+				grupoId: 'general',
+				grupoNombre: titulo,
+				mensaje,
+				createdAt: new Date().toISOString(),
+			});
+
+			await incrementUnreadNotificationsCount();
+			addToast(titulo);
+		});
+
 		return () => {
 			socket.disconnect();
 			socketRef.current = null;

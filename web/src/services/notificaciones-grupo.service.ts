@@ -4,7 +4,9 @@ export type GroupNotificationType =
 	| 'solicitud-ingreso'
 	| 'solicitud-aprobada'
 	| 'solicitud-rechazada'
-	| 'admin-transferido';
+	| 'admin-transferido'
+	| 'evento-nuevo'
+	| 'notificacion-general';
 
 export type UnreadGroupEventNotification = {
 	id: string;
