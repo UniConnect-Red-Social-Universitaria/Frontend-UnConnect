@@ -36,15 +36,25 @@ export const styles = StyleSheet.create({
     gap: 10,
     alignItems: "stretch",
   },
+  adminActionsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    paddingHorizontal: 15,
+    marginTop: 10,
+    gap: 10,
+    alignItems: "stretch",
+  },
   actionButton: {
     flexGrow: 1,
     flexBasis: "31%",
     minWidth: 92,
+    minHeight: 56,
     backgroundColor: "#FFF",
     paddingVertical: 12,
     paddingHorizontal: 10,
     borderRadius: 10,
     alignItems: "center",
+    justifyContent: "center",
     elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
@@ -144,5 +154,12 @@ export const styles = StyleSheet.create({
   actionButtonDanger: {
     backgroundColor: "#dc3545",
     borderColor: "#dc3545",
+  },
+  adminActionButton: {
+    flexBasis: "48%",
+  },
+  exitButton: {
+    flexBasis: "100%",
+    marginTop: 2,
   },
 });
