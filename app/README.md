@@ -42,6 +42,7 @@ EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID=...
 ## 🚀 Ejecutar la App
 
 ### Comando Principal (Recomendado para la mayoría de sistemas)
+
 Muestra el código QR y utiliza una configuración optimizada y estable para Node 20:
 
 ```bash
@@ -49,6 +50,7 @@ npm run start:qr
 ```
 
 ### Para Usuarios de Windows (Redes locales restringidas / Adaptadores virtuales)
+
 Si tienes problemas de red local y el código QR de Expo Go no logra conectarse con tu PC, inicia el servidor en modo túnel:
 
 ```bash
@@ -57,15 +59,41 @@ npm run start:tunnel
 
 ### Otros Scripts Disponibles
 
-| Comando | Descripción |
-| :--- | :--- |
-| `npm run start` | Inicia el servidor Metro predeterminado de Expo. |
-| `npm run start:lan` | Inicia el servidor Metro forzando la red LAN. |
-| `npm run start:tunnel` | Inicia Metro a través de un túnel público seguro de Ngrok. |
-| `npm run android` | Abre la aplicación directamente en un emulador Android activo. |
-| `npm run ios` | Abre la aplicación directamente en un simulador iOS (requiere macOS y Xcode). |
-| `npm run web` | Compila y ejecuta la versión web interactiva de Expo. |
-| `npm run test` | Ejecuta las pruebas unitarias de Jest configuradas para el entorno de React Native. |
+| Comando                | Descripción                                                                         |
+| :--------------------- | :---------------------------------------------------------------------------------- |
+| `npm run start`        | Inicia el servidor Metro predeterminado de Expo.                                    |
+| `npm run start:lan`    | Inicia el servidor Metro forzando la red LAN.                                       |
+| `npm run start:tunnel` | Inicia Metro a través de un túnel público seguro de Ngrok.                          |
+| `npm run android`      | Abre la aplicación directamente en un emulador Android activo.                      |
+| `npm run ios`          | Abre la aplicación directamente en un simulador iOS (requiere macOS y Xcode).       |
+| `npm run web`          | Compila y ejecuta la versión web interactiva de Expo.                               |
+| `npm run test`         | Ejecuta las pruebas unitarias de Jest configuradas para el entorno de React Native. |
+
+---
+
+## 📦 Distribución del APK Preview
+
+La versión móvil se distribuye mediante **EAS Build** en el perfil `preview`, que genera un **APK instalable en dispositivos Android reales**.
+
+### Último APK Preview
+
+- Enlace de descarga: **https://expo.dev/accounts/leon55490/projects/uniconnect/builds/235f6cfa-156c-42f9-9a1e-739003871e65**
+
+### Cómo instalarlo en Android
+
+1. Abre el enlace del APK preview desde el dispositivo Android o transfiérelo al teléfono.
+2. Descarga el archivo `.apk`.
+3. Si Android lo solicita, habilita temporalmente la instalación desde orígenes desconocidos para esa fuente.
+4. Abre el archivo descargado e instala la app.
+5. Inicia sesión y verifica que la app cargue contra el backend de producción en Fly.io.
+
+### Cómo generar un nuevo APK Preview
+
+Desde la carpeta `app/`, ejecuta:
+
+```bash
+eas build -p android --profile preview
+```
 
 ---
 
@@ -92,10 +120,10 @@ El siguiente diagrama detalla cómo fluyen los cambios y cómo se compila la ver
 
 ## 📱 Entornos Disponibles
 
-| Entorno | Plataforma / URL | Activador / Trigger | Descripción |
-| :--- | :--- | :--- | :--- |
-| **Desarrollo Local** | Servidor Metro (Expo Go) | Manual (`npm run start:qr`) | Entorno interactivo local con Fast Refresh para el desarrollo diario. |
-| **Preview / Staging** | [GitHub Releases](https://github.com/JackelineR/Frontend-UnConnect/releases) | Push automático a `main` con cambios en `app/` | Compilaciones automatizadas por EAS para iOS y Android compartidas mediante GitHub Releases (pre-releases) con enlaces de descarga directa. |
+| Entorno               | Plataforma / URL         | Activador / Trigger                      | Descripción                                                                          |
+| :-------------------- | :----------------------- | :--------------------------------------- | :----------------------------------------------------------------------------------- |
+| **Desarrollo Local**  | Servidor Metro (Expo Go) | Manual (`npm run start:qr`)              | Entorno interactivo local con Fast Refresh para el desarrollo diario.                |
+| **Preview / Staging** | APK Preview EAS          | `eas build -p android --profile preview` | Compilación instalable para Android real con variables públicas inyectadas en build. |
 
 > [!NOTE]
 > El workflow de compilación EAS (`eas-build.yml`) posee una directiva condicional `if: false` a nivel de job para evitar el uso excesivo de minutos en compilaciones tempranas. Puede ser activado removiendo o modificando esta línea cuando el equipo lo requiera.
@@ -106,8 +134,8 @@ El siguiente diagrama detalla cómo fluyen los cambios y cómo se compila la ver
 
 Para que las compilaciones automatizadas y notificaciones de la app se ejecuten sin problemas, deben estar definidos los siguientes secretos en el repositorio (`Settings > Secrets and variables > Actions`):
 
-| Secreto | Requerido por | Descripción |
-| :--- | :--- | :--- |
-| `EXPO_TOKEN` | `eas-build.yml` | Token de acceso personal generado en la consola de Expo. Permite a GitHub Actions autenticar la EAS CLI y compilar las aplicaciones iOS/Android de forma remota. |
-| `SLACK_WEBHOOK_URL` | `ci.yml` | URL del Webhook entrante de Slack para notificar automáticamente al equipo si las pruebas y tipados de la app pasaron o fallaron. |
-| `GITHUB_TOKEN` | `eas-build.yml` y `pr-coverage.yml` | Proporcionado automáticamente por la plataforma de GitHub Actions. Se utiliza para generar comentarios de cobertura y para crear la Pre-Release en el repositorio conteniendo el archivo de log y links de EAS. |
+| Secreto             | Requerido por                       | Descripción                                                                                                                                                                                                     |
+| :------------------ | :---------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `EXPO_TOKEN`        | `eas-build.yml`                     | Token de acceso personal generado en la consola de Expo. Permite a GitHub Actions autenticar la EAS CLI y compilar las aplicaciones iOS/Android de forma remota.                                                |
+| `SLACK_WEBHOOK_URL` | `ci.yml`                            | URL del Webhook entrante de Slack para notificar automáticamente al equipo si las pruebas y tipados de la app pasaron o fallaron.                                                                               |
+| `GITHUB_TOKEN`      | `eas-build.yml` y `pr-coverage.yml` | Proporcionado automáticamente por la plataforma de GitHub Actions. Se utiliza para generar comentarios de cobertura y para crear la Pre-Release en el repositorio conteniendo el archivo de log y links de EAS. |
