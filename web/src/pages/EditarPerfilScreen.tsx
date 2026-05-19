@@ -6,10 +6,11 @@ import { materiasService } from "../services/materias.service";
 import { authService } from "../services/auth.service";
 import {
   getPreferenciasNotificaciones,
-  updatePreferenciaNotificacion,
+  updatePreferenciasGlobales,
   CANALES,
   type CanalNotificacion,
   type TipoEvento,
+  getDefaultPreferencias,
 } from "../services/notificaciones-preferencias.service";
 import type { Materia, PerfilEnriquecido, Insignia } from "../types/api.types";
 
@@ -115,22 +116,29 @@ export default function EditarPerfilScreen() {
   const cargarPreferenciasNotificaciones = useCallback(async () => {
     try {
       const preferencias = await getPreferenciasNotificaciones();
+      
+      // Si el backend no tiene nada registrado aún, recién ahí usamos los defaults
+      const listaPreferencias = preferencias.length > 0 ? preferencias : getDefaultPreferencias();
+
       const canalMap: Record<CanalNotificacion, boolean> = {
         "in-app": false,
         email: false,
         push: false,
       };
 
-      const prefMensaje = preferencias.find((p) => p.tipoEvento === "mensaje");
+      const prefMensaje = listaPreferencias.find((p) => p.tipoEvento === "mensaje");
       if (prefMensaje) {
         prefMensaje.canales.forEach((canal) => {
-          canalMap[canal] = true;
+          // Validamos que el canal devuelto exista en nuestro mapa local
+          if (canal in canalMap) {
+            canalMap[canal] = true;
+          }
         });
       }
 
       setPreferenciasNotificaciones(canalMap);
-    } catch (error: any) {
-      console.log("No se pudieron cargar preferencias:", error);
+    } catch (error) {
+      console.error("No se pudieron procesar los canales en la pantalla:", error);
     }
   }, []);
 
@@ -178,25 +186,7 @@ export default function EditarPerfilScreen() {
         .filter(([_, enabled]) => enabled)
         .map(([canal]) => canal);
 
-      // 3. Usar los tipos exactos que espera el backend
-      const tiposEvento: TipoEvento[] = [
-        "mensaje",
-        "mensaje-grupo",
-        "mencion",
-        "encuesta",
-        "recordatorio",
-        "evento-academico",
-        "evento-cultural",
-        "evento-deportivo",
-        "evento-otro",
-      ];
-
-      // Ejecutar todas las promesas en paralelo
-      await Promise.all(
-        tiposEvento.map((tipoEvento) =>
-          updatePreferenciaNotificacion(tipoEvento, canalesSeleccionados),
-        ),
-      );
+      await updatePreferenciasGlobales(canalesSeleccionados);
 
       showMsg(
         "Tu perfil académico y preferencias se actualizaron correctamente.",
