@@ -44,33 +44,29 @@ export const CANALES: { id: CanalNotificacion; label: string; emoji: string }[] 
 export async function getPreferenciasNotificaciones(): Promise<PreferenciaNotificacion[]> {
     try {
         const res = await apiClient.get<any>('/api/notificaciones/preferencias');
-        const data = res.data?.data;
-        if (Array.isArray(data)) {
-            return data.map((p: any) => ({
+        
+        const respuestaBackend = res.success !== undefined ? res : res.data;
+        const listaEventos = respuestaBackend?.data;
+
+        if (Array.isArray(listaEventos)) {
+            return listaEventos.map((p: any) => ({
                 tipoEvento: p.tipoEvento as TipoEvento,
                 canales: (p.canalesActivos ?? p.canales ?? []) as CanalNotificacion[],
             }));
         }
+        
+        console.warn("⚠️ El backend respondió, pero 'data' no es un arreglo válido");
         return getDefaultPreferencias();
-    } catch {
+    } catch (error) {
+        console.error("❌ Error al consultar las preferencias en el servidor:", error);
         return getDefaultPreferencias();
     }
 }
 
-export async function updatePreferenciaNotificacion(
-    tipoEvento: TipoEvento,
-    canales: CanalNotificacion[],
-): Promise<void> {
-    await apiClient.put(`/api/notificaciones/preferencias/${tipoEvento}`, { canales });
-}
-
-export async function updateMultiplesPreferencias(
-    eventos: TipoEvento[],
+export async function updatePreferenciasGlobales(
     canales: CanalNotificacion[]
-): Promise<void[]> {
-    return Promise.all(
-        eventos.map((evento) => updatePreferenciaNotificacion(evento, canales))
-    );
+): Promise<void> {
+    await apiClient.put('/api/notificaciones/preferencias', { canales });
 }
 
 export function getDefaultPreferencias(): PreferenciaNotificacion[] {

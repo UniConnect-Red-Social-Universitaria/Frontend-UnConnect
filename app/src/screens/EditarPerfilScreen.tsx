@@ -23,11 +23,12 @@ import { Materia, Usuario, PerfilEnriquecido, Insignia } from '../types/api.type
 import { showToast } from '../utils/toast';
 import {
 	getPreferenciasNotificaciones,
-	updatePreferenciaNotificacion,
+	getDefaultPreferencias,
+	PreferenciaNotificacion,
 	CANALES,
 	type CanalNotificacion,
 	type TipoEvento,
-	updateMultiplesPreferencias,
+	updatePreferenciasGlobales,
 	TIPO_EVENTO_LABELS,
 } from '../services/notificaciones-preferencias.service';
 
@@ -324,30 +325,43 @@ export default function EditarPerfilScreen({
     }, []);
 
 	const cargarPreferenciasNotificaciones = useCallback(async () => {
-        setCargandoNotificaciones(true);
-        try {
-            const preferencias = await getPreferenciasNotificaciones();
-            const canalMap: Record<CanalNotificacion, boolean> = {
-                'in-app': false,
-                'email': false,
-                'push': false,
-            };
-            
-            // Buscar la preferencia de "mensaje" (tipo de evento más general)
-            const prefMensaje = preferencias.find(p => p.tipoEvento === 'mensaje');
-            if (prefMensaje) {
-                prefMensaje.canales.forEach(canal => {
+    setCargandoNotificaciones(true);
+    try {
+        // 1. Forzamos que la respuesta sea del tipo correcto
+        const preferencias: PreferenciaNotificacion[] = await getPreferenciasNotificaciones();
+        
+        // 2. Si viene vacío, usamos los defaults tipados
+        const listaPreferencias: PreferenciaNotificacion[] = preferencias.length > 0 
+            ? preferencias 
+            : getDefaultPreferencias();
+
+        const canalMap: Record<CanalNotificacion, boolean> = {
+            'in-app': false,
+            'email': false,
+            'push': false,
+        };
+        
+        // 3. Tipamos explícitamente el parámetro 'p' como PreferenciaNotificacion
+        const prefMensaje = listaPreferencias.find(
+            (p: PreferenciaNotificacion) => p.tipoEvento === 'mensaje'
+        );
+
+        if (prefMensaje) {
+            // 4. Tipamos explícitamente 'canal' como CanalNotificacion
+            prefMensaje.canales.forEach((canal: CanalNotificacion) => {
+                if (canal in canalMap) {
                     canalMap[canal] = true;
-                });
-            }
-            
-            setPreferenciasNotificaciones(canalMap);
-        } catch (error) {
-            console.log('No se pudieron cargar preferencias:', error);
-        } finally {
-            setCargandoNotificaciones(false);
+                }
+            });
         }
-    }, []);
+        
+        setPreferenciasNotificaciones(canalMap);
+    } catch (error) {
+        console.log('❌ Error al procesar las preferencias en la pantalla:', error);
+    } finally {
+        setCargandoNotificaciones(false);
+    }
+}, []);
 
 	useEffect(() => {
 		void cargarPerfilAcademico();
@@ -397,13 +411,9 @@ const handleGuardarCambios = async () => {
             .filter(([_, enabled]) => enabled)
             .map(([canal]) => canal);
 
-        // 👇 Lista idéntica extraída dinámicamente de las llaves del diccionario unificado
-        const tiposEvento: TipoEvento[] = Object.keys(TIPO_EVENTO_LABELS) as TipoEvento[];
-
-        // Guardamos todo en paralelo
         const [responsePerfil] = await Promise.all([
             usuariosService.updatePerfil(payload),
-            updateMultiplesPreferencias(tiposEvento, canalesSeleccionados)
+            updatePreferenciasGlobales(canalesSeleccionados) // 👈 Aquí ocurre la magia
         ]);
 
         if (!responsePerfil.success) {
