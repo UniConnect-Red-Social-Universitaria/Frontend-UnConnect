@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
 	ActivityIndicator,
 	FlatList,
@@ -339,15 +340,14 @@ export default function ForoScreen({ navigation, route }: ForoScreenProps) {
 const s = StyleSheet.create({
 	container: { flex: 1, backgroundColor: '#f5f5f5' },
 	header: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		paddingHorizontal: 16,
-		paddingBottom: 16,
-		paddingTop: 16 + (StatusBar.currentHeight ?? 0),
-		backgroundColor: '#fff',
-		borderBottomWidth: 1,
-		borderColor: '#eee',
-	},
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 16,   // ← reemplaza paddingBottom + paddingTop
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderColor: '#eee',
+},
 	back: { marginRight: 8 },
 	headerTitle: { flex: 1, fontSize: 16, fontWeight: '600' },
 	addBtn: { marginLeft: 8 },
