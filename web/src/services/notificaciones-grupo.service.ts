@@ -2,6 +2,7 @@ const UNREAD_GROUP_NOTIFICATIONS_KEY = 'unreadGroupEventNotifications';
 
 export type GroupNotificationType =
 	| 'solicitud-ingreso'
+	| 'solicitud-invitacion'
 	| 'solicitud-aprobada'
 	| 'solicitud-rechazada'
 	| 'admin-transferido'
@@ -11,6 +12,7 @@ export type GroupNotificationType =
 export type UnreadGroupEventNotification = {
 	id: string;
 	tipo: GroupNotificationType;
+	solicitudId?: string;
 	grupoId: string;
 	grupoNombre: string;
 	mensaje: string;
@@ -44,7 +46,7 @@ function ensureLoaded() {
 function persistAndNotify() {
 	try {
 		localStorage.setItem(UNREAD_GROUP_NOTIFICATIONS_KEY, JSON.stringify(unreadItems));
-	} catch {}
+	} catch { }
 	const snapshot = sortByDateDesc(unreadItems);
 	listeners.forEach((l) => l(snapshot));
 }

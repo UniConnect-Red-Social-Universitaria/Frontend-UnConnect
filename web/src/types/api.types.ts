@@ -133,6 +133,7 @@ export interface PerfilEnriquecido {
 export interface SolicitudGrupo {
 	id: string;
 	estado: 'PENDIENTE' | 'APROBADA' | 'RECHAZADA';
+	tipo?: 'INGRESO' | 'INVITACION';
 	createdAt: string;
 	solicitante?: {
 		id: string;
