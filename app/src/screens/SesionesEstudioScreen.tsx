@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -10,38 +10,61 @@ import {
   TextInput,
   View,
   StyleSheet,
+  Alert,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import {
   sesionService,
-  SesionDTO,
+  CalendarioSesionDTO,
   FrecuenciaRecurrencia,
-  AlcanceModificacion,
+  EstadoAsistencia,
 } from '../services/sesion.service';
 import { showToast } from '../utils/toast';
 import theme from '../styles/theme';
+import { gruposService } from '../services/grupos.service';
 
-type RootStackParamList = { SesionesEstudio: undefined };
+type RootStackParamList = {
+  SesionesEstudio: undefined;
+  SesionDetalle: { sesionId: string };
+};
 type Props = { navigation: StackNavigationProp<RootStackParamList, 'SesionesEstudio'> };
 
-type ModalTipo = 'crear' | 'editar' | 'cancelar' | null;
+type ModalTipo = 'crear' | 'cancelar-una' | 'cancelar-multi' | null;
 type PickerTarget = 'inicio' | 'fin' | null;
 
+const RECURRENCIA_LABEL: Record<FrecuenciaRecurrencia, string> = {
+  DIARIA: 'Diaria', SEMANAL: 'Semanal', QUINCENAL: 'Quincenal',
+};
+const ASISTENCIA_LABEL: Record<EstadoAsistencia, string> = {
+  PENDIENTE: 'Pendiente', CONFIRMADA: 'Confirmada', DECLINADA: 'Declinada',
+};
+
 function fmtFecha(d: Date) {
-  return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleDateString('es-CO', {
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+}
+function fmtTime(iso: string) {
+  return new Date(iso).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+}
+function fmtDay(d: Date) {
+  return d.toLocaleDateString('es-CO', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  });
 }
 
 export default function SesionesEstudioScreen({ navigation }: Props) {
-  const [sesiones, setSesiones] = useState<SesionDTO[]>([]);
+  const [calendario, setCalendario] = useState<CalendarioSesionDTO[]>([]);
+  const [grupos, setGrupos] = useState<any[]>([]);
   const [cargando, setCargando] = useState(false);
   const [modal, setModal] = useState<ModalTipo>(null);
-  const [sesionActual, setSesionActual] = useState<SesionDTO | null>(null);
+  const [sesionActual, setSesionActual] = useState<CalendarioSesionDTO | null>(null);
   const [enviando, setEnviando] = useState(false);
-  const [alcance, setAlcance] = useState<AlcanceModificacion>('solo_esta');
+  const [multiMode, setMultiMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Crear serie
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [lugar, setLugar] = useState('');
@@ -49,23 +72,23 @@ export default function SesionesEstudioScreen({ navigation }: Props) {
   const [dateInicio, setDateInicio] = useState<Date>(new Date(Date.now() + 24 * 60 * 60 * 1000));
   const [dateFin, setDateFin] = useState<Date>(new Date(Date.now() + 8 * 24 * 60 * 60 * 1000));
   const [recordatorio, setRecordatorio] = useState('30');
+  const [grupoId, setGrupoId] = useState('');
 
-  // DateTimePicker state
   const [pickerTarget, setPickerTarget] = useState<PickerTarget>(null);
   const [pickerMode, setPickerMode] = useState<'date' | 'time'>('date');
   const [tempDate, setTempDate] = useState<Date>(new Date());
 
-  // Editar
-  const [editTitulo, setEditTitulo] = useState('');
-  const [editLugar, setEditLugar] = useState('');
-
   const cargar = useCallback(async () => {
     setCargando(true);
     try {
-      const data = await sesionService.obtenerSesiones();
-      setSesiones(data);
+      const [cal, grp] = await Promise.all([
+        sesionService.obtenerCalendario(),
+        gruposService.getGrupos(),
+      ]);
+      setCalendario(cal);
+      setGrupos(grp);
     } catch {
-      showToast.error('Error al cargar sesiones');
+      showToast.error('Error al cargar datos');
     } finally {
       setCargando(false);
     }
@@ -73,18 +96,39 @@ export default function SesionesEstudioScreen({ navigation }: Props) {
 
   useEffect(() => { cargar(); }, [cargar]);
 
-  const abrirEditar = (s: SesionDTO) => {
-    setSesionActual(s);
-    setEditTitulo(s.titulo);
-    setEditLugar(s.lugar);
-    setAlcance('solo_esta');
-    setModal('editar');
+  const days = useMemo(() => {
+    const map = new Map<string, CalendarioSesionDTO[]>();
+    const sorted = [...calendario].sort(
+      (a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
+    );
+    for (const ses of sorted) {
+      const d = new Date(ses.fecha);
+      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(ses);
+    }
+    return Array.from(map.entries()).map(([, sessions]) => ({
+      date: new Date(sessions[0].fecha),
+      sessions,
+    }));
+  }, [calendario]);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
-  const abrirCancelar = (s: SesionDTO) => {
-    setSesionActual(s);
-    setAlcance('solo_esta');
-    setModal('cancelar');
+  const abrirCrear = () => {
+    setTitulo(''); setDescripcion(''); setLugar('');
+    setFrecuencia('SEMANAL');
+    setDateInicio(new Date(Date.now() + 24 * 60 * 60 * 1000));
+    setDateFin(new Date(Date.now() + 8 * 24 * 60 * 60 * 1000));
+    setRecordatorio('30'); setGrupoId('');
+    setModal('crear');
   };
 
   const abrirPicker = (target: PickerTarget) => {
@@ -95,21 +139,11 @@ export default function SesionesEstudioScreen({ navigation }: Props) {
   };
 
   const onPickerChange = (_event: unknown, selected?: Date) => {
-    if (!selected) {
-      // Android: dismissed
-      setPickerTarget(null);
-      return;
-    }
+    if (!selected) { setPickerTarget(null); return; }
     if (Platform.OS === 'android') {
-      if (pickerMode === 'date') {
-        setTempDate(selected);
-        setPickerMode('time');
-      } else {
-        applyDate(selected);
-      }
-    } else {
-      setTempDate(selected);
-    }
+      if (pickerMode === 'date') { setTempDate(selected); setPickerMode('time'); }
+      else { applyDate(selected); }
+    } else { setTempDate(selected); }
   };
 
   const applyDate = (date: Date) => {
@@ -120,175 +154,263 @@ export default function SesionesEstudioScreen({ navigation }: Props) {
 
   const handleCrear = async () => {
     if (!titulo.trim() || !descripcion.trim() || !lugar.trim()) {
-      showToast.error('Completa todos los campos');
-      return;
+      showToast.error('Completa los campos obligatorios'); return;
     }
-    if (dateFin <= dateInicio) {
-      showToast.error('La fecha fin debe ser posterior a la fecha inicio');
-      return;
-    }
+    if (dateFin <= dateInicio) { showToast.error('La fecha fin debe ser posterior'); return; }
     setEnviando(true);
     try {
       await sesionService.crearSerie({
-        titulo, descripcion, lugar, frecuencia,
-        fechaInicio: dateInicio.toISOString(),
-        fechaFin: dateFin.toISOString(),
+        titulo: titulo.trim(), descripcion: descripcion.trim(), lugar: lugar.trim(),
+        frecuencia,
+        fechaInicio: dateInicio.toISOString(), fechaFin: dateFin.toISOString(),
         recordatorioMinutos: parseInt(recordatorio, 10) || 30,
+        ...(grupoId ? { grupoId } : {}),
       });
       setModal(null);
-      setTitulo(''); setDescripcion(''); setLugar('');
-      setDateInicio(new Date(Date.now() + 24 * 60 * 60 * 1000));
-      setDateFin(new Date(Date.now() + 8 * 24 * 60 * 60 * 1000));
       showToast.success('Serie creada');
       cargar();
     } catch (e: any) {
-      showToast.error(e?.message || 'Error al crear la serie');
+      showToast.error(e?.message || 'Error al crear');
     } finally {
       setEnviando(false);
     }
   };
 
-  const handleEditar = async () => {
+  const handleCancelarUna = async () => {
     if (!sesionActual) return;
     setEnviando(true);
     try {
-      await sesionService.modificarSesion(sesionActual.id, alcance, {
-        titulo: editTitulo, lugar: editLugar,
-      });
-      setModal(null);
-      showToast.success('Sesión actualizada');
-      cargar();
-    } catch {
-      showToast.error('Error al modificar la sesión');
-    } finally {
-      setEnviando(false);
-    }
-  };
-
-  const handleCancelar = async () => {
-    if (!sesionActual) return;
-    setEnviando(true);
-    try {
-      await sesionService.cancelarSesion(sesionActual.id, alcance);
+      await sesionService.cancelarSesion(sesionActual.id, 'solo_esta');
       setModal(null);
       showToast.success('Sesión cancelada');
       cargar();
     } catch {
-      showToast.error('Error al cancelar la sesión');
+      showToast.error('Error al cancelar');
     } finally {
       setEnviando(false);
     }
   };
 
-  const FRECUENCIAS: FrecuenciaRecurrencia[] = ['DIARIA', 'SEMANAL', 'QUINCENAL'];
+  const handleCancelarMulti = async () => {
+    if (!selectedIds.size) return;
+    setEnviando(true);
+    try {
+      const res = await sesionService.cancelarMultiples(Array.from(selectedIds));
+      setModal(null); setSelectedIds(new Set()); setMultiMode(false);
+      showToast.success(`${res.canceladas} sesion(es) cancelada(s)`);
+      cargar();
+    } catch {
+      showToast.error('Error al cancelar');
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const confirmCancelarMulti = () => {
+    if (!selectedIds.size) { showToast.info('Selecciona al menos una sesion'); return; }
+    Alert.alert(
+      'Cancelar sesiones',
+      `Cancelar ${selectedIds.size} sesion(es)? Esta accion no se puede deshacer.`,
+      [
+        { text: 'Volver', style: 'cancel' },
+        { text: 'Cancelar', style: 'destructive', onPress: handleCancelarMulti },
+      ]
+    );
+  };
+
+  const renderSession = (ses: CalendarioSesionDTO) => (
+    <Pressable
+      key={ses.id}
+      style={[est.card, ses.cancelada && est.cardCancelada]}
+      onPress={() => !multiMode && navigation.navigate('SesionDetalle', { sesionId: ses.id })}
+    >
+      <View style={est.cardRow}>
+        {multiMode && !ses.cancelada && (
+          <Pressable style={est.checkbox} onPress={() => toggleSelect(ses.id)}>
+            <Ionicons
+              name={selectedIds.has(ses.id) ? 'checkbox' : 'square-outline'}
+              size={22}
+              color={theme.colors.primary}
+            />
+          </Pressable>
+        )}
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={est.cardTime}>{fmtTime(ses.fecha)}</Text>
+            {ses.cancelada && <Text style={est.badgeCancelada}>Cancelada</Text>}
+          </View>
+          <Text style={[est.cardTitle, ses.cancelada && est.textTachado]}>{ses.titulo}</Text>
+          <Text style={est.cardLugar}> {ses.lugar}</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+            {ses.recurrencia && (
+              <Text style={est.chipSmall}>
+                {ses.recurrencia === 'DIARIA' ? 'Diaria' : ses.recurrencia === 'SEMANAL' ? 'Semanal' : 'Quincenal'}
+              </Text>
+            )}
+            {ses.grupoNombre && <Text style={[est.chipSmall, { backgroundColor: '#f0e6ff' }]}>{ses.grupoNombre}</Text>}
+            {ses.miAsistencia && (
+              <Text
+                style={[
+                  est.chipSmall,
+                  ses.miAsistencia === 'CONFIRMADA'
+                    ? { backgroundColor: '#e8f8f0' }
+                    : ses.miAsistencia === 'DECLINADA'
+                    ? { backgroundColor: '#fde8e8' }
+                    : { backgroundColor: '#fef9e7' },
+                ]}
+              >
+                {ASISTENCIA_LABEL[ses.miAsistencia]}
+              </Text>
+            )}
+          </View>
+        </View>
+        {!multiMode && !ses.cancelada && (
+          <Pressable
+            style={est.btnCancelSmall}
+            onPress={() => { setSesionActual(ses); setModal('cancelar-una'); }}
+          >
+            <Ionicons name="close-circle-outline" size={20} color="#c0392b" />
+          </Pressable>
+        )}
+      </View>
+    </Pressable>
+  );
 
   return (
-    <View style={s.container}>
-      <View style={s.header}>
-        <Pressable onPress={() => navigation.goBack()} style={s.back}>
+    <View style={est.container}>
+      <View style={est.header}>
+        <Pressable onPress={() => navigation.goBack()} style={est.backBtn}>
           <Ionicons name="arrow-back" size={22} color={theme.colors.primary} />
         </Pressable>
-        <Text style={s.headerTitle}>Sesiones de Estudio</Text>
-        <Pressable onPress={() => setModal('crear')} style={s.addBtn}>
+        <Text style={est.headerTitle}>Sesiones de Estudio</Text>
+        <Pressable onPress={abrirCrear} style={est.addBtn}>
           <Ionicons name="add-circle" size={28} color={theme.colors.primary} />
         </Pressable>
       </View>
 
+      <View style={est.toolbar}>
+        <Pressable
+          style={[est.toolBtn, multiMode && est.toolBtnActive]}
+          onPress={() => { setMultiMode(!multiMode); setSelectedIds(new Set()); }}
+        >
+          <Text style={[est.toolBtnText, multiMode && est.toolBtnTextActive]}>
+            {multiMode ? 'Salir' : 'Seleccionar'}
+          </Text>
+        </Pressable>
+        {multiMode && selectedIds.size > 0 && (
+          <Pressable style={[est.toolBtn, { backgroundColor: '#c0392b' }]} onPress={confirmCancelarMulti}>
+            <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>
+              Cancelar ({selectedIds.size})
+            </Text>
+          </Pressable>
+        )}
+      </View>
+
       {cargando ? (
-        <ActivityIndicator style={s.loader} color={theme.colors.primary} />
+        <ActivityIndicator style={{ marginTop: 40 }} color={theme.colors.primary} />
       ) : (
         <FlatList
-          data={sesiones}
-          keyExtractor={item => item.id}
-          contentContainerStyle={s.list}
-          ListEmptyComponent={<Text style={s.empty}>No tienes sesiones programadas. ¡Crea una serie!</Text>}
+          data={days}
+          keyExtractor={(item) => item.date.toISOString()}
+          contentContainerStyle={{ padding: 12, gap: 12 }}
+          ListEmptyComponent={
+            <Text style={{ textAlign: 'center', color: '#999', marginTop: 40 }}>
+              No tienes sesiones programadas.
+            </Text>
+          }
           renderItem={({ item }) => (
-            <View style={s.card}>
-              <Text style={s.cardTitle}>{item.titulo}</Text>
-              {item.modificada && <Text style={s.cardModificada}>✎ Modificada</Text>}
-              <Text style={s.cardMeta}>
-                {new Date(item.fecha).toLocaleDateString('es-CO', { weekday: 'long', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            <View>
+              <Text style={est.dayHeader}>
+                {fmtDay(item.date)}
               </Text>
-              <Text style={s.cardLugar}>📍 {item.lugar}</Text>
-              <Text style={s.cardMeta}>⏰ Recordatorio: {item.recordatorioMinutos} min antes</Text>
-              <View style={s.cardActions}>
-                <Pressable style={s.btnEdit} onPress={() => abrirEditar(item)}>
-                  <Text style={s.btnEditText}>Editar</Text>
-                </Pressable>
-                <Pressable style={s.btnCancel} onPress={() => abrirCancelar(item)}>
-                  <Text style={s.btnCancelText}>Cancelar</Text>
-                </Pressable>
-              </View>
+              {item.sessions.map(renderSession)}
             </View>
           )}
         />
       )}
 
-      {/* Modal crear */}
       <Modal visible={modal === 'crear'} transparent animationType="slide">
-        <View style={s.overlay}>
-          <ScrollView style={s.modal} contentContainerStyle={{ gap: 8 }}>
-            <Text style={s.modalTitle}>Nueva serie de sesiones</Text>
-            <TextInput style={s.input} placeholder="Título" value={titulo} onChangeText={setTitulo} />
-            <TextInput style={s.input} placeholder="Descripción" value={descripcion} onChangeText={setDescripcion} />
-            <TextInput style={s.input} placeholder="Lugar" value={lugar} onChangeText={setLugar} />
-            <Text style={s.label}>Frecuencia</Text>
-            <View style={s.chipRow}>
-              {FRECUENCIAS.map(f => (
-                <Pressable key={f} style={[s.chip, frecuencia === f && s.chipActive]} onPress={() => setFrecuencia(f)}>
-                  <Text style={[s.chipText, frecuencia === f && s.chipTextActive]}>{f}</Text>
+        <View style={est.overlay}>
+          <ScrollView style={est.modal} contentContainerStyle={{ gap: 8 }}>
+            <Text style={est.modalTitle}>Nueva serie de sesiones</Text>
+            <TextInput style={est.input} placeholder="Titulo *" value={titulo} onChangeText={setTitulo} />
+            <TextInput style={est.input} placeholder="Descripcion *" value={descripcion} onChangeText={setDescripcion} />
+            <TextInput style={est.input} placeholder="Lugar *" value={lugar} onChangeText={setLugar} />
+
+            <Text style={est.label}>Frecuencia</Text>
+            <View style={est.chipRow}>
+              {(['DIARIA', 'SEMANAL', 'QUINCENAL'] as FrecuenciaRecurrencia[]).map((f) => (
+                <Pressable
+                  key={f}
+                  style={[est.chip, frecuencia === f && est.chipActive]}
+                  onPress={() => setFrecuencia(f)}
+                >
+                  <Text style={[est.chipText, frecuencia === f && est.chipTextActive]}>{f}</Text>
                 </Pressable>
               ))}
             </View>
 
-            <Text style={s.label}>Fecha inicio</Text>
-            <Pressable style={s.dateBtn} onPress={() => abrirPicker('inicio')}>
+            <Text style={est.label}>Fecha inicio</Text>
+            <Pressable style={est.dateBtn} onPress={() => abrirPicker('inicio')}>
               <Ionicons name="calendar-outline" size={16} color={theme.colors.primary} />
-              <Text style={s.dateBtnText}>{fmtFecha(dateInicio)}</Text>
+              <Text style={est.dateBtnText}>{fmtFecha(dateInicio)}</Text>
             </Pressable>
 
-            <Text style={s.label}>Fecha fin de la serie</Text>
-            <Pressable style={s.dateBtn} onPress={() => abrirPicker('fin')}>
+            <Text style={est.label}>Fecha fin</Text>
+            <Pressable style={est.dateBtn} onPress={() => abrirPicker('fin')}>
               <Ionicons name="calendar-outline" size={16} color={theme.colors.primary} />
-              <Text style={s.dateBtnText}>{fmtFecha(dateFin)}</Text>
+              <Text style={est.dateBtnText}>{fmtFecha(dateFin)}</Text>
             </Pressable>
 
-            <Text style={s.label}>Recordatorio (minutos antes)</Text>
-            <TextInput style={s.input} placeholder="30" keyboardType="numeric" value={recordatorio} onChangeText={setRecordatorio} />
+            <Text style={est.label}>Recordatorio (minutos)</Text>
+            <TextInput style={est.input} placeholder="30" keyboardType="numeric" value={recordatorio} onChangeText={setRecordatorio} />
 
-            <View style={s.modalBtns}>
-              <Pressable style={s.btnSecondary} onPress={() => setModal(null)}><Text>Cancelar</Text></Pressable>
-              <Pressable style={s.btnPrimary} onPress={handleCrear} disabled={enviando}>
-                <Text style={s.btnPrimaryText}>{enviando ? 'Creando...' : 'Crear serie'}</Text>
+            <Text style={est.label}>Grupo (opcional)</Text>
+            <View style={est.chipRow}>
+              <Pressable style={[est.chip, !grupoId && est.chipActive]} onPress={() => setGrupoId('')}>
+                <Text style={[est.chipText, !grupoId && est.chipTextActive]}>Sin grupo</Text>
+              </Pressable>
+              {grupos.map((g: any) => (
+                <Pressable
+                  key={g.id}
+                  style={[est.chip, grupoId === g.id && est.chipActive]}
+                  onPress={() => setGrupoId(g.id)}
+                >
+                  <Text style={[est.chipText, grupoId === g.id && est.chipTextActive]}>{g.nombre}</Text>
+                </Pressable>
+              ))}
+            </View>
+            {grupoId ? <Text style={est.grupoInfo}>Se notificara a los miembros</Text> : null}
+
+            <View style={est.modalBtns}>
+              <Pressable style={est.btnSecondary} onPress={() => setModal(null)}>
+                <Text>Cancelar</Text>
+              </Pressable>
+              <Pressable style={est.btnPrimary} onPress={handleCrear} disabled={enviando}>
+                <Text style={est.btnPrimaryText}>{enviando ? 'Creando...' : 'Crear serie'}</Text>
               </Pressable>
             </View>
           </ScrollView>
         </View>
       </Modal>
 
-      {/* iOS date picker modal */}
       {Platform.OS === 'ios' && pickerTarget !== null && (
         <Modal visible transparent animationType="slide">
-          <View style={s.overlay}>
-            <View style={[s.modal, { paddingBottom: 24 }]}>
-              <Text style={s.modalTitle}>
+          <View style={est.overlay}>
+            <View style={[est.modal, { paddingBottom: 24 }]}>
+              <Text style={est.modalTitle}>
                 {pickerTarget === 'inicio' ? 'Fecha inicio' : 'Fecha fin'}
               </Text>
               <DateTimePicker
-                value={tempDate}
-                mode="datetime"
-                display="spinner"
-                onChange={onPickerChange}
-                onDismiss={() => setPickerTarget(null)}
-                locale="es-CO"
-                minimumDate={new Date()}
+                value={tempDate} mode="datetime" display="spinner"
+                onChange={onPickerChange} locale="es-CO" minimumDate={new Date()}
               />
-              <View style={s.modalBtns}>
-                <Pressable style={s.btnSecondary} onPress={() => setPickerTarget(null)}>
+              <View style={est.modalBtns}>
+                <Pressable style={est.btnSecondary} onPress={() => setPickerTarget(null)}>
                   <Text>Cancelar</Text>
                 </Pressable>
-                <Pressable style={s.btnPrimary} onPress={() => applyDate(tempDate)}>
-                  <Text style={s.btnPrimaryText}>Listo</Text>
+                <Pressable style={est.btnPrimary} onPress={() => applyDate(tempDate)}>
+                  <Text style={est.btnPrimaryText}>Listo</Text>
                 </Pressable>
               </View>
             </View>
@@ -296,60 +418,30 @@ export default function SesionesEstudioScreen({ navigation }: Props) {
         </Modal>
       )}
 
-      {/* Android date/time picker (se muestra como diálogo nativo) */}
       {Platform.OS === 'android' && pickerTarget !== null && (
         <DateTimePicker
-          value={tempDate}
-          mode={pickerMode}
-          display="default"
-          onChange={onPickerChange}
-          onDismiss={() => setPickerTarget(null)}
-          minimumDate={new Date()}
+          value={tempDate} mode={pickerMode} display="default"
+          onChange={onPickerChange} minimumDate={new Date()}
         />
       )}
 
-      {/* Modal editar */}
-      <Modal visible={modal === 'editar'} transparent animationType="slide">
-        <View style={s.overlay}>
-          <View style={s.modal}>
-            <Text style={s.modalTitle}>Editar sesión</Text>
-            <Text style={s.label}>Aplicar a</Text>
-            <View style={s.chipRow}>
-              {(['solo_esta', 'esta_y_siguientes'] as AlcanceModificacion[]).map(a => (
-                <Pressable key={a} style={[s.chip, alcance === a && s.chipActive]} onPress={() => setAlcance(a)}>
-                  <Text style={[s.chipText, alcance === a && s.chipTextActive]}>{a === 'solo_esta' ? 'Solo esta' : 'Esta y siguientes'}</Text>
-                </Pressable>
-              ))}
-            </View>
-            <TextInput style={s.input} placeholder="Título" value={editTitulo} onChangeText={setEditTitulo} />
-            <TextInput style={s.input} placeholder="Lugar" value={editLugar} onChangeText={setEditLugar} />
-            <View style={s.modalBtns}>
-              <Pressable style={s.btnSecondary} onPress={() => setModal(null)}><Text>Cancelar</Text></Pressable>
-              <Pressable style={s.btnPrimary} onPress={handleEditar} disabled={enviando}>
-                <Text style={s.btnPrimaryText}>{enviando ? 'Guardando...' : 'Guardar'}</Text>
+      <Modal visible={modal === 'cancelar-una'} transparent animationType="slide">
+        <View style={est.overlay}>
+          <View style={est.modal}>
+            <Text style={est.modalTitle}>Cancelar sesion</Text>
+            <Text style={{ color: '#555', marginBottom: 12 }}>
+              Cancelar &quot;{sesionActual?.titulo}&quot;? Esta accion no se puede deshacer.
+            </Text>
+            <View style={est.modalBtns}>
+              <Pressable style={est.btnSecondary} onPress={() => setModal(null)}>
+                <Text>Volver</Text>
               </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Modal cancelar */}
-      <Modal visible={modal === 'cancelar'} transparent animationType="slide">
-        <View style={s.overlay}>
-          <View style={s.modal}>
-            <Text style={s.modalTitle}>Cancelar sesión</Text>
-            <Text style={{ color: '#555', marginBottom: 12 }}>¿Qué deseas cancelar?</Text>
-            <View style={s.chipRow}>
-              {(['solo_esta', 'esta_y_siguientes'] as AlcanceModificacion[]).map(a => (
-                <Pressable key={a} style={[s.chip, alcance === a && s.chipActive]} onPress={() => setAlcance(a)}>
-                  <Text style={[s.chipText, alcance === a && s.chipTextActive]}>{a === 'solo_esta' ? 'Solo esta' : 'Esta y siguientes'}</Text>
-                </Pressable>
-              ))}
-            </View>
-            <View style={s.modalBtns}>
-              <Pressable style={s.btnSecondary} onPress={() => setModal(null)}><Text>No cancelar</Text></Pressable>
-              <Pressable style={[s.btnPrimary, { backgroundColor: '#c0392b' }]} onPress={handleCancelar} disabled={enviando}>
-                <Text style={s.btnPrimaryText}>{enviando ? 'Cancelando...' : 'Confirmar'}</Text>
+              <Pressable
+                style={[est.btnPrimary, { backgroundColor: '#c0392b' }]}
+                onPress={handleCancelarUna}
+                disabled={enviando}
+              >
+                <Text style={est.btnPrimaryText}>{enviando ? 'Cancelando...' : 'Cancelar'}</Text>
               </Pressable>
             </View>
           </View>
@@ -359,37 +451,65 @@ export default function SesionesEstudioScreen({ navigation }: Props) {
   );
 }
 
-const s = StyleSheet.create({
+const est = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#eee' },
-  back: { marginRight: 8 },
+  header: {
+    flexDirection: 'row', alignItems: 'center', padding: 16,
+    backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#eee',
+  },
+  backBtn: { marginRight: 8 },
   headerTitle: { flex: 1, fontSize: 16, fontWeight: '600' },
   addBtn: { marginLeft: 8 },
-  loader: { flex: 1, marginTop: 40 },
-  list: { padding: 12, gap: 10 },
-  empty: { textAlign: 'center', color: '#999', marginTop: 40 },
-  card: { backgroundColor: '#fff', borderRadius: 10, padding: 14, elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 },
-  cardTitle: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
-  cardModificada: { fontSize: 11, color: '#f39c12', fontWeight: '600', marginBottom: 4 },
-  cardMeta: { fontSize: 12, color: '#999', marginBottom: 2 },
-  cardLugar: { fontSize: 13, color: '#555', marginBottom: 8 },
-  cardActions: { flexDirection: 'row', gap: 8 },
-  btnEdit: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6, backgroundColor: '#e8f0fe' },
-  btnEditText: { color: '#003e70', fontWeight: '600', fontSize: 12 },
-  btnCancel: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6, backgroundColor: '#fde8e8' },
-  btnCancelText: { color: '#c0392b', fontWeight: '600', fontSize: 12 },
+  toolbar: {
+    flexDirection: 'row', gap: 8, padding: 8,
+    backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#eee',
+  },
+  toolBtn: {
+    paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6,
+    borderWidth: 1, borderColor: '#dde4ec',
+  },
+  toolBtnActive: { backgroundColor: '#e8f0fe', borderColor: theme.colors.primary },
+  toolBtnText: { fontSize: 13, color: '#556677' },
+  toolBtnTextActive: { color: theme.colors.primary, fontWeight: '600' },
+  dayHeader: {
+    fontSize: 14, fontWeight: '700', color: '#003e70', marginBottom: 8, marginTop: 4,
+  },
+  card: {
+    backgroundColor: '#fff', borderRadius: 10, padding: 12, marginBottom: 8,
+    elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4,
+  },
+  cardCancelada: { opacity: 0.5 },
+  cardRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cardTime: { fontSize: 12, fontWeight: '700', color: theme.colors.primary, marginBottom: 2 },
+  cardTitle: { fontSize: 15, fontWeight: '700', color: '#1a2a3a' },
+  textTachado: { textDecorationLine: 'line-through' },
+  cardLugar: { fontSize: 12, color: '#667788', marginTop: 2 },
+  badgeCancelada: {
+    fontSize: 10, fontWeight: '700', color: '#c0392b', backgroundColor: '#fde8e8',
+    paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, overflow: 'hidden',
+  },
+  chipSmall: {
+    fontSize: 10, fontWeight: '600', paddingHorizontal: 6, paddingVertical: 2,
+    borderRadius: 4, backgroundColor: '#e8f0fe', color: '#003e70', overflow: 'hidden',
+  },
+  btnCancelSmall: { padding: 4 },
+  checkbox: { padding: 4 },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modal: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '85%' },
-  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
+  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12, color: '#003e70' },
   label: { fontSize: 13, fontWeight: '600', color: '#555', marginBottom: 4 },
   input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 10, fontSize: 14, marginBottom: 4 },
-  dateBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: theme.colors.primary, borderRadius: 8, padding: 10, marginBottom: 4, backgroundColor: '#f0f6ff' },
+  dateBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1,
+    borderColor: theme.colors.primary, borderRadius: 8, padding: 10, marginBottom: 4, backgroundColor: '#f0f6ff',
+  },
   dateBtnText: { fontSize: 14, color: theme.colors.primary, fontWeight: '500' },
-  chipRow: { flexDirection: 'row', gap: 8, marginBottom: 10, flexWrap: 'wrap' },
+  chipRow: { flexDirection: 'row', gap: 6, marginBottom: 10, flexWrap: 'wrap' },
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#ddd' },
   chipActive: { borderColor: theme.colors.primary, backgroundColor: '#e8f0fe' },
   chipText: { fontSize: 13, color: '#555' },
   chipTextActive: { color: theme.colors.primary, fontWeight: '600' },
+  grupoInfo: { fontSize: 12, color: '#6c3483', marginBottom: 8 },
   modalBtns: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12, marginTop: 8 },
   btnSecondary: { padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#ddd' },
   btnPrimary: { padding: 12, borderRadius: 8, backgroundColor: theme.colors.primary },
