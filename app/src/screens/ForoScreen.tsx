@@ -79,6 +79,28 @@ export default function ForoScreen({ navigation, route }: ForoScreenProps) {
 		cargarPreguntas();
 	}, [cargarPreguntas]);
 
+	useEffect(() => {
+		const intervalo = setInterval(() => {
+			if (vista === 'preguntas') {
+				foroService.obtenerPreguntas(materiaId)
+					.then(setPreguntas)
+					.catch(() => {});
+			} else if (preguntaSeleccionada) {
+				foroService.obtenerRespuestas(preguntaSeleccionada.id)
+					.then((nuevas) =>
+						setRespuestas((prev) =>
+							(nuevas as ForoRespuestaUI[]).map((r) => ({
+								...r,
+								miVoto: prev.find((p) => p.id === r.id)?.miVoto,
+							}))
+						)
+					)
+					.catch(() => {});
+			}
+		}, 15_000);
+		return () => clearInterval(intervalo);
+	}, [vista, preguntaSeleccionada?.id, materiaId]);
+
 	const abrirPregunta = (pregunta: ForoPregunta) => {
 		setPreguntaSeleccionada(pregunta);
 		setVista('respuestas');
