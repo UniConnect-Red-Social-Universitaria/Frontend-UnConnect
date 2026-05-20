@@ -262,6 +262,33 @@ export default function PrincipalScreen() {
 					Busca materias para encontrar compañeros de estudio
 				</p>
 
+				{/* Acceso directo a Scrum */}
+				<button
+					onClick={() => navigate('/scrum')}
+					onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,62,112,0.18)'; }}
+					onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,62,112,0.06)'; }}
+					style={{
+						display: 'flex', alignItems: 'center', gap: 14, width: '100%',
+						backgroundColor: '#fff', border: '2px solid #003e70',
+						borderRadius: 14, padding: '16px 20px', marginBottom: 20,
+						cursor: 'pointer', textAlign: 'left',
+						boxShadow: '0 2px 8px rgba(0,62,112,0.06)',
+						transition: 'box-shadow 0.2s, transform 0.2s',
+						fontFamily: "'Inter', sans-serif",
+					}}
+				>
+					<span style={{ fontSize: 28 }}>📊</span>
+					<div>
+						<p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#003e70' }}>
+							Scrum — Tablero de Sprints
+						</p>
+						<p style={{ margin: '2px 0 0', fontSize: 13, color: '#7a9ab5' }}>
+							Gestiona sprints, historias de usuario, métricas y retrospectivas
+						</p>
+					</div>
+					<span style={{ marginLeft: 'auto', fontSize: 20, color: '#003e70' }}>→</span>
+				</button>
+
 				{/* Barra de búsqueda */}
 				<div style={s.searchSection}>
 					<input
@@ -399,6 +426,7 @@ export default function PrincipalScreen() {
 							{ icon: '📅', title: 'Eventos académicos', desc: 'Descubre eventos y actividades', path: '/eventos' },
 							{ icon: '💬', title: 'Contactos', desc: 'Chatea con tus compañeros', path: '/contactos' },
 							{ icon: '📨', title: 'Solicitudes', desc: 'Gestiona tus solicitudes pendientes', path: '/solicitudes' },
+							{ icon: '📊', title: 'Scrum', desc: 'Gestiona sprints, métricas y retrospectivas', path: '/scrum' },
 						].map((card) => (
 							<button
 								key={card.path}

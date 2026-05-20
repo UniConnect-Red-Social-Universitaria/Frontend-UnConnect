@@ -13,6 +13,14 @@ export { encuestasService } from './encuestas.service';
 export { default as notificacionesService } from './notificaciones.service';
 export { onboardingService } from './onboarding.service';
 export { perfilService } from './perfil.service';
+export { sprintService } from './sprint.service';
+export { historiaUsuarioService } from './historia-usuario.service';
+export { criterioAceptacionService } from './criterio-aceptacion.service';
+export { metricasService } from './metricas.service';
+export { trazabilidadService } from './trazabilidad.service';
+export { retrospectivaService } from './retrospectiva.service';
+export { impedimentoService } from './impedimento.service';
+export { exportacionService } from './exportacion.service';
 export { sesionService } from './sesion.service';
 
 // Re-exportar tipos para conveniencia
@@ -32,7 +40,20 @@ export type {
     PerfilEnriquecido,
     EstadisticasPerfil,
     Insignia,
+    // Scrum
+    Sprint,
+    HistoriaUsuario,
+    CriterioAceptacion,
+    MetricasSprint,
+    BurnDownData,
+    CumplimientoSprint,
+    VelocidadHistorica,
+    TrazabilidadHU,
+    Retrospectiva,
+    Impedimento,
 } from '../types/api.types';
 
 export type { CrearGrupoRequest } from './grupos.service';
 export type { CrearEventoRequest } from './eventos.service';
+export type { CrearSprintRequest } from './sprint.service';
+export type { CrearHURequest } from './historia-usuario.service';
