@@ -383,20 +383,37 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 			];
 			if (tiposIgnorados.includes(payload?.tipoEvento)) return;
 
+			const prioridad = payload?.prioridad || 'normal';
 			const titulo = payload?.titulo || 'Notificación';
 			const mensaje = payload?.mensaje || 'Tienes una nueva notificación.';
+			const accion = payload?.accion || null;
+			const referenciaId = payload?.referenciaId || null;
+
+			const toastMsg = prioridad === 'urgente' ? `🔴 ${titulo}` : titulo;
 
 			await upsertUnreadGroupEventNotification({
 				id: `notif-${Date.now()}-${Math.random()}`,
 				tipo: 'notificacion-general',
-				grupoId: 'general',
+				grupoId: prioridad === 'urgente' ? 'urgente' : 'general',
 				grupoNombre: titulo,
 				mensaje,
 				createdAt: new Date().toISOString(),
 			});
 
 			await incrementUnreadNotificationsCount();
-			addToast(titulo);
+
+			// Notificaciones urgentes tienen un estilo visual distinto
+			if (prioridad === 'urgente') {
+				addToast(mensaje || titulo, 'error');
+			} else {
+				addToast(toastMsg);
+			}
+
+			// Notificaciones de recordatorio navegan al detalle de sesión
+			if (payload?.tipoEvento === 'recordatorio' && referenciaId) {
+				const { marcarNotificacionLeida } = await import('../services/notificaciones-api.service');
+				await marcarNotificacionLeida(payload?.id || referenciaId);
+			}
 		});
 
 		return () => {
