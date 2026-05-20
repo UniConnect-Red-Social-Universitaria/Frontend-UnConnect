@@ -3,18 +3,18 @@
 	"version": "1.0.0",
 	"main": "index.ts",
 	"scripts": {
-		"start": "expo start",
-		"start:lan": "node scripts/start-expo.js --lan",
-		"start:tunnel": "npm run start:lts:tunnel",
-		"start:lts": "node scripts/start-expo.js --lan --node20",
-		"start:lts:tunnel": "node scripts/start-expo.js --tunnel --node20",
-		"start:qr": "npm run start:lts",
-		"android": "expo run:android",
-		"ios": "expo run:ios",
-		"web": "expo start --web",
-		"build:web": "expo export --platform web",
-		"test": "jest"
-	},
+    "start": "copyfiles -f ../.env . && expo start",
+    "start:lan": "copyfiles -f ../.env . && node scripts/start-expo.js --lan",
+    "start:tunnel": "npm run start:lts:tunnel",
+    "start:lts": "copyfiles -f ../.env . && node scripts/start-expo.js --lan --node20",
+    "start:lts:tunnel": "copyfiles -f ../.env . && node scripts/start-expo.js --tunnel --node20",
+    "start:qr": "npm run start:lts",
+    "android": "copyfiles -f ../.env . && expo run:android",
+    "ios": "copyfiles -f ../.env . && expo run:ios",
+    "web": "copyfiles -f ../.env . && expo start --web",
+    "build:web": "copyfiles -f ../.env . && expo export --platform web",
+    "test": "jest"
+},
 	"engines": {
 		"node": ">=18 <23"
 	},
