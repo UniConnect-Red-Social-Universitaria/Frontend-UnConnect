@@ -23,6 +23,8 @@ import SolicitudesGrupoScreen from '../screens/SolicitudesGrupoScreen';
 import ForoScreen from '../screens/ForoScreen';
 import SesionesEstudioScreen from '../screens/SesionesEstudioScreen';
 import PerfilEstudianteScreen from '../screens/PerfilEstudianteScreen';
+import SprintsScreen from '../screens/SprintsScreen';
+import SprintDashboardScreen from '../screens/SprintDashboardScreen';
 import { resolverApiBaseUrl } from '../utils/apiConfig';
 import { authService } from '../services';
 import { notifyIncomingMessage } from '../services/notificaciones.service';
@@ -76,6 +78,8 @@ export type RootStackParamList = {
 	};
 	SesionesEstudio: undefined;
 	PerfilEstudiante: { usuarioId: string; nombre: string };
+	Sprints: undefined;
+	SprintDashboard: { sprintId: string; sprintNombre: string };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -751,6 +755,8 @@ export default function RootNavigator() {
 				<Stack.Screen name="MensajeDirecto" component={MensajeDirectoScreen} />
 				<Stack.Screen name="DetalleGrupo" component={DetalleGrupoScreen} />
 				<Stack.Screen name="MensajeGrupo" component={MensajeGrupoScreen} />
+			<Stack.Screen name="Sprints" component={SprintsScreen} />
+			<Stack.Screen name="SprintDashboard" component={SprintDashboardScreen} />
 			</Stack.Navigator>
 		</NavigationContainer>
 	);

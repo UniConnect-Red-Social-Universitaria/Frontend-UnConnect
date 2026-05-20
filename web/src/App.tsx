@@ -25,6 +25,8 @@ const MensajeGrupoScreen = lazy(() => import('./pages/MensajeGrupoScreen'));
 const ForoScreen = lazy(() => import('./pages/ForoScreen'));
 const SesionesEstudioScreen = lazy(() => import('./pages/SesionesEstudioScreen'));
 const PerfilEstudianteScreen = lazy(() => import('./pages/PerfilEstudianteScreen'));
+const SprintsPage = lazy(() => import('./pages/scrum/SprintsPage'));
+const SprintDashboardPage = lazy(() => import('./pages/scrum/SprintDashboardPage'));
 
 function PageLoader() {
 	return (
@@ -84,6 +86,8 @@ function AppRoutes() {
 					<Route path="/foro/:materiaId" element={<ForoScreen />} />
 					<Route path="/sesiones" element={<SesionesEstudioScreen />} />
 					<Route path="/perfil/:id" element={<PerfilEstudianteScreen />} />
+					<Route path="/scrum" element={<SprintsPage />} />
+					<Route path="/scrum/sprint/:sprintId" element={<SprintDashboardPage />} />
 				</Route>
 
 				{/* Fallback */}
