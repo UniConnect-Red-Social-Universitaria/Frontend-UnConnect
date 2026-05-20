@@ -50,7 +50,6 @@ export default function ForoScreen({ navigation, route }: ForoScreenProps) {
 	const [contenido, setContenido] = useState('');
 	const [enviando, setEnviando] = useState(false);
 	const [votoEnCurso, setVotoEnCurso] = useState<string | null>(null);
-	const [votoPersonal, setVotoPersonal] = useState<Record<string, 1 | -1>>({});
 
 	const cargarPreguntas = useCallback(async () => {
 		setCargando(true);
@@ -97,9 +96,7 @@ export default function ForoScreen({ navigation, route }: ForoScreenProps) {
 			setModalPregunta(false);
 			showToast.success('Pregunta publicada');
 		} catch (e: any) {
-			showToast.error(
-				e?.response?.data?.error || 'No puedes publicar en esta asignatura'
-			);
+			showToast.error(e?.message || 'No puedes publicar en esta asignatura');
 		} finally {
 			setEnviando(false);
 		}
@@ -115,9 +112,7 @@ export default function ForoScreen({ navigation, route }: ForoScreenProps) {
 			await cargarRespuestas(preguntaSeleccionada.id);
 			showToast.success('Respuesta publicada');
 		} catch (e: any) {
-			showToast.error(
-				e?.response?.data?.error || 'No puedes responder en esta asignatura'
-			);
+			showToast.error(e?.message || 'No puedes responder en esta asignatura');
 		} finally {
 			setEnviando(false);
 		}
