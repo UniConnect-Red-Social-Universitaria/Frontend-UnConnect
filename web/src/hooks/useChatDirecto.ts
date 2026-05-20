@@ -2,8 +2,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { authService } from '../services/auth.service';
 import { obtenerHistorialMensajes, enviarNuevoMensaje } from '../services/mensajes.service';
+import { resolverApiBaseUrl } from '../utils/apiConfig';
 
-const API_URL = `${import.meta.env?.VITE_API_URL || 'http://localhost:3000'}`;
+const API_URL = resolverApiBaseUrl();
 
 interface UseChatDirectoProps {
 	contactoId: string;
@@ -166,9 +167,9 @@ export const useChatDirecto = ({ contactoId, userIdParam }: UseChatDirectoProps)
 			const mensaje = mensajes.find(m => m.id === mensajeId);
 			if (!mensaje) return;
 			const yaReacciono = mensaje.reacciones?.some((r: any) => r.emoji === emoji && r.usuarioId === userId);
-			
+
 			const { agregarReaccion, removerReaccion } = await import('../services/mensajes.service');
-			
+
 			if (yaReacciono) {
 				await removerReaccion(mensajeId, emoji, false);
 			} else {

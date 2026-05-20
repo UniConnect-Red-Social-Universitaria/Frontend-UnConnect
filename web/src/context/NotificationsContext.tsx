@@ -11,8 +11,9 @@ import { upsertUnreadContactRequestNotification } from '../services/notificacion
 import { upsertUnreadRejectedRequestNotification } from '../services/notificaciones-rechazos.service';
 import { upsertUnreadGroupEventNotification } from '../services/notificaciones-grupo.service';
 import { publishContactRequestRejected } from '../services/contacto-events.service';
+import { resolverApiBaseUrl } from '../utils/apiConfig';
 
-const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3000';
+const API_URL = resolverApiBaseUrl();
 
 interface NotificationsContextValue {
 	unreadCount: number;

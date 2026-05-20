@@ -5,8 +5,9 @@ import type { Encuesta } from '@uniconnect/api-types';
 import { authService } from '../services/auth.service';
 import { obtenerHistorialMensajesGrupo, enviarNuevoMensajeGrupo } from '../services/mensajes.service';
 import { encuestasService } from '../services/encuestas.service';
+import { resolverApiBaseUrl } from '../utils/apiConfig';
 
-const API_URL = `${import.meta.env?.VITE_API_URL || 'http://localhost:3000'}`;
+const API_URL = resolverApiBaseUrl();
 
 interface UseChatGrupoProps {
 	grupoId: string;
@@ -261,9 +262,9 @@ export const useChatGrupo = ({ grupoId, userIdParam }: UseChatGrupoProps) => {
 			const mensaje = mensajes.find(m => m.id === mensajeId);
 			if (!mensaje) return;
 			const yaReacciono = mensaje.reacciones?.some((r: any) => r.emoji === emoji && r.usuarioId === userId);
-			
+
 			const { agregarReaccion, removerReaccion } = await import('../services/mensajes.service');
-			
+
 			if (yaReacciono) {
 				await removerReaccion(mensajeId, emoji, true);
 			} else {

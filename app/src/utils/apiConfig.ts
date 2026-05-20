@@ -1,6 +1,8 @@
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 
+const BACKEND_PRODUCTION_URL = "https://uniconnect-backend.fly.dev";
+
 function extraerHostDesdeHostUri(hostUri: string): string | null {
   const valor = hostUri.trim();
   if (!valor) return null;
@@ -65,6 +67,10 @@ export function resolverApiBaseUrl(): string {
       return `http://${hostNormalizado}:3000`;
     }
   }
-  if (Platform.OS === "android") return "http://10.0.2.2:3000";
-  return "http://localhost:3000";
+
+  if (Platform.OS === "android") {
+    return "http://10.0.2.2:3000";
+  }
+
+  return BACKEND_PRODUCTION_URL;
 }
