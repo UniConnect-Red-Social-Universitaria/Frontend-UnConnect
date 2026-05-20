@@ -5,6 +5,10 @@ export type GroupNotificationType =
 	| 'solicitud-invitacion'
 	| 'solicitud-aprobada'
 	| 'solicitud-rechazada'
+	| 'transferencia-pendiente'
+	| 'transferencia-aceptada'
+	| 'transferencia-rechazada'
+	| 'transferencia-cancelada'
 	| 'admin-transferido'
 	| 'evento-nuevo'
 	| 'notificacion-general';

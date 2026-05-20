@@ -224,6 +224,32 @@ export default function NotificacionesScreen() {
 		}
 	};
 
+	const handleAceptarTransferencia = async (item: UnreadGroupEventNotification) => {
+		setProcessingInvitationId(item.grupoId);
+		try {
+			await gruposService.aceptarTransferencia(item.grupoId);
+			await clearUnreadGroupEventNotification(item.id);
+			navigate(`/grupos/${item.grupoId}`);
+		} catch {
+			showMsg('No se pudo aceptar la transferencia', 'error');
+		} finally {
+			setProcessingInvitationId(null);
+		}
+	};
+
+	const handleRechazarTransferencia = async (item: UnreadGroupEventNotification) => {
+		setProcessingInvitationId(item.grupoId);
+		try {
+			await gruposService.rechazarTransferencia(item.grupoId);
+			await clearUnreadGroupEventNotification(item.id);
+			showMsg('Transferencia rechazada');
+		} catch {
+			showMsg('No se pudo rechazar la transferencia', 'error');
+		} finally {
+			setProcessingInvitationId(null);
+		}
+	};
+
 	return (
 		<div style={s.page}>
 			<style>{`
@@ -395,6 +421,25 @@ export default function NotificacionesScreen() {
 									</div>
 									<span className={`uc-notif-type ${typeClass}`}>{typeLabel}</span>
 									<p style={{ margin: 0, fontSize: 14, color: '#4a6a85' }}>{message}</p>
+									{item.kind === 'grupo-event' &&
+									item.tipo === 'transferencia-pendiente' ? (
+										<div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+											<button
+												className="uc-btn-view"
+												onClick={() => handleAceptarTransferencia(item)}
+												disabled={processingInvitationId === item.grupoId}
+											>
+												{processingInvitationId === item.grupoId ? '...' : 'Aceptar'}
+											</button>
+											<button
+												className="uc-btn-view"
+												onClick={() => handleRechazarTransferencia(item)}
+												disabled={processingInvitationId === item.grupoId}
+											>
+												{processingInvitationId === item.grupoId ? '...' : 'Rechazar'}
+											</button>
+										</div>
+									) : null}
 									{isInvite ? (
 										<div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
 											<button

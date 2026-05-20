@@ -217,7 +217,11 @@ export default function RootNavigator() {
 						receptorId: String(msg?.receptorId ?? ''),
 					},
 				});
-				showToast.info(emisorNombre.length > 0 ? `Nuevo mensaje de ${emisorNombre}` : 'Tienes un nuevo mensaje');
+				showToast.info(
+					emisorNombre.length > 0
+						? `Nuevo mensaje de ${emisorNombre}`
+						: 'Tienes un nuevo mensaje'
+				);
 			});
 
 			socket.on('grupo:mensaje:nuevo', async (msg: any) => {
@@ -270,7 +274,9 @@ export default function RootNavigator() {
 						emisorId: String(msg?.emisorId ?? ''),
 					},
 				});
-				showToast.info(nombreGrupo ? `Nuevo mensaje en ${nombreGrupo}` : 'Nuevo mensaje de grupo');
+				showToast.info(
+					nombreGrupo ? `Nuevo mensaje en ${nombreGrupo}` : 'Nuevo mensaje de grupo'
+				);
 			});
 
 			socket.on('contacto:solicitud:nueva', async (payload: any) => {
@@ -306,7 +312,11 @@ export default function RootNavigator() {
 						solicitanteId: String(payload?.solicitanteId ?? ''),
 					},
 				});
-				showToast.info(nombreCompleto.length > 0 ? `${nombreCompleto} te envió una solicitud de contacto` : 'Tienes una nueva solicitud de contacto');
+				showToast.info(
+					nombreCompleto.length > 0
+						? `${nombreCompleto} te envió una solicitud de contacto`
+						: 'Tienes una nueva solicitud de contacto'
+				);
 			});
 
 			socket.on('contacto:solicitud:rechazada', (payload: any) => {
@@ -345,7 +355,11 @@ export default function RootNavigator() {
 						solicitudId: String(payload?.solicitudId ?? ''),
 					},
 				});
-				showToast.info(receptorNombreCompleto.length > 0 ? `${receptorNombreCompleto} rechazó tu solicitud de contacto.` : 'Una solicitud de contacto enviada por ti fue rechazada.');
+				showToast.info(
+					receptorNombreCompleto.length > 0
+						? `${receptorNombreCompleto} rechazó tu solicitud de contacto.`
+						: 'Una solicitud de contacto enviada por ti fue rechazada.'
+				);
 
 				publishContactRequestRejected({
 					solicitudId: String(payload?.solicitudId ?? ''),
@@ -365,23 +379,36 @@ export default function RootNavigator() {
 					.filter(Boolean)
 					.join(' ')
 					.trim();
+				const esInvitacion = payload?.tipo === 'INVITACION';
 
 				await upsertUnreadGroupEventNotification({
 					id: `solicitud-${payload?.solicitudId ?? Date.now()}`,
-					tipo: 'solicitud-ingreso',
+					tipo: esInvitacion ? 'solicitud-invitacion' : 'solicitud-ingreso',
+					solicitudId: String(payload?.solicitudId ?? ''),
 					grupoId: String(payload?.grupoId ?? ''),
 					grupoNombre: String(payload?.grupoNombre ?? 'Grupo'),
-					mensaje: `${nombreCompleto || 'Un estudiante'} quiere unirse a tu grupo "${payload?.grupoNombre ?? 'Grupo'}".`,
+					mensaje: esInvitacion
+						? `Te invitaron a unirte al grupo "${payload?.grupoNombre ?? 'Grupo'}".`
+						: `${nombreCompleto || 'Un estudiante'} quiere unirse a tu grupo "${payload?.grupoNombre ?? 'Grupo'}".`,
 					createdAt: new Date().toISOString(),
 				});
 
 				await incrementUnreadNotificationsCount();
 				await notifyIncomingMessage({
-					title: 'Nueva solicitud de grupo',
-					body: `${nombreCompleto || 'Un estudiante'} quiere unirse a "${payload?.grupoNombre ?? ''}"`,
-					data: { type: 'grupo-solicitud-nueva', grupoId: String(payload?.grupoId ?? '') },
+					title: esInvitacion ? 'Invitación de grupo' : 'Nueva solicitud de grupo',
+					body: esInvitacion
+						? `Te invitaron a "${payload?.grupoNombre ?? ''}"`
+						: `${nombreCompleto || 'Un estudiante'} quiere unirse a "${payload?.grupoNombre ?? ''}"`,
+					data: {
+						type: 'grupo-solicitud-nueva',
+						grupoId: String(payload?.grupoId ?? ''),
+					},
 				});
-				showToast.info(`${nombreCompleto || 'Un estudiante'} quiere unirse a "${payload?.grupoNombre ?? ''}"`);
+				showToast.info(
+					esInvitacion
+						? `Te invitaron a "${payload?.grupoNombre ?? ''}"`
+						: `${nombreCompleto || 'Un estudiante'} quiere unirse a "${payload?.grupoNombre ?? ''}"`
+				);
 			});
 
 			socket.on('grupo:solicitud:resuelta', async (payload: any) => {
@@ -407,9 +434,16 @@ export default function RootNavigator() {
 					body: aprobada
 						? `Fuiste aceptado en "${grupoNombre}"`
 						: `Tu solicitud a "${grupoNombre}" fue rechazada`,
-					data: { type: 'grupo-solicitud-resuelta', grupoId: String(payload?.grupoId ?? '') },
+					data: {
+						type: 'grupo-solicitud-resuelta',
+						grupoId: String(payload?.grupoId ?? ''),
+					},
 				});
-				showToast.info(aprobada ? `Fuiste aceptado en "${grupoNombre}"` : `Tu solicitud a "${grupoNombre}" fue rechazada`);
+				showToast.info(
+					aprobada
+						? `Fuiste aceptado en "${grupoNombre}"`
+						: `Tu solicitud a "${grupoNombre}" fue rechazada`
+				);
 			});
 
 			socket.on('grupo:admin:transferido', async (payload: any) => {
@@ -437,9 +471,112 @@ export default function RootNavigator() {
 					body: esNuevoAdmin
 						? `Ahora eres admin de "${grupoNombre}"`
 						: `Transferiste admin de "${grupoNombre}"`,
-					data: { type: 'grupo-admin-transferido', grupoId: String(payload?.grupoId ?? '') },
+					data: {
+						type: 'grupo-admin-transferido',
+						grupoId: String(payload?.grupoId ?? ''),
+					},
 				});
-				showToast.info(esNuevoAdmin ? `Ahora eres admin de "${grupoNombre}"` : `Transferiste admin de "${grupoNombre}"`);
+				showToast.info(
+					esNuevoAdmin
+						? `Ahora eres admin de "${grupoNombre}"`
+						: `Transferiste admin de "${grupoNombre}"`
+				);
+			});
+
+			socket.on('grupo:admin:transferencia_pendiente', async (payload: any) => {
+				if (!isMounted || payload?.candidatoId !== currentAuthUserIdRef.current) return;
+
+				const grupoNombre = String(payload?.grupoNombre ?? 'Grupo');
+				await upsertUnreadGroupEventNotification({
+					id: `transferencia-${payload?.grupoId ?? Date.now()}`,
+					tipo: 'transferencia-pendiente',
+					grupoId: String(payload?.grupoId ?? ''),
+					grupoNombre,
+					mensaje: `El administrador de "${grupoNombre}" quiere transferirte el rol.`,
+					createdAt: new Date().toISOString(),
+				});
+
+				await incrementUnreadNotificationsCount();
+				showToast.info(`Transferencia pendiente en "${grupoNombre}"`);
+			});
+
+			socket.on('grupo:admin:transferencia_aceptada', async (payload: any) => {
+				if (!isMounted) return;
+				const grupoNombre = String(payload?.grupoNombre ?? 'Grupo');
+				await upsertUnreadGroupEventNotification({
+					id: `transferencia-${payload?.grupoId ?? Date.now()}`,
+					tipo: 'transferencia-aceptada',
+					grupoId: String(payload?.grupoId ?? ''),
+					grupoNombre,
+					mensaje: `La transferencia de administración de "${grupoNombre}" fue aceptada.`,
+					createdAt: new Date().toISOString(),
+				});
+				await incrementUnreadNotificationsCount();
+				showToast.info(`Transferencia aceptada en "${grupoNombre}"`);
+			});
+
+			socket.on('grupo:admin:transferencia_rechazada', async (payload: any) => {
+				if (!isMounted) return;
+				const grupoNombre = String(payload?.grupoNombre ?? 'Grupo');
+				await upsertUnreadGroupEventNotification({
+					id: `transferencia-${payload?.grupoId ?? Date.now()}`,
+					tipo: 'transferencia-rechazada',
+					grupoId: String(payload?.grupoId ?? ''),
+					grupoNombre,
+					mensaje: `La transferencia de administración de "${grupoNombre}" fue rechazada.`,
+					createdAt: new Date().toISOString(),
+				});
+				await incrementUnreadNotificationsCount();
+				showToast.info(`Transferencia rechazada en "${grupoNombre}"`);
+			});
+
+			socket.on('grupo:admin:transferencia_cancelada', async (payload: any) => {
+				if (!isMounted) return;
+				const grupoNombre = String(payload?.grupoNombre ?? 'Grupo');
+				await upsertUnreadGroupEventNotification({
+					id: `transferencia-${payload?.grupoId ?? Date.now()}`,
+					tipo: 'transferencia-cancelada',
+					grupoId: String(payload?.grupoId ?? ''),
+					grupoNombre,
+					mensaje: `La transferencia de administración de "${grupoNombre}" fue cancelada.`,
+					createdAt: new Date().toISOString(),
+				});
+				await incrementUnreadNotificationsCount();
+				showToast.info(`Transferencia cancelada en "${grupoNombre}"`);
+			});
+
+			socket.on('evento:nuevo:categoria', async (payload: any) => {
+				if (!isMounted) {
+					return;
+				}
+
+				if (payload?.creadorId === currentAuthUserIdRef.current) {
+					return;
+				}
+
+				const titulo = String(payload?.titulo ?? 'Nuevo evento');
+				const categoria = String(payload?.categoria ?? 'general');
+
+				await upsertUnreadGroupEventNotification({
+					id: `evento-${payload?.id ?? Date.now()}`,
+					tipo: 'evento-nuevo',
+					grupoId: categoria,
+					grupoNombre: titulo,
+					mensaje: `Se ha creado un nuevo evento de categoría ${categoria}: ${titulo}.`,
+					createdAt: new Date().toISOString(),
+				});
+
+				await incrementUnreadNotificationsCount();
+				await notifyIncomingMessage({
+					title: `Nuevo evento de ${categoria}`,
+					body: titulo,
+					data: {
+						type: 'evento-nuevo',
+						categoria,
+						eventoId: String(payload?.id ?? ''),
+					},
+				});
+				showToast.info(`Nuevo evento de categoría ${categoria}: ${titulo}`);
 			});
 		};
 

@@ -259,6 +259,68 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 			);
 		});
 
+		socket.on('grupo:admin:transferencia_pendiente', async (payload: any) => {
+			if (payload?.candidatoId !== userId) return;
+
+			const grupoNombre = String(payload?.grupoNombre ?? 'Grupo');
+			await upsertUnreadGroupEventNotification({
+				id: `transferencia-${payload?.grupoId ?? Date.now()}`,
+				tipo: 'transferencia-pendiente',
+				grupoId: String(payload?.grupoId ?? ''),
+				grupoNombre,
+				mensaje: `El administrador de "${grupoNombre}" quiere transferirte el rol.`,
+				createdAt: new Date().toISOString(),
+			});
+
+			await incrementUnreadNotificationsCount();
+			addToast(`Transferencia pendiente en "${grupoNombre}"`);
+		});
+
+		socket.on('grupo:admin:transferencia_aceptada', async (payload: any) => {
+			const grupoNombre = String(payload?.grupoNombre ?? 'Grupo');
+			await upsertUnreadGroupEventNotification({
+				id: `transferencia-${payload?.grupoId ?? Date.now()}`,
+				tipo: 'transferencia-aceptada',
+				grupoId: String(payload?.grupoId ?? ''),
+				grupoNombre,
+				mensaje: `La transferencia de administración de "${grupoNombre}" fue aceptada.`,
+				createdAt: new Date().toISOString(),
+			});
+
+			await incrementUnreadNotificationsCount();
+			addToast(`Transferencia aceptada en "${grupoNombre}"`);
+		});
+
+		socket.on('grupo:admin:transferencia_rechazada', async (payload: any) => {
+			const grupoNombre = String(payload?.grupoNombre ?? 'Grupo');
+			await upsertUnreadGroupEventNotification({
+				id: `transferencia-${payload?.grupoId ?? Date.now()}`,
+				tipo: 'transferencia-rechazada',
+				grupoId: String(payload?.grupoId ?? ''),
+				grupoNombre,
+				mensaje: `La transferencia de administración de "${grupoNombre}" fue rechazada.`,
+				createdAt: new Date().toISOString(),
+			});
+
+			await incrementUnreadNotificationsCount();
+			addToast(`Transferencia rechazada en "${grupoNombre}"`);
+		});
+
+		socket.on('grupo:admin:transferencia_cancelada', async (payload: any) => {
+			const grupoNombre = String(payload?.grupoNombre ?? 'Grupo');
+			await upsertUnreadGroupEventNotification({
+				id: `transferencia-${payload?.grupoId ?? Date.now()}`,
+				tipo: 'transferencia-cancelada',
+				grupoId: String(payload?.grupoId ?? ''),
+				grupoNombre,
+				mensaje: `La transferencia de administración de "${grupoNombre}" fue cancelada.`,
+				createdAt: new Date().toISOString(),
+			});
+
+			await incrementUnreadNotificationsCount();
+			addToast(`Transferencia cancelada en "${grupoNombre}"`);
+		});
+
 		socket.on('evento:nuevo:categoria', async (payload: any) => {
 			if (payload?.creadorId === userId) return;
 
@@ -280,7 +342,14 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
 		socket.on('notificacion:nueva', async (payload: any) => {
 			// Estos tipos ya los manejan mensaje:nuevo y grupo:mensaje:nuevo
-			const tiposIgnorados = ['mensaje', 'mensaje-grupo'];
+			const tiposIgnorados = [
+				'mensaje',
+				'mensaje-grupo',
+				'solicitud-contacto',
+				'solicitud-grupo',
+				'invitacion-grupo',
+				'transferencia-admin',
+			];
 			if (tiposIgnorados.includes(payload?.tipoEvento)) return;
 
 			const titulo = payload?.titulo || 'Notificación';
