@@ -80,8 +80,13 @@ export async function upsertUnreadRejectedRequestNotification(params: {
 
 export async function clearUnreadRejectedRequestNotification(solicitudId: string): Promise<void> {
 	ensureLoaded();
+	const removed = unreadRejectedRequests.filter((i) => i.solicitudId === solicitudId.trim()).length;
 	unreadRejectedRequests = unreadRejectedRequests.filter((i) => i.solicitudId !== solicitudId.trim());
 	persistAndNotify();
+	if (removed > 0) {
+		const { decrementUnreadNotificationsCount } = await import('./notificaciones-badge.service');
+		await decrementUnreadNotificationsCount(removed);
+	}
 }
 
 export function subscribeUnreadRejectedRequestNotifications(listener: Listener): () => void {

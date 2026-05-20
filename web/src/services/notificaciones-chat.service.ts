@@ -75,8 +75,13 @@ export async function upsertUnreadDirectChatNotification(params: {
 
 export async function clearUnreadDirectChatNotification(contactoId: string): Promise<void> {
   ensureDirectLoaded();
+  const removed = directItems.filter((i) => i.contactoId === contactoId).length;
   directItems = directItems.filter((i) => i.contactoId !== contactoId);
   persistAndNotifyDirect();
+  if (removed > 0) {
+    const { decrementUnreadNotificationsCount } = await import('./notificaciones-badge.service');
+    await decrementUnreadNotificationsCount(removed);
+  }
 }
 
 export async function getUnreadDirectChatNotifications(): Promise<UnreadDirectChatNotification[]> {
@@ -140,8 +145,13 @@ export async function upsertUnreadGroupChatNotification(params: {
 
 export async function clearUnreadGroupChatNotification(grupoId: string): Promise<void> {
   ensureGroupLoaded();
+  const removed = groupItems.filter((i) => i.grupoId === grupoId).length;
   groupItems = groupItems.filter((i) => i.grupoId !== grupoId);
   persistAndNotifyGroup();
+  if (removed > 0) {
+    const { decrementUnreadNotificationsCount } = await import('./notificaciones-badge.service');
+    await decrementUnreadNotificationsCount(removed);
+  }
 }
 
 export async function getUnreadGroupChatNotifications(): Promise<UnreadGroupChatNotification[]> {

@@ -577,6 +577,11 @@ export default function RootNavigator() {
 					},
 				});
 				showToast.info(`Nuevo evento de categoría ${categoria}: ${titulo}`);
+
+				try {
+					const { publishNuevoEvento } = require('../services/evento-events.service');
+					publishNuevoEvento(payload);
+				} catch {}
 			});
 		};
 
