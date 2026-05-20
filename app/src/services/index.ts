@@ -21,6 +21,7 @@ export { trazabilidadService } from './trazabilidad.service';
 export { retrospectivaService } from './retrospectiva.service';
 export { impedimentoService } from './impedimento.service';
 export { exportacionService } from './exportacion.service';
+export { sesionService } from './sesion.service';
 
 // Re-exportar tipos para conveniencia
 export type {

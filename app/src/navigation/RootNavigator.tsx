@@ -22,6 +22,7 @@ import NotificacionesScreen from '../screens/NotificacionesScreen';
 import SolicitudesGrupoScreen from '../screens/SolicitudesGrupoScreen';
 import ForoScreen from '../screens/ForoScreen';
 import SesionesEstudioScreen from '../screens/SesionesEstudioScreen';
+import SesionDetalleScreen from '../screens/SesionDetalleScreen';
 import PerfilEstudianteScreen from '../screens/PerfilEstudianteScreen';
 import SprintsScreen from '../screens/SprintsScreen';
 import SprintDashboardScreen from '../screens/SprintDashboardScreen';
@@ -77,6 +78,7 @@ export type RootStackParamList = {
 		materiaNombre: string;
 	};
 	SesionesEstudio: undefined;
+	SesionDetalle: { sesionId: string };
 	PerfilEstudiante: { usuarioId: string; nombre: string };
 	Sprints: undefined;
 	SprintDashboard: { sprintId: string; sprintNombre: string };
@@ -601,13 +603,14 @@ export default function RootNavigator() {
 				];
 				if (tiposIgnorados.includes(payload?.tipoEvento)) return;
 
+				const prioridad = payload?.prioridad || 'normal';
 				const titulo = payload?.titulo || 'Notificación';
 				const mensaje = payload?.mensaje || 'Tienes una nueva notificación.';
 
 				await upsertUnreadGroupEventNotification({
 					id: `notif-${Date.now()}-${Math.random()}`,
 					tipo: 'notificacion-general',
-					grupoId: 'general',
+					grupoId: prioridad === 'urgente' ? 'urgente' : 'general',
 					grupoNombre: titulo,
 					mensaje,
 					createdAt: new Date().toISOString(),
@@ -615,14 +618,20 @@ export default function RootNavigator() {
 
 				await incrementUnreadNotificationsCount();
 				await notifyIncomingMessage({
-					title: titulo,
+					title: prioridad === 'urgente' ? `🔴 ${titulo}` : titulo,
 					body: mensaje,
 					data: {
 						type: 'notificacion-general',
 						tipoEvento: String(payload?.tipoEvento ?? ''),
+						referenciaId: String(payload?.referenciaId ?? ''),
 					},
 				});
-				showToast.info(titulo);
+
+				if (prioridad === 'urgente') {
+					showToast.error(mensaje || titulo);
+				} else {
+					showToast.info(titulo);
+				}
 			});
 		};
 
@@ -751,6 +760,7 @@ export default function RootNavigator() {
 				<Stack.Screen name="SolicitudesGrupo" component={SolicitudesGrupoScreen} />
 				<Stack.Screen name="Foro" component={ForoScreen} />
 				<Stack.Screen name="SesionesEstudio" component={SesionesEstudioScreen} />
+				<Stack.Screen name="SesionDetalle" component={SesionDetalleScreen} />
 				<Stack.Screen name="PerfilEstudiante" component={PerfilEstudianteScreen} />
 				<Stack.Screen name="MensajeDirecto" component={MensajeDirectoScreen} />
 				<Stack.Screen name="DetalleGrupo" component={DetalleGrupoScreen} />
