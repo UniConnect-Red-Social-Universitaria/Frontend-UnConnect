@@ -152,10 +152,17 @@ export async function clearUnreadRejectedRequestNotification(
         return;
     }
 
+    const removed = unreadRejectedRequests.filter(
+        (item) => item.solicitudId === id
+    ).length;
     unreadRejectedRequests = unreadRejectedRequests.filter(
         (item) => item.solicitudId !== id
     );
     await persistAndNotify();
+    if (removed > 0) {
+        const { decrementUnreadNotificationsCount } = await import('./notificaciones-badge.service');
+        await decrementUnreadNotificationsCount(removed);
+    }
 }
 
 export function subscribeUnreadRejectedRequestNotifications(

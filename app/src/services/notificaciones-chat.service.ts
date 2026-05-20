@@ -1,38 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-    NotificacionDTO,
-    tieneNivel,
-    tieneAccion,
-} from '../types/notificacion.types';
-
-export function procesarNotificacionSocket(raw: unknown): NotificacionDTO | null {
-    if (!raw || typeof raw !== 'object') {
-        return null;
-    }
-
-    const data = raw as Record<string, unknown>;
-
-    if (
-        typeof data.mensaje !== 'string' ||
-        typeof data.destinatario !== 'string' ||
-        !data.timestamp
-    ) {
-        return null;
-    }
-
-    const base: NotificacionDTO = {
-        mensaje: data.mensaje,
-        destinatario: data.destinatario,
-        timestamp: String(data.timestamp),
-    };
-
-    const asDTO = data as unknown as NotificacionDTO;
-
-    const conNivel = tieneNivel(asDTO) ? { nivel: asDTO.nivel } : {};
-    const conAccion = tieneAccion(asDTO) ? { accion: asDTO.accion } : {};
-
-    return { ...base, ...conNivel, ...conAccion } as NotificacionDTO;
-}
 
 const UNREAD_DIRECT_CHATS_KEY = 'unreadDirectChatNotifications';
 const UNREAD_GROUP_CHATS_KEY = 'unreadGroupChatNotifications';
@@ -256,17 +222,21 @@ export async function upsertUnreadDirectChatNotification(params: {
 }
 
 export async function clearUnreadDirectChatNotification(
-    contactoId: string
+    contactoId: string,
 ): Promise<void> {
     await ensureLoaded();
 
-    const id = String(contactoId ?? '').trim();
-    if (!id) {
-        return;
-    }
-
-    unreadDirectChats = unreadDirectChats.filter((item) => item.contactoId !== id);
+    const removed = unreadDirectChats.filter(
+        (item) => item.contactoId === contactoId,
+    ).length;
+    unreadDirectChats = unreadDirectChats.filter(
+        (item) => item.contactoId !== contactoId,
+    );
     await persistAndNotify();
+    if (removed > 0) {
+        const { decrementUnreadNotificationsCount } = await import('./notificaciones-badge.service');
+        await decrementUnreadNotificationsCount(removed);
+    }
 }
 
 export function subscribeUnreadDirectChatNotifications(
@@ -350,8 +320,13 @@ export async function clearUnreadGroupChatNotification(
         return;
     }
 
+    const removed = unreadGroupChats.filter((item) => item.grupoId === id).length;
     unreadGroupChats = unreadGroupChats.filter((item) => item.grupoId !== id);
     await persistGroupsAndNotify();
+    if (removed > 0) {
+        const { decrementUnreadNotificationsCount } = await import('./notificaciones-badge.service');
+        await decrementUnreadNotificationsCount(removed);
+    }
 }
 
 export function subscribeUnreadGroupChatNotifications(

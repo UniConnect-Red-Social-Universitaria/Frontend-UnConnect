@@ -5,12 +5,11 @@ import {
 	incrementUnreadNotificationsCount,
 	subscribeUnreadNotificationsCount,
 } from '../services/notificaciones-badge.service';
-import { upsertUnreadDirectChatNotification } from '../services/notificaciones-chat.service';
-import { upsertUnreadGroupChatNotification } from '../services/notificaciones-chat.service';
+import { upsertUnreadDirectChatNotification, upsertUnreadGroupChatNotification } from '../services/notificaciones-chat.service';
 import { upsertUnreadContactRequestNotification } from '../services/notificaciones-solicitudes.service';
 import { upsertUnreadRejectedRequestNotification } from '../services/notificaciones-rechazos.service';
 import { upsertUnreadGroupEventNotification } from '../services/notificaciones-grupo.service';
-import { publishContactRequestRejected } from '../services/contacto-events.service';
+import { fetchNotificaciones } from '../services/notificaciones-api.service';
 import { resolverApiBaseUrl } from '../utils/apiConfig';
 
 const API_URL = resolverApiBaseUrl();
@@ -38,6 +37,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 	const activeChatRef = useRef<{ type: 'direct' | 'group'; id: string } | null>(null);
 	const [unreadCount, setUnreadCount] = useState(0);
 	const [toasts, setToasts] = useState<ToastItem[]>([]);
+	const apiSyncedRef = useRef(false);
 
 	// Suscribirse al badge counter
 	useEffect(() => {
@@ -74,6 +74,18 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
 		// Evitar duplicar socket si ya existe con el mismo token
 		if (socketRef.current?.connected) return;
+
+		// Sincronizar notificaciones desde backend al montar
+		if (!apiSyncedRef.current) {
+			apiSyncedRef.current = true;
+			fetchNotificaciones().then(async (res) => {
+				const noLeidas = res.meta?.noLeidas ?? 0;
+				if (noLeidas > 0) {
+					const { incrementUnreadNotificationsCount } = await import('../services/notificaciones-badge.service');
+					incrementUnreadNotificationsCount(noLeidas);
+				}
+			}).catch(() => {});
+		}
 
 		const socket = io(API_URL, {
 			auth: { token },
@@ -155,6 +167,31 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 			);
 		});
 
+		socket.on('contacto:solicitud:aceptada', async (payload: any) => {
+			const nombre = [payload?.solicitanteNombre, payload?.solicitanteApellido]
+				.filter(Boolean)
+				.join(' ')
+				.trim();
+
+			await upsertUnreadGroupEventNotification({
+				id: `contacto-aceptada-${payload?.solicitudId ?? Date.now()}`,
+				tipo: 'notificacion-general',
+				grupoId: 'contactos',
+				grupoNombre: nombre || 'Usuario',
+				mensaje: nombre
+					? `${nombre} aceptó tu solicitud de contacto`
+					: 'Un usuario aceptó tu solicitud de contacto',
+				createdAt: new Date().toISOString(),
+			});
+
+			await incrementUnreadNotificationsCount();
+			addToast(
+				nombre
+					? `${nombre} aceptó tu solicitud de contacto`
+					: 'Solicitud de contacto aceptada'
+			);
+		});
+
 		socket.on('contacto:solicitud:rechazada', async (payload: any) => {
 			const receptorNombre = [payload?.receptorNombre, payload?.receptorApellido]
 				.filter(Boolean)
@@ -176,13 +213,6 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 					? `${receptorNombre} rechazó tu solicitud de contacto.`
 					: 'Una solicitud fue rechazada.'
 			);
-
-			publishContactRequestRejected({
-				solicitudId: String(payload?.solicitudId ?? ''),
-				solicitanteId: String(payload?.solicitanteId ?? ''),
-				receptorId: String(payload?.receptorId ?? ''),
-				updatedAt: typeof payload?.updatedAt === 'string' ? payload.updatedAt : undefined,
-			});
 		});
 
 		socket.on('grupo:solicitud:nueva', async (payload: any) => {

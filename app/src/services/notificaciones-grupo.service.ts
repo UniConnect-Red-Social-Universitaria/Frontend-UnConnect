@@ -95,8 +95,13 @@ export async function clearUnreadGroupEventNotification(
 ): Promise<void> {
 	await ensureLoaded();
 
+	const removed = unreadItems.filter((item) => item.id === notificationId).length;
 	unreadItems = unreadItems.filter((item) => item.id !== notificationId);
 	await persistAndNotify();
+	if (removed > 0) {
+		const { decrementUnreadNotificationsCount } = await import('./notificaciones-badge.service');
+		await decrementUnreadNotificationsCount(removed);
+	}
 }
 
 export async function clearAllUnreadGroupEventNotifications(): Promise<void> {

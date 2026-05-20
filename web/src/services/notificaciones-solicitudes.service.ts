@@ -73,8 +73,13 @@ export async function upsertUnreadContactRequestNotification(params: {
 
 export async function clearUnreadContactRequestNotification(solicitudId: string): Promise<void> {
 	ensureLoaded();
+	const removed = unreadRequests.filter((i) => i.solicitudId === solicitudId.trim()).length;
 	unreadRequests = unreadRequests.filter((i) => i.solicitudId !== solicitudId.trim());
 	persistAndNotify();
+	if (removed > 0) {
+		const { decrementUnreadNotificationsCount } = await import('./notificaciones-badge.service');
+		await decrementUnreadNotificationsCount(removed);
+	}
 }
 
 export function subscribeUnreadContactRequestNotifications(listener: Listener): () => void {

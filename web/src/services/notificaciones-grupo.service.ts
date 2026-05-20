@@ -76,8 +76,13 @@ export async function upsertUnreadGroupEventNotification(
 
 export async function clearUnreadGroupEventNotification(notificationId: string): Promise<void> {
 	ensureLoaded();
+	const removed = unreadItems.filter((i) => i.id === notificationId).length;
 	unreadItems = unreadItems.filter((i) => i.id !== notificationId);
 	persistAndNotify();
+	if (removed > 0) {
+		const { decrementUnreadNotificationsCount } = await import('./notificaciones-badge.service');
+		await decrementUnreadNotificationsCount(removed);
+	}
 }
 
 export async function clearAllUnreadGroupEventNotifications(): Promise<void> {

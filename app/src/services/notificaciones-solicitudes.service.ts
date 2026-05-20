@@ -138,8 +138,13 @@ export async function clearUnreadContactRequestNotification(
         return;
     }
 
+    const removed = unreadRequests.filter((item) => item.solicitudId === id).length;
     unreadRequests = unreadRequests.filter((item) => item.solicitudId !== id);
     await persistAndNotify();
+    if (removed > 0) {
+        const { decrementUnreadNotificationsCount } = await import('./notificaciones-badge.service');
+        await decrementUnreadNotificationsCount(removed);
+    }
 }
 
 export function subscribeUnreadContactRequestNotifications(
