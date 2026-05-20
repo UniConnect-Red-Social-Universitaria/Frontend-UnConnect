@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { FlatList, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import io from "socket.io-client";
-// @ts-expect-error - La biblioteca no tiene tipos, pero funciona correctamente
 import type { Encuesta } from "@uniconnect/api-types";
 
 import { resolverApiBaseUrl } from "../utils/apiConfig";

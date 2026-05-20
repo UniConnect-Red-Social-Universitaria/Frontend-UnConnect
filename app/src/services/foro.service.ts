@@ -1,5 +1,4 @@
 import { apiClient } from './api.client';
-// @ts-expect-error - La biblioteca no tiene tipos, pero funciona correctamente
 import type { ForoPregunta, ForoRespuesta } from '@uniconnect/api-types';
 
 export type { ForoPregunta, ForoRespuesta };

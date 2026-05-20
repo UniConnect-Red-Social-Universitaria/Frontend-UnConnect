@@ -11,6 +11,7 @@ export type SesionDTO = {
     fecha: string;
     recordatorioMinutos: number;
     cancelada: boolean;
+    modificada: boolean;
     serieId: string;
 };
 
