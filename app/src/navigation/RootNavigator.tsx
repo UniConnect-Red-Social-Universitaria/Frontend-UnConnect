@@ -583,6 +583,43 @@ export default function RootNavigator() {
 					publishNuevoEvento(payload);
 				} catch {}
 			});
+
+			socket.on('notificacion:nueva', async (payload: any) => {
+				if (!isMounted) return;
+
+				const tiposIgnorados = [
+					'mensaje',
+					'mensaje-grupo',
+					'solicitud-contacto',
+					'solicitud-grupo',
+					'invitacion-grupo',
+					'transferencia-admin',
+				];
+				if (tiposIgnorados.includes(payload?.tipoEvento)) return;
+
+				const titulo = payload?.titulo || 'Notificación';
+				const mensaje = payload?.mensaje || 'Tienes una nueva notificación.';
+
+				await upsertUnreadGroupEventNotification({
+					id: `notif-${Date.now()}-${Math.random()}`,
+					tipo: 'notificacion-general',
+					grupoId: 'general',
+					grupoNombre: titulo,
+					mensaje,
+					createdAt: new Date().toISOString(),
+				});
+
+				await incrementUnreadNotificationsCount();
+				await notifyIncomingMessage({
+					title: titulo,
+					body: mensaje,
+					data: {
+						type: 'notificacion-general',
+						tipoEvento: String(payload?.tipoEvento ?? ''),
+					},
+				});
+				showToast.info(titulo);
+			});
 		};
 
 		const syncGlobalNotificationsSocket = async () => {

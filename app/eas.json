@@ -9,10 +9,7 @@
 			"distribution": "internal",
 			"env": {
 				"EXPO_PUBLIC_API_URL": "https://uniconnect-backend.fly.dev",
-				"EXPO_PUBLIC_ALLOWED_DOMAIN": "ucaldas.edu.co",
-				"EXPO_PUBLIC_AUTH0_DOMAIN": "dev-tu-tenant.us.auth0.com",
-				"EXPO_PUBLIC_AUTH0_CLIENT_ID": "tu_client_id_auth0",
-				"EXPO_PUBLIC_AUTH0_CONNECTION": "google-oauth2"
+				"EXPO_PUBLIC_ALLOWED_DOMAIN": "ucaldas.edu.co"
 			}
 		},
 		"preview": {
@@ -22,10 +19,7 @@
 			},
 			"env": {
 				"EXPO_PUBLIC_API_URL": "https://uniconnect-backend.fly.dev",
-				"EXPO_PUBLIC_ALLOWED_DOMAIN": "ucaldas.edu.co",
-				"EXPO_PUBLIC_AUTH0_DOMAIN": "dev-tu-tenant.us.auth0.com",
-				"EXPO_PUBLIC_AUTH0_CLIENT_ID": "tu_client_id_auth0",
-				"EXPO_PUBLIC_AUTH0_CONNECTION": "google-oauth2"
+				"EXPO_PUBLIC_ALLOWED_DOMAIN": "ucaldas.edu.co"
 			}
 		},
 		"production": {
@@ -35,10 +29,7 @@
 			},
 			"env": {
 				"EXPO_PUBLIC_API_URL": "https://uniconnect-backend.fly.dev",
-				"EXPO_PUBLIC_ALLOWED_DOMAIN": "ucaldas.edu.co",
-				"EXPO_PUBLIC_AUTH0_DOMAIN": "dev-tu-tenant.us.auth0.com",
-				"EXPO_PUBLIC_AUTH0_CLIENT_ID": "tu_client_id_auth0",
-				"EXPO_PUBLIC_AUTH0_CONNECTION": "google-oauth2"
+				"EXPO_PUBLIC_ALLOWED_DOMAIN": "ucaldas.edu.co"
 			}
 		}
 	},
