@@ -17,4 +17,21 @@ config.resolver.nodeModulesPaths = [
 ];
 config.resolver.disableHierarchicalLookup = true;
 
+// Fix monorepo: expo está en workspaceRoot/node_modules/, entonces AppEntry.js
+// resuelve '../../App' relativo a workspaceRoot en vez de projectRoot.
+// Este resolver intercepta esa importación y la redirige al App.tsx correcto.
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+	if (
+		moduleName === '../../App' &&
+		context.originModulePath &&
+		context.originModulePath.includes('expo/AppEntry')
+	) {
+		return {
+			filePath: path.resolve(projectRoot, 'App.tsx'),
+			type: 'sourceFile',
+		};
+	}
+	return context.resolveRequest(context, moduleName, platform);
+};
+
 module.exports = config;
