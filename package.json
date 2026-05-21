@@ -1,26 +1,29 @@
 {
-    "name": "uniconnect-frontend",
-    "private": true,
-    "workspaces": [
-        "app",
-        "web",
-        "packages/*"
-    ],
-    "scripts": {
-        "dev:app": "npm --workspace uniconnect-app run start",
-        "dev:web": "npm --workspace web run dev",
-        "build:web": "npm --workspace web run build",
-        "test:app": "npm --workspace uniconnect-app run test",
-        "generate:api-types": "npm --workspace @uniconnect/api-types run generate",
-        "test:web": "npm --workspace web run test",
-        "test:all": "npm run test --workspace uniconnect-app && npm run test --workspace web",
-        "test:coverage": "npm run test --workspace uniconnect-app -- --coverage && npm run test --workspace web -- --coverage"
-    },
-    "overrides": {
-        "react": "19.1.0",
-        "react-dom": "19.1.0"
-    },
-    "devDependencies": {
-        "copyfiles": "^2.4.1"
-    }
+  "name": "uniconnect-frontend",
+  "private": true,
+  "workspaces": [
+    "app",
+    "web",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:app": "npm --workspace uniconnect-app run start",
+    "dev:web": "npm --workspace web run dev",
+    "build:web": "npm --workspace web run build",
+    "test:app": "npm --workspace uniconnect-app run test",
+    "generate:api-types": "npm --workspace @uniconnect/api-types run generate",
+    "test:web": "npm --workspace web run test",
+    "test:all": "npm run test --workspace uniconnect-app && npm run test --workspace web",
+    "test:coverage": "npm run test --workspace uniconnect-app -- --coverage && npm run test --workspace web -- --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report"
+  },
+  "overrides": {
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "copyfiles": "^2.4.1"
+  }
 }

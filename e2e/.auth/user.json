@@ -1,0 +1,14 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "https://uniconnect-frontend-staging.fly.dev",
+      "localStorage": [
+        {
+          "name": "userToken",
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMGU3M2E4OTNiODVkZDg5MGJjOThjMSIsImNvcnJlbyI6ImphY2tlbGluZS5yaXZlcmEyMzI5NkB1Y2FsZGFzLmVkdS5jbyIsIm5vbWJyZSI6IkpBQ0tFTElORSIsIm1hdGVyaWFzQ3Vyc2FuZG8iOlsiQmFzZSBkZSBEYXRvcyIsIkVjb25vbcOtYSBHZW5lcmFsIiwiUHJvYmFiaWxpZGFkIHkgRXN0YWTDrXN0aWNhIiwiUHJvZ3JhbWFjacOzbiBJIiwiUXVpbWljYSBHZW5lcmFsIl0sImlhdCI6MTc3OTM0NTA2MSwiZXhwIjoxNzgxOTM3MDYxfQ.dawCbI0ZytM6OEDObTJ2SyzP4v5d7jeipJlFT0ivIns"
+        }
+      ]
+    }
+  ]
+}

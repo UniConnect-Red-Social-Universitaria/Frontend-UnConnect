@@ -688,7 +688,7 @@ export default function RootNavigator() {
 	}
 
 	const linking = {
-		prefixes: ['https://uniconnect-frontend.fly.dev', 'http://localhost'],
+		prefixes: ['https://uniconnect-frontend.fly.dev/', 'http://localhost'],
 		config: {
 			screens: {
 				Home: '',
