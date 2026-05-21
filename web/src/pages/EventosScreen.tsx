@@ -71,7 +71,7 @@ export default function EventosScreen() {
 	};
 
 	const sincronizarSuscripcionesBackend = useCallback(async () => {
-		let categoriasLocales: CategoriaEvento[] = [];
+		let categoriasLocales: CategoriaEvento[];
 		try {
 			const raw = localStorage.getItem(SUSCRIPCIONES_KEY);
 			categoriasLocales = raw ? JSON.parse(raw) : [];
