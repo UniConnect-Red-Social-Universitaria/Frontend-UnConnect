@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Linking, Image, Alert, Modal, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Linking, Image, Alert, ScrollView } from 'react-native';
 import { recursosService, Recurso } from '../services/recursos.service';
 import { authService } from '../services/auth.service';
 
@@ -91,17 +91,13 @@ function RecursoCard({ recurso, currentUserId, onDelete }: { recurso: Recurso, c
     );
 }
 
-export function RecursosTab({ grupoId }: { grupoId: string }) {
+export function RecursosTab({ grupoId, onPressAgregar }: { grupoId: string; onPressAgregar?: () => void }) {
     const [recursos, setRecursos] = useState<Recurso[]>([]);
     const [loading, setLoading] = useState(true);
     const [userId, setUserId] = useState<string | null>(null);
 
     const [busqueda, setBusqueda] = useState('');
     const [filtroTipo, setFiltroTipo] = useState('TODOS');
-    
-    const [modalVisible, setModalVisible] = useState(false);
-    const [newRecurso, setNewRecurso] = useState({ nombre: '', url: '', tipo: 'VIDEO', etiquetas: '' });
-    const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         cargarRecursos();
@@ -129,32 +125,6 @@ export function RecursosTab({ grupoId }: { grupoId: string }) {
         }
     };
 
-    const handleCrear = async () => {
-        if (!newRecurso.url.trim()) {
-            Alert.alert('Atención', 'La URL es obligatoria');
-            return;
-        }
-        setSaving(true);
-        try {
-            await recursosService.crearRecurso({
-                titulo: newRecurso.nombre.trim() || 'Sin título',
-                contenido: newRecurso.url.trim(),
-                tipo: newRecurso.tipo,
-                grupoId,
-                metadata: {
-                    etiquetas: newRecurso.etiquetas.split(',').map(t => t.trim()).filter(Boolean),
-                },
-            });
-            setModalVisible(false);
-            setNewRecurso({ nombre: '', url: '', tipo: 'VIDEO', etiquetas: '' });
-            cargarRecursos();
-        } catch (err) {
-            Alert.alert('Error', 'No se pudo publicar el recurso. Intenta de nuevo.');
-        } finally {
-            setSaving(false);
-        }
-    };
-
     const recursosFiltrados = recursos.filter(r => {
         const matchTipo = filtroTipo === 'TODOS' || r.tipo === filtroTipo;
         const q = busqueda.toLowerCase();
@@ -176,7 +146,7 @@ export function RecursosTab({ grupoId }: { grupoId: string }) {
         <View style={styles.container}>
             <View style={styles.headerRow}>
                 <Text style={styles.sectionTitle}>📚 Biblioteca</Text>
-                <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
+                <TouchableOpacity style={styles.addBtn} onPress={onPressAgregar}>
                     <Text style={styles.addBtnText}>＋ Agregar</Text>
                 </TouchableOpacity>
             </View>
@@ -220,84 +190,7 @@ export function RecursosTab({ grupoId }: { grupoId: string }) {
                 </View>
             )}
 
-            <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
-                <View style={styles.modalOverlay}>
-                    <KeyboardAvoidingView
-                        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                        style={{ justifyContent: 'flex-end' }}
-                    >
-                        <ScrollView
-                            keyboardShouldPersistTaps="handled"
-                            contentContainerStyle={{ justifyContent: 'flex-end' }}
-                        >
-                            <View style={styles.modalContent}>
-                                <View style={styles.modalHeader}>
-                                    <Text style={styles.modalTitle}>Compartir Recurso</Text>
-                                    <TouchableOpacity style={styles.modalClose} onPress={() => setModalVisible(false)}>
-                                        <Text style={styles.modalCloseText}>✕</Text>
-                                    </TouchableOpacity>
-                                </View>
 
-                                <Text style={styles.label}>Tipo</Text>
-                                <View style={styles.typeGrid}>
-                                    {[
-                                        { v: 'VIDEO',   icon: '🎬', label: 'Video'   },
-                                        { v: 'PDF',     icon: '📄', label: 'PDF'     },
-                                        { v: 'IMAGEN',  icon: '🖼️', label: 'Imagen'  },
-                                        { v: 'ARCHIVO', icon: '📁', label: 'Archivo' },
-                                    ].map(opt => (
-                                        <TouchableOpacity
-                                            key={opt.v}
-                                            style={[styles.typeBtn, newRecurso.tipo === opt.v && styles.typeBtnActive]}
-                                            onPress={() => setNewRecurso({ ...newRecurso, tipo: opt.v })}
-                                        >
-                                            <Text style={styles.typeBtnIcon}>{opt.icon}</Text>
-                                            <Text style={[styles.typeBtnLabel, newRecurso.tipo === opt.v && styles.typeBtnLabelActive]}>
-                                                {opt.label}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-
-                                <Text style={styles.label}>Nombre del recurso *</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="ej: Clase 3 - Derivadas"
-                                    value={newRecurso.nombre}
-                                    onChangeText={v => setNewRecurso({ ...newRecurso, nombre: v })}
-                                />
-
-                                <Text style={styles.label}>URL *</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="https://..."
-                                    value={newRecurso.url}
-                                    onChangeText={v => setNewRecurso({ ...newRecurso, url: v })}
-                                    autoCapitalize="none"
-                                    keyboardType="url"
-                                />
-                                <Text style={styles.hint}>Se extraerá la vista previa automáticamente.</Text>
-
-                                <Text style={styles.label}>Etiquetas (separadas por coma)</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="ej: parcial, semana 5"
-                                    value={newRecurso.etiquetas}
-                                    onChangeText={v => setNewRecurso({ ...newRecurso, etiquetas: v })}
-                                />
-
-                                <TouchableOpacity
-                                    style={[styles.submitBtn, saving && { opacity: 0.7 }]}
-                                    onPress={handleCrear}
-                                    disabled={saving}
-                                >
-                                    {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitBtnText}>🚀 Publicar</Text>}
-                                </TouchableOpacity>
-                            </View>
-                        </ScrollView>
-                    </KeyboardAvoidingView>
-                </View>
-            </Modal>
         </View>
     );
 }
@@ -341,21 +234,5 @@ const styles = StyleSheet.create({
     avatar: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#6366f1', alignItems: 'center', justifyContent: 'center', marginRight: 6 },
     avatarText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
     metaText: { fontSize: 12, color: '#94a3b8' },
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-    modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '90%' },
-    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-    modalTitle: { fontSize: 18, fontWeight: '700', color: '#0f172a' },
-    modalClose: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center' },
-    modalCloseText: { color: '#64748b', fontSize: 14, fontWeight: 'bold' },
-    label: { fontSize: 13, fontWeight: '600', color: '#475569', marginBottom: 6, marginTop: 12 },
-    input: { borderWidth: 1.5, borderColor: '#e2e8f0', borderRadius: 10, padding: 12, fontSize: 14, color: '#1e293b' },
-    hint: { fontSize: 11, color: '#94a3b8', marginTop: 4 },
-    typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    typeBtn: { width: '48%', flexDirection: 'column', alignItems: 'center', gap: 4, padding: 12, borderWidth: 2, borderColor: '#e2e8f0', borderRadius: 10, backgroundColor: '#fff' },
-    typeBtnActive: { borderColor: '#6366f1', backgroundColor: '#f5f3ff' },
-    typeBtnIcon: { fontSize: 24 },
-    typeBtnLabel: { fontSize: 13, fontWeight: '600', color: '#475569' },
-    typeBtnLabelActive: { color: '#6366f1' },
-    submitBtn: { backgroundColor: '#6366f1', borderRadius: 10, padding: 14, alignItems: 'center', marginTop: 24, marginBottom: 20 },
-    submitBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' }
+
 });

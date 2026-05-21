@@ -25,6 +25,9 @@ import SesionesEstudioScreen from '../screens/SesionesEstudioScreen';
 import CrearSerieScreen from '../screens/CrearSerieScreen';
 import SesionDetalleScreen from '../screens/SesionDetalleScreen';
 import PerfilEstudianteScreen from '../screens/PerfilEstudianteScreen';
+import CrearRecursoScreen from '../screens/CrearRecursoScreen';
+import CrearPreguntaScreen from '../screens/CrearPreguntaScreen';
+import CrearRespuestaScreen from '../screens/CrearRespuestaScreen';
 import { resolverApiBaseUrl } from '../utils/apiConfig';
 import { authService } from '../services';
 import { notifyIncomingMessage } from '../services/notificaciones.service';
@@ -80,6 +83,9 @@ export type RootStackParamList = {
   CrearSerie: undefined;
   SesionDetalle: { sesionId: string };
 	PerfilEstudiante: { usuarioId: string; nombre: string };
+	CrearRecurso: { grupoId: string };
+	CrearPregunta: { materiaId: string; materiaNombre: string };
+	CrearRespuesta: { preguntaId: string; materiaId: string; materiaNombre: string };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -764,6 +770,9 @@ export default function RootNavigator() {
 				<Stack.Screen name="MensajeDirecto" component={MensajeDirectoScreen} />
 				<Stack.Screen name="DetalleGrupo" component={DetalleGrupoScreen} />
 				<Stack.Screen name="MensajeGrupo" component={MensajeGrupoScreen} />
+				<Stack.Screen name="CrearRecurso" component={CrearRecursoScreen} />
+				<Stack.Screen name="CrearPregunta" component={CrearPreguntaScreen} />
+				<Stack.Screen name="CrearRespuesta" component={CrearRespuestaScreen} />
 			</Stack.Navigator>
 		</NavigationContainer>
 	);
