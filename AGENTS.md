@@ -9,8 +9,8 @@ npm workspaces monorepo with two apps and four shared packages:
 | `app/` | `uniconnect-app` | Expo / React Native 0.81 |
 | `web/` | `web` | React 19 + Vite 8 |
 | `packages/api-types/` | `@uniconnect/api-types` | Generated TS types from OpenAPI |
-| `packages/api/` | `@uniconnect/api` | API client |
-| `packages/theme/` | `@uniconnect/theme` | Design tokens |
+| `packages/api/` | `@uniconnect/api` | API client (no build step) |
+| `packages/theme/` | `@uniconnect/theme` | Design tokens (no build step) |
 | `packages/ui/` | `@uniconnect/ui` | Cross-platform components (`web/` / `native/` entries) |
 
 ## Must-know before touching anything
@@ -19,11 +19,11 @@ npm workspaces monorepo with two apps and four shared packages:
    ```
    npm --workspace @uniconnect/api-types run build
    ```
-   CI fails without this step. The web `build` script does it automatically; the `dev` script does not.
+   The web `build` script does it automatically; the `dev` script does not.
 
 2. **`npm install` at root only** — workspaces resolve all dependencies from the root. Never `npm install` inside a workspace.
 
-3. **Node 20 required** — `.nvmrc` says `20`, `engines` in `app/package.json` allows `>=18 <23`, CI uses 20.
+3. **Node 20 required** — CI runs on 20, `app/package.json` `engines` allows `>=18 <23`.
 
 4. **React 19.1 is locked** via root `overrides` — do not bump react/react-dom without updating the override.
 
@@ -33,46 +33,44 @@ npm workspaces monorepo with two apps and four shared packages:
 |---|---|
 | Dev web | `npm run dev:web` → Vite on `localhost:5173` |
 | Dev app (Expo) | `npm run dev:app` → copies `.env` then starts Expo |
-| Dev app (LAN) | `npm run dev:app` → actually runs `start:lan` via the custom script |
-| Build web | `npm run build:web` |
-| Test app | `npm run test:app` (Jest) |
+| Build web | `npm run build:web` (auto-builds api-types first) |
 | Test web | `npm run test:web` (Vitest) |
+| Test app | `npm run test:app` (Jest) |
 | Test all | `npm run test:all` |
 | Test with coverage | `npm run test:coverage` |
 | Lint web | `npm --workspace web run lint` (ESLint flat config) |
 | Typecheck web | `npx tsc --noEmit` (inside `web/`) |
-| Generate API types | `npm run generate:api-types` — reads `../../../uniconnect-backend/openapi.json` (`packages/api-types/src/schema.ts`) |
+| Generate API types | `npm run generate:api-types` — reads `../../../uniconnect-backend/openapi.json` |
+| Generate Zod schemas | `npm --workspace @uniconnect/api-types run generate:zod` |
 
 ## CI pipeline (`.github/workflows/ci.yml`)
 
 `lint-and-type-check` → `build-and-test`
 
-Order matters: lint web → typecheck web → typecheck app (soft-fail) → run all tests → build web.
+Triggers on push/PR to `main` and `developer` branches. Sequential order: lint web → typecheck web → typecheck app (soft-fail) → run all tests → build web → upload coverage to Codecov.
 
 ## Testing quirks
 
-- **App (Jest)**: uses `ts-jest`, `jest-expo` preset, `testEnvironment: 'node'`. Coverage reporters: `json-summary`, `text`, `lcov`, `html`.
+- **App (Jest)**: `ts-jest` transform, `testEnvironment: 'node'`, `preset: null`. Coverage reporters: `json-summary`, `text`, `lcov`, `html`.
 - **Web (Vitest)**: jsdom environment, globals enabled, v8 coverage provider. Setup file: `web/src/setupTests.ts`.
 - Coverage threshold is 75% (enforced in PR coverage CI but currently non-blocking).
 
 ## Auth & env
 
 - Root `.env` is the single source of truth. All mobile `start` scripts copy it via `copyfiles -f ../.env .`.
-- Exports use `EXPO_PUBLIC_*` prefix. Web uses `VITE_*` prefix. Vite `define` statically replaces `import.meta.env.VITE_*` at build time.
-- Auth providers: Auth0 (hosted at `dev-orxxfhogwtwn2og3.us.auth0.com`) + Google OAuth.
-- Domain-restricted: only `ucaldas.edu.co` emails allowed.
+- Web uses Vite `define` to statically replace `import.meta.env.VITE_*` at build time (loaded from parent dir via `loadEnv`).
+- Auth providers: Auth0 + Google OAuth. Domain-restricted: only `ucaldas.edu.co` emails allowed.
 
 ## UI cross-platform pattern
 
 `packages/ui/package.json` uses:
 - `"main": "./web/index.js"` for bundlers
 - `"react-native": "./native/index.js"` for Metro/RN
-- Peer deps: `react`, `react-dom`, `react-native`
 
 ## Deploy
 
-- **Web**: Docker → Fly.io (`fly.toml` at root, `web/Dockerfile`). Build args pass `VITE_API_URL` etc. CI auto-deploys on main push with rollback on failure.
-- **Mobile (EAS)**: workflow exists but disabled (`if: false`). Enable when ready for preview builds.
+- **Web**: Docker → Fly.io (`fly.toml` at root, `web/Dockerfile` — two-stage: node:20-alpine builder + nginx). CI auto-deploys on main push with rollback on failure.
+- **Mobile (EAS)**: workflow exists but disabled (`if: false`).
 
 ## Notable gotchas
 

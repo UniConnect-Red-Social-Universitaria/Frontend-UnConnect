@@ -283,11 +283,14 @@ export default function SprintDashboardPage() {
 		try {
 			await criterioAceptacionService.evaluar(criterioId, cumplido);
 			showMsg('Criterio evaluado');
-			if (showCriterios) {
-				const crits = await criterioAceptacionService.listarPorHU(showCriterios.id);
-				setCriteriosMap((prev) => ({ ...prev, [showCriterios.id]: crits }));
-				const c = await criterioAceptacionService.cumplimientoHU(showCriterios.id);
-				setCumplimientoMap((prev) => ({ ...prev, [showCriterios.id]: c }));
+			const huId = Object.entries(criteriosMap).find(([, crits]) =>
+				crits.some(c => c.id === criterioId)
+			)?.[0];
+			if (huId) {
+				const crits = await criterioAceptacionService.listarPorHU(huId);
+				setCriteriosMap((prev) => ({ ...prev, [huId]: crits }));
+				const c = await criterioAceptacionService.cumplimientoHU(huId);
+				setCumplimientoMap((prev) => ({ ...prev, [huId]: c }));
 			}
 		} catch (err: any) { showMsg(err.message, 'error'); }
 	};
