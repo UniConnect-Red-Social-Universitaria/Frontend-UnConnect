@@ -77,7 +77,7 @@ La versión móvil se distribuye mediante **EAS Build** en el perfil `preview`, 
 
 ### Último APK Preview
 
-- Enlace de descarga: **https://expo.dev/accounts/leon55490/projects/uniconnect/builds/4723be73-ed77-44f1-8c93-84f41c047047**
+- Enlace de descarga: **https://expo.dev/accounts/leon55490/projects/uniconnect/builds/559257d0-e4cf-4b4d-aeb1-9e9bbb4e8ff8**
 
 ### Cómo instalarlo en Android
 
