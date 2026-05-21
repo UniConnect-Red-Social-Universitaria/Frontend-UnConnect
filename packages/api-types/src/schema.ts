@@ -2341,6 +2341,7 @@ export interface components {
             id?: string;
             titulo?: string;
             contenido?: string;
+            cerrada?: boolean;
             autorId?: string;
             autorNombre?: string;
             materiaId?: string;

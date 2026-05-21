@@ -18,6 +18,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { foroService, ForoPregunta, ForoRespuesta } from '../services/foro.service';
+import { authService } from '../services/auth.service';
 import { showToast } from '../utils/toast';
 import theme from '../styles/theme';
 
@@ -53,6 +54,11 @@ export default function ForoScreen({ navigation, route }: ForoScreenProps) {
 	const [contenido, setContenido] = useState('');
 	const [enviando, setEnviando] = useState(false);
 	const [votoEnCurso, setVotoEnCurso] = useState<string | null>(null);
+	const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+	useEffect(() => {
+		authService.obtenerIdUsuarioActual().then(setCurrentUserId).catch(() => {});
+	}, []);
 
 	const cargarPreguntas = useCallback(async () => {
 		setCargando(true);
@@ -164,6 +170,20 @@ export default function ForoScreen({ navigation, route }: ForoScreenProps) {
 		}
 	};
 
+	const handleCerrarPregunta = async () => {
+		if (!preguntaSeleccionada) return;
+		setEnviando(true);
+		try {
+			const cerrada = await foroService.cerrarPregunta(preguntaSeleccionada.id);
+			setPreguntaSeleccionada(cerrada);
+			showToast.success('Pregunta cerrada');
+		} catch (e: any) {
+			showToast.error(e?.message || 'Error al cerrar pregunta');
+		} finally {
+			setEnviando(false);
+		}
+	};
+
 	return (
 		<View style={s.container}>
 			{/* Header */}
@@ -187,8 +207,17 @@ export default function ForoScreen({ navigation, route }: ForoScreenProps) {
 						vista === 'preguntas' ? setModalPregunta(true) : setModalRespuesta(true)
 					}
 					style={s.addBtn}
+					disabled={vista === 'respuestas' && !!preguntaSeleccionada?.cerrada}
 				>
-					<Ionicons name="add-circle" size={28} color={theme.colors.primary} />
+					<Ionicons
+						name="add-circle"
+						size={28}
+						color={
+							vista === 'respuestas' && preguntaSeleccionada?.cerrada
+								? '#ccc'
+								: theme.colors.primary
+						}
+					/>
 				</Pressable>
 			</View>
 
@@ -219,6 +248,33 @@ export default function ForoScreen({ navigation, route }: ForoScreenProps) {
 				))}
 
 			{/* Lista respuestas */}
+			{vista === 'respuestas' && preguntaSeleccionada && (
+				<View style={s.preguntaInfo}>
+					<Text style={s.cardMeta}>
+						{preguntaSeleccionada.autorNombre} ·{' '}
+						{new Date(preguntaSeleccionada.createdAt).toLocaleDateString()}
+					</Text>
+					<Text style={s.cardPreview}>{preguntaSeleccionada.contenido}</Text>
+					<View style={s.preguntaActions}>
+						{preguntaSeleccionada.cerrada && (
+							<Text style={s.badgeCerrada}>Cerrada</Text>
+						)}
+						{!preguntaSeleccionada.cerrada &&
+							currentUserId === preguntaSeleccionada.autorId && (
+								<Pressable
+									style={s.btnCerrar}
+									onPress={handleCerrarPregunta}
+									disabled={enviando}
+								>
+									<Ionicons name="lock-closed" size={16} color="#c0392b" />
+									<Text style={s.btnCerrarText}>
+										{enviando ? 'Cerrando...' : 'Cerrar pregunta'}
+									</Text>
+								</Pressable>
+							)}
+					</View>
+				</View>
+			)}
 			{vista === 'respuestas' &&
 				(cargando ? (
 					<ActivityIndicator style={s.loader} color={theme.colors.primary} />
@@ -395,6 +451,22 @@ const s = StyleSheet.create({
 	loader: { flex: 1, marginTop: 40 },
 	list: { padding: 12, gap: 10 },
 	empty: { textAlign: 'center', color: '#999', marginTop: 40 },
+	preguntaInfo: {
+		padding: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#eee',
+	},
+	preguntaActions: {
+		flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 8,
+	},
+	badgeCerrada: {
+		fontSize: 12, fontWeight: '700', color: '#c0392b', backgroundColor: '#fde8e8',
+		paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6, overflow: 'hidden',
+	},
+	btnCerrar: {
+		flexDirection: 'row', alignItems: 'center', gap: 6,
+		paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8,
+		borderWidth: 1, borderColor: '#c0392b',
+	},
+	btnCerrarText: { fontSize: 13, color: '#c0392b', fontWeight: '600' },
 	card: {
 		backgroundColor: '#fff',
 		borderRadius: 10,
