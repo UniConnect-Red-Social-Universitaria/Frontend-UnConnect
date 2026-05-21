@@ -3,8 +3,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
 	ActivityIndicator,
 	FlatList,
+	KeyboardAvoidingView,
 	Modal,
+	Platform,
 	Pressable,
+	ScrollView,
 	Text,
 	TextInput,
 	View,
@@ -288,66 +291,86 @@ export default function ForoScreen({ navigation, route }: ForoScreenProps) {
 			{/* Modal nueva pregunta */}
 			<Modal visible={modalPregunta} transparent animationType="slide">
 				<View style={s.modalOverlay}>
-					<View style={s.modal}>
-						<Text style={s.modalTitle}>Nueva pregunta</Text>
-						<TextInput
-							style={s.input}
-							placeholder="Título"
-							value={titulo}
-							onChangeText={setTitulo}
-						/>
-						<TextInput
-							style={[s.input, s.inputMulti]}
-							placeholder="Describe tu duda..."
-							value={contenido}
-							onChangeText={setContenido}
-							multiline
-						/>
-						<View style={s.modalBtns}>
-							<Pressable style={s.btnSecondary} onPress={() => setModalPregunta(false)}>
-								<Text>Cancelar</Text>
-							</Pressable>
-							<Pressable
-								style={s.btnPrimary}
-								onPress={handlePublicarPregunta}
-								disabled={enviando}
-							>
-								<Text style={s.btnPrimaryText}>
-									{enviando ? 'Publicando...' : 'Publicar'}
-								</Text>
-							</Pressable>
-						</View>
-					</View>
+					<KeyboardAvoidingView
+						behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+						style={{ justifyContent: 'flex-end' }}
+					>
+						<ScrollView
+							keyboardShouldPersistTaps="handled"
+							contentContainerStyle={{ justifyContent: 'flex-end' }}
+						>
+							<View style={s.modal}>
+								<Text style={s.modalTitle}>Nueva pregunta</Text>
+								<TextInput
+									style={s.input}
+									placeholder="Título"
+									value={titulo}
+									onChangeText={setTitulo}
+								/>
+								<TextInput
+									style={[s.input, s.inputMulti]}
+									placeholder="Describe tu duda..."
+									value={contenido}
+									onChangeText={setContenido}
+									multiline
+								/>
+								<View style={s.modalBtns}>
+									<Pressable style={s.btnSecondary} onPress={() => setModalPregunta(false)}>
+										<Text>Cancelar</Text>
+									</Pressable>
+									<Pressable
+										style={s.btnPrimary}
+										onPress={handlePublicarPregunta}
+										disabled={enviando}
+									>
+										<Text style={s.btnPrimaryText}>
+											{enviando ? 'Publicando...' : 'Publicar'}
+										</Text>
+									</Pressable>
+								</View>
+							</View>
+						</ScrollView>
+					</KeyboardAvoidingView>
 				</View>
 			</Modal>
 
 			{/* Modal nueva respuesta */}
 			<Modal visible={modalRespuesta} transparent animationType="slide">
 				<View style={s.modalOverlay}>
-					<View style={s.modal}>
-						<Text style={s.modalTitle}>Responder</Text>
-						<TextInput
-							style={[s.input, s.inputMulti]}
-							placeholder="Escribe tu respuesta..."
-							value={contenido}
-							onChangeText={setContenido}
-							multiline
-						/>
-						<View style={s.modalBtns}>
-							<Pressable style={s.btnSecondary} onPress={() => setModalRespuesta(false)}>
-								<Text>Cancelar</Text>
-							</Pressable>
-							<Pressable
-								style={s.btnPrimary}
-								onPress={handlePublicarRespuesta}
-								disabled={enviando}
-							>
-								<Text style={s.btnPrimaryText}>
-									{enviando ? 'Publicando...' : 'Responder'}
-								</Text>
-							</Pressable>
-						</View>
-					</View>
+					<KeyboardAvoidingView
+						behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+						style={{ justifyContent: 'flex-end' }}
+					>
+						<ScrollView
+							keyboardShouldPersistTaps="handled"
+							contentContainerStyle={{ justifyContent: 'flex-end' }}
+						>
+							<View style={s.modal}>
+								<Text style={s.modalTitle}>Responder</Text>
+								<TextInput
+									style={[s.input, s.inputMulti]}
+									placeholder="Escribe tu respuesta..."
+									value={contenido}
+									onChangeText={setContenido}
+									multiline
+								/>
+								<View style={s.modalBtns}>
+									<Pressable style={s.btnSecondary} onPress={() => setModalRespuesta(false)}>
+										<Text>Cancelar</Text>
+									</Pressable>
+									<Pressable
+										style={s.btnPrimary}
+										onPress={handlePublicarRespuesta}
+										disabled={enviando}
+									>
+										<Text style={s.btnPrimaryText}>
+											{enviando ? 'Publicando...' : 'Responder'}
+										</Text>
+									</Pressable>
+								</View>
+							</View>
+						</ScrollView>
+					</KeyboardAvoidingView>
 				</View>
 			</Modal>
 		</View>
@@ -360,7 +383,8 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 16,   // ← reemplaza paddingBottom + paddingTop
+    paddingTop: (StatusBar.currentHeight || 24) + 8,
+    paddingBottom: 16,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderColor: '#eee',

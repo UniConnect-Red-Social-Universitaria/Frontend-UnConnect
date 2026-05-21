@@ -22,10 +22,9 @@ import NotificacionesScreen from '../screens/NotificacionesScreen';
 import SolicitudesGrupoScreen from '../screens/SolicitudesGrupoScreen';
 import ForoScreen from '../screens/ForoScreen';
 import SesionesEstudioScreen from '../screens/SesionesEstudioScreen';
+import CrearSerieScreen from '../screens/CrearSerieScreen';
 import SesionDetalleScreen from '../screens/SesionDetalleScreen';
 import PerfilEstudianteScreen from '../screens/PerfilEstudianteScreen';
-import SprintsScreen from '../screens/SprintsScreen';
-import SprintDashboardScreen from '../screens/SprintDashboardScreen';
 import { resolverApiBaseUrl } from '../utils/apiConfig';
 import { authService } from '../services';
 import { notifyIncomingMessage } from '../services/notificaciones.service';
@@ -77,11 +76,10 @@ export type RootStackParamList = {
 		materiaId: string;
 		materiaNombre: string;
 	};
-	SesionesEstudio: undefined;
-	SesionDetalle: { sesionId: string };
+  SesionesEstudio: { refresh?: number } | undefined;
+  CrearSerie: undefined;
+  SesionDetalle: { sesionId: string };
 	PerfilEstudiante: { usuarioId: string; nombre: string };
-	Sprints: undefined;
-	SprintDashboard: { sprintId: string; sprintNombre: string };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -759,14 +757,13 @@ export default function RootNavigator() {
 				<Stack.Screen name="Notificaciones" component={NotificacionesScreen} />
 				<Stack.Screen name="SolicitudesGrupo" component={SolicitudesGrupoScreen} />
 				<Stack.Screen name="Foro" component={ForoScreen} />
-				<Stack.Screen name="SesionesEstudio" component={SesionesEstudioScreen} />
-				<Stack.Screen name="SesionDetalle" component={SesionDetalleScreen} />
+        <Stack.Screen name="SesionesEstudio" component={SesionesEstudioScreen} />
+        <Stack.Screen name="CrearSerie" component={CrearSerieScreen} />
+        <Stack.Screen name="SesionDetalle" component={SesionDetalleScreen} />
 				<Stack.Screen name="PerfilEstudiante" component={PerfilEstudianteScreen} />
 				<Stack.Screen name="MensajeDirecto" component={MensajeDirectoScreen} />
 				<Stack.Screen name="DetalleGrupo" component={DetalleGrupoScreen} />
 				<Stack.Screen name="MensajeGrupo" component={MensajeGrupoScreen} />
-			<Stack.Screen name="Sprints" component={SprintsScreen} />
-			<Stack.Screen name="SprintDashboard" component={SprintDashboardScreen} />
 			</Stack.Navigator>
 		</NavigationContainer>
 	);

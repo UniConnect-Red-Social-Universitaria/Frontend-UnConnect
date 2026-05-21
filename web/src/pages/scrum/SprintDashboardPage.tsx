@@ -348,7 +348,11 @@ export default function SprintDashboardPage() {
 		e.preventDefault();
 		if (!impForm.descripcion.trim()) return;
 		try {
-			await impedimentoService.crear({ ...impForm, sprintId });
+			const body: any = { descripcion: impForm.descripcion.trim(), sprintId };
+			if (impForm.responsable.trim()) {
+				body.responsable = impForm.responsable.trim();
+			}
+			await impedimentoService.crear(body);
 			showMsg('Impedimento registrado');
 			setShowCrearImpedimento(false);
 			setImpForm({ descripcion: '', responsable: '' });
@@ -963,10 +967,6 @@ export default function SprintDashboardPage() {
 							<div style={{ marginBottom: 12 }}>
 								<label style={s.label}>Descripción *</label>
 								<textarea className="uc-inp" style={{ minHeight: 60, resize: 'vertical' }} value={impForm.descripcion} onChange={(e) => setImpForm({ ...impForm, descripcion: e.target.value })} />
-							</div>
-							<div style={{ marginBottom: 16 }}>
-								<label style={s.label}>Responsable</label>
-								<input className="uc-inp" value={impForm.responsable} onChange={(e) => setImpForm({ ...impForm, responsable: e.target.value })} />
 							</div>
 							<div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
 								<button type="button" className="uc-btn-s" onClick={() => setShowCrearImpedimento(false)}>Cancelar</button>

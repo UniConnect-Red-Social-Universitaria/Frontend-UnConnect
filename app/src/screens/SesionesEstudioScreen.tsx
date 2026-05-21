@@ -3,16 +3,13 @@ import {
   ActivityIndicator,
   FlatList,
   Modal,
-  Platform,
   Pressable,
-  ScrollView,
+  StatusBar,
   Text,
-  TextInput,
   View,
   StyleSheet,
   Alert,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -23,16 +20,15 @@ import {
 } from '../services/sesion.service';
 import { showToast } from '../utils/toast';
 import theme from '../styles/theme';
-import { gruposService } from '../services/grupos.service';
 
-type RootStackParamList = {
-  SesionesEstudio: undefined;
-  SesionDetalle: { sesionId: string };
+import type { RootStackParamList } from '../navigation/RootNavigator';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+type Props = {
+  navigation: StackNavigationProp<RootStackParamList, 'SesionesEstudio'>;
+  route?: any;
 };
-type Props = { navigation: StackNavigationProp<RootStackParamList, 'SesionesEstudio'> };
 
-type ModalTipo = 'crear' | 'cancelar-una' | 'cancelar-multi' | null;
-type PickerTarget = 'inicio' | 'fin' | null;
+type ModalTipo = 'cancelar-una' | 'cancelar-multi' | null;
 
 const RECURRENCIA_LABEL: Record<FrecuenciaRecurrencia, string> = {
   DIARIA: 'Diaria', SEMANAL: 'Semanal', QUINCENAL: 'Quincenal',
@@ -55,9 +51,9 @@ function fmtDay(d: Date) {
   });
 }
 
-export default function SesionesEstudioScreen({ navigation }: Props) {
+export default function SesionesEstudioScreen({ navigation, route }: Props) {
+  const isDesktop = useIsDesktop();
   const [calendario, setCalendario] = useState<CalendarioSesionDTO[]>([]);
-  const [grupos, setGrupos] = useState<any[]>([]);
   const [cargando, setCargando] = useState(false);
   const [modal, setModal] = useState<ModalTipo>(null);
   const [sesionActual, setSesionActual] = useState<CalendarioSesionDTO | null>(null);
@@ -65,28 +61,11 @@ export default function SesionesEstudioScreen({ navigation }: Props) {
   const [multiMode, setMultiMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const [titulo, setTitulo] = useState('');
-  const [descripcion, setDescripcion] = useState('');
-  const [lugar, setLugar] = useState('');
-  const [frecuencia, setFrecuencia] = useState<FrecuenciaRecurrencia>('SEMANAL');
-  const [dateInicio, setDateInicio] = useState<Date>(new Date(Date.now() + 24 * 60 * 60 * 1000));
-  const [dateFin, setDateFin] = useState<Date>(new Date(Date.now() + 8 * 24 * 60 * 60 * 1000));
-  const [recordatorio, setRecordatorio] = useState('30');
-  const [grupoId, setGrupoId] = useState('');
-
-  const [pickerTarget, setPickerTarget] = useState<PickerTarget>(null);
-  const [pickerMode, setPickerMode] = useState<'date' | 'time'>('date');
-  const [tempDate, setTempDate] = useState<Date>(new Date());
-
   const cargar = useCallback(async () => {
     setCargando(true);
     try {
-      const [cal, grp] = await Promise.all([
-        sesionService.obtenerCalendario(),
-        gruposService.getGrupos(),
-      ]);
+      const cal = await sesionService.obtenerCalendario();
       setCalendario(cal);
-      setGrupos(grp);
     } catch {
       showToast.error('Error al cargar datos');
     } finally {
@@ -95,6 +74,12 @@ export default function SesionesEstudioScreen({ navigation }: Props) {
   }, []);
 
   useEffect(() => { cargar(); }, [cargar]);
+
+  useEffect(() => {
+    if (route?.params?.refresh) {
+      cargar();
+    }
+  }, [route?.params?.refresh]);
 
   const days = useMemo(() => {
     const map = new Map<string, CalendarioSesionDTO[]>();
@@ -123,57 +108,7 @@ export default function SesionesEstudioScreen({ navigation }: Props) {
   };
 
   const abrirCrear = () => {
-    setTitulo(''); setDescripcion(''); setLugar('');
-    setFrecuencia('SEMANAL');
-    setDateInicio(new Date(Date.now() + 24 * 60 * 60 * 1000));
-    setDateFin(new Date(Date.now() + 8 * 24 * 60 * 60 * 1000));
-    setRecordatorio('30'); setGrupoId('');
-    setModal('crear');
-  };
-
-  const abrirPicker = (target: PickerTarget) => {
-    const current = target === 'inicio' ? dateInicio : dateFin;
-    setTempDate(current);
-    setPickerTarget(target);
-    setPickerMode('date');
-  };
-
-  const onPickerChange = (_event: unknown, selected?: Date) => {
-    if (!selected) { setPickerTarget(null); return; }
-    if (Platform.OS === 'android') {
-      if (pickerMode === 'date') { setTempDate(selected); setPickerMode('time'); }
-      else { applyDate(selected); }
-    } else { setTempDate(selected); }
-  };
-
-  const applyDate = (date: Date) => {
-    if (pickerTarget === 'inicio') setDateInicio(date);
-    else setDateFin(date);
-    setPickerTarget(null);
-  };
-
-  const handleCrear = async () => {
-    if (!titulo.trim() || !descripcion.trim() || !lugar.trim()) {
-      showToast.error('Completa los campos obligatorios'); return;
-    }
-    if (dateFin <= dateInicio) { showToast.error('La fecha fin debe ser posterior'); return; }
-    setEnviando(true);
-    try {
-      await sesionService.crearSerie({
-        titulo: titulo.trim(), descripcion: descripcion.trim(), lugar: lugar.trim(),
-        frecuencia,
-        fechaInicio: dateInicio.toISOString(), fechaFin: dateFin.toISOString(),
-        recordatorioMinutos: parseInt(recordatorio, 10) || 30,
-        ...(grupoId ? { grupoId } : {}),
-      });
-      setModal(null);
-      showToast.success('Serie creada');
-      cargar();
-    } catch (e: any) {
-      showToast.error(e?.message || 'Error al crear');
-    } finally {
-      setEnviando(false);
-    }
+    navigation.navigate('CrearSerie');
   };
 
   const handleCancelarUna = async () => {
@@ -312,7 +247,7 @@ export default function SesionesEstudioScreen({ navigation }: Props) {
         <FlatList
           data={days}
           keyExtractor={(item) => item.date.toISOString()}
-          contentContainerStyle={{ padding: 12, gap: 12 }}
+          contentContainerStyle={{ padding: 12, gap: 12, paddingBottom: 140 }}
           ListEmptyComponent={
             <Text style={{ textAlign: 'center', color: '#999', marginTop: 40 }}>
               No tienes sesiones programadas.
@@ -326,102 +261,6 @@ export default function SesionesEstudioScreen({ navigation }: Props) {
               {item.sessions.map(renderSession)}
             </View>
           )}
-        />
-      )}
-
-      <Modal visible={modal === 'crear'} transparent animationType="slide">
-        <View style={est.overlay}>
-          <ScrollView style={est.modal} contentContainerStyle={{ gap: 8 }}>
-            <Text style={est.modalTitle}>Nueva serie de sesiones</Text>
-            <TextInput style={est.input} placeholder="Titulo *" value={titulo} onChangeText={setTitulo} />
-            <TextInput style={est.input} placeholder="Descripcion *" value={descripcion} onChangeText={setDescripcion} />
-            <TextInput style={est.input} placeholder="Lugar *" value={lugar} onChangeText={setLugar} />
-
-            <Text style={est.label}>Frecuencia</Text>
-            <View style={est.chipRow}>
-              {(['DIARIA', 'SEMANAL', 'QUINCENAL'] as FrecuenciaRecurrencia[]).map((f) => (
-                <Pressable
-                  key={f}
-                  style={[est.chip, frecuencia === f && est.chipActive]}
-                  onPress={() => setFrecuencia(f)}
-                >
-                  <Text style={[est.chipText, frecuencia === f && est.chipTextActive]}>{f}</Text>
-                </Pressable>
-              ))}
-            </View>
-
-            <Text style={est.label}>Fecha inicio</Text>
-            <Pressable style={est.dateBtn} onPress={() => abrirPicker('inicio')}>
-              <Ionicons name="calendar-outline" size={16} color={theme.colors.primary} />
-              <Text style={est.dateBtnText}>{fmtFecha(dateInicio)}</Text>
-            </Pressable>
-
-            <Text style={est.label}>Fecha fin</Text>
-            <Pressable style={est.dateBtn} onPress={() => abrirPicker('fin')}>
-              <Ionicons name="calendar-outline" size={16} color={theme.colors.primary} />
-              <Text style={est.dateBtnText}>{fmtFecha(dateFin)}</Text>
-            </Pressable>
-
-            <Text style={est.label}>Recordatorio (minutos)</Text>
-            <TextInput style={est.input} placeholder="30" keyboardType="numeric" value={recordatorio} onChangeText={setRecordatorio} />
-
-            <Text style={est.label}>Grupo (opcional)</Text>
-            <View style={est.chipRow}>
-              <Pressable style={[est.chip, !grupoId && est.chipActive]} onPress={() => setGrupoId('')}>
-                <Text style={[est.chipText, !grupoId && est.chipTextActive]}>Sin grupo</Text>
-              </Pressable>
-              {grupos.map((g: any) => (
-                <Pressable
-                  key={g.id}
-                  style={[est.chip, grupoId === g.id && est.chipActive]}
-                  onPress={() => setGrupoId(g.id)}
-                >
-                  <Text style={[est.chipText, grupoId === g.id && est.chipTextActive]}>{g.nombre}</Text>
-                </Pressable>
-              ))}
-            </View>
-            {grupoId ? <Text style={est.grupoInfo}>Se notificara a los miembros</Text> : null}
-
-            <View style={est.modalBtns}>
-              <Pressable style={est.btnSecondary} onPress={() => setModal(null)}>
-                <Text>Cancelar</Text>
-              </Pressable>
-              <Pressable style={est.btnPrimary} onPress={handleCrear} disabled={enviando}>
-                <Text style={est.btnPrimaryText}>{enviando ? 'Creando...' : 'Crear serie'}</Text>
-              </Pressable>
-            </View>
-          </ScrollView>
-        </View>
-      </Modal>
-
-      {Platform.OS === 'ios' && pickerTarget !== null && (
-        <Modal visible transparent animationType="slide">
-          <View style={est.overlay}>
-            <View style={[est.modal, { paddingBottom: 24 }]}>
-              <Text style={est.modalTitle}>
-                {pickerTarget === 'inicio' ? 'Fecha inicio' : 'Fecha fin'}
-              </Text>
-              <DateTimePicker
-                value={tempDate} mode="datetime" display="spinner"
-                onChange={onPickerChange} locale="es-CO" minimumDate={new Date()}
-              />
-              <View style={est.modalBtns}>
-                <Pressable style={est.btnSecondary} onPress={() => setPickerTarget(null)}>
-                  <Text>Cancelar</Text>
-                </Pressable>
-                <Pressable style={est.btnPrimary} onPress={() => applyDate(tempDate)}>
-                  <Text style={est.btnPrimaryText}>Listo</Text>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-        </Modal>
-      )}
-
-      {Platform.OS === 'android' && pickerTarget !== null && (
-        <DateTimePicker
-          value={tempDate} mode={pickerMode} display="default"
-          onChange={onPickerChange} minimumDate={new Date()}
         />
       )}
 
@@ -447,25 +286,81 @@ export default function SesionesEstudioScreen({ navigation }: Props) {
           </View>
         </View>
       </Modal>
+
+      {!isDesktop && (
+        <View style={est.bottomBar}>
+          <Pressable
+            style={est.footerTab}
+            onPress={() => navigation.navigate('Principal')}
+            accessibilityLabel="Inicio"
+          >
+            <Ionicons name="home-outline" size={24} style={est.footerIcon} />
+          </Pressable>
+
+          <Pressable
+            style={est.footerTab}
+            onPress={() => navigation.navigate('Grupos')}
+            accessibilityLabel="Grupos"
+          >
+            <Ionicons name="people-outline" size={24} style={est.footerIcon} />
+          </Pressable>
+
+          <Pressable
+            style={est.footerTab}
+            onPress={() => navigation.navigate('Eventos')}
+            accessibilityLabel="Eventos"
+          >
+            <Ionicons name="calendar-outline" size={24} style={est.footerIcon} />
+          </Pressable>
+
+          <Pressable
+            style={[est.footerTab, est.footerTabActive]}
+            onPress={() => navigation.navigate('SesionesEstudio')}
+            accessibilityLabel="Sesiones"
+          >
+            <Ionicons name="time" size={24} style={est.footerIcon} />
+          </Pressable>
+
+          <Pressable
+            style={est.footerTab}
+            onPress={() => navigation.navigate('Contactos')}
+            accessibilityLabel="Contactos"
+          >
+            <Ionicons name="chatbubbles-outline" size={24} style={est.footerIcon} />
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }
 
 const est = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
+  bottomBar: {
+    flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center',
+    backgroundColor: theme.colors.primary, paddingVertical: 24, paddingHorizontal: 12,
+    borderTopWidth: 1, borderTopColor: '#E0E0E0', paddingBottom: 48, paddingTop: 24,
+    width: '100%', alignSelf: 'stretch', minHeight: 80,
+  },
+  footerTab: {
+    flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 8, borderRadius: 999,
+  },
+  footerTabActive: { backgroundColor: 'rgba(255, 255, 255, 0.18)' },
+  footerIcon: { color: theme.colors.white || '#FFFFFF' },
   header: {
     flexDirection: 'row', alignItems: 'center', padding: 16,
+    paddingTop: (StatusBar.currentHeight || 24) + 8,
     backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#eee',
   },
   backBtn: { marginRight: 8 },
   headerTitle: { flex: 1, fontSize: 16, fontWeight: '600' },
   addBtn: { marginLeft: 8 },
   toolbar: {
-    flexDirection: 'row', gap: 8, padding: 8,
+    flexDirection: 'row', gap: 10, padding: 12,
     backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#eee',
   },
   toolBtn: {
-    paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6,
+    paddingHorizontal: 18, paddingVertical: 10, borderRadius: 8,
     borderWidth: 1, borderColor: '#dde4ec',
   },
   toolBtnActive: { backgroundColor: '#e8f0fe', borderColor: theme.colors.primary },
@@ -495,23 +390,10 @@ const est = StyleSheet.create({
   btnCancelSmall: { padding: 4 },
   checkbox: { padding: 4 },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modal: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '85%' },
+  modal: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, maxHeight: '90%' },
   modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12, color: '#003e70' },
-  label: { fontSize: 13, fontWeight: '600', color: '#555', marginBottom: 4 },
-  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 10, fontSize: 14, marginBottom: 4 },
-  dateBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1,
-    borderColor: theme.colors.primary, borderRadius: 8, padding: 10, marginBottom: 4, backgroundColor: '#f0f6ff',
-  },
-  dateBtnText: { fontSize: 14, color: theme.colors.primary, fontWeight: '500' },
-  chipRow: { flexDirection: 'row', gap: 6, marginBottom: 10, flexWrap: 'wrap' },
-  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#ddd' },
-  chipActive: { borderColor: theme.colors.primary, backgroundColor: '#e8f0fe' },
-  chipText: { fontSize: 13, color: '#555' },
-  chipTextActive: { color: theme.colors.primary, fontWeight: '600' },
-  grupoInfo: { fontSize: 12, color: '#6c3483', marginBottom: 8 },
-  modalBtns: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12, marginTop: 8 },
-  btnSecondary: { padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#ddd' },
-  btnPrimary: { padding: 12, borderRadius: 8, backgroundColor: theme.colors.primary },
+  modalBtns: { flexDirection: 'row', gap: 12, marginTop: 16, marginBottom: 8 },
+  btnSecondary: { flex: 1, padding: 14, borderRadius: 8, borderWidth: 1, borderColor: '#ddd', alignItems: 'center' },
+  btnPrimary: { flex: 1, padding: 14, borderRadius: 8, backgroundColor: theme.colors.primary, alignItems: 'center' },
   btnPrimaryText: { color: '#fff', fontWeight: '600' },
 });

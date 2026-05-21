@@ -34,6 +34,7 @@ type RootStackParamList = {
 	Grupos: undefined;
 	Contactos: undefined;
 	Notificaciones: undefined;
+	SesionesEstudio: undefined;
 	EditarPerfil: undefined;
 	Login: undefined;
 };
@@ -447,6 +448,14 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 							accessibilityLabel="Eventos"
 						>
 							<Ionicons name="calendar" size={24} style={styles.footerIcon} />
+						</Pressable>
+
+						<Pressable
+							style={styles.footerTab}
+							onPress={() => navigation.navigate('SesionesEstudio')}
+							accessibilityLabel="Sesiones"
+						>
+							<Ionicons name="time-outline" size={24} style={styles.footerIcon} />
 						</Pressable>
 
 						<Pressable

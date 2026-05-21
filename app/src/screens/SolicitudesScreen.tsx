@@ -220,6 +220,18 @@ export default function SolicitudesScreen({ navigation }: Props) {
 
 				<Pressable
 					style={principalStyles.footerTab}
+					onPress={() => navigation.navigate('SesionesEstudio')}
+					accessibilityLabel="Sesiones"
+				>
+					<Ionicons
+						name="time-outline"
+						size={24}
+						style={principalStyles.footerIcon}
+					/>
+				</Pressable>
+
+				<Pressable
+					style={principalStyles.footerTab}
 					onPress={() => navigation.navigate('Contactos')}
 					accessibilityLabel="Contactos"
 				>

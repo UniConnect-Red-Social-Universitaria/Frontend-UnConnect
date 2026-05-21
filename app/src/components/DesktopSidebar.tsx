@@ -21,7 +21,6 @@ type ActiveScreen =
 	| 'Contactos'
 	| 'Notificaciones'
 	| 'EditarPerfil'
-	| 'Sprints'
 	| null;
 
 type Props = {
@@ -56,12 +55,6 @@ const NAV_ITEMS = [
 		label: 'Perfil',
 		icon: 'person-circle-outline',
 		iconActive: 'person-circle',
-	},
-	{
-		screen: 'Sprints',
-		label: 'Scrum',
-		icon: 'stats-chart-outline',
-		iconActive: 'stats-chart',
 	},
 ] as const;
 

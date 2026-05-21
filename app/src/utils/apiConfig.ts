@@ -56,21 +56,42 @@ export function resolverApiBaseUrl(): string {
   const apiUrlConfiguradaRaw = process.env.EXPO_PUBLIC_API_URL;
   const apiUrlConfigurada =
     apiUrlConfiguradaRaw?.trim().replace(/\/+$/, "") ?? "";
-  if (apiUrlConfigurada) return apiUrlConfigurada;
   const hostUriExpo = obtenerHostExpo();
-  if (hostUriExpo) {
-    const hostDetectado = extraerHostDesdeHostUri(hostUriExpo);
-    if (hostDetectado && esHostLanValido(hostDetectado)) {
-      const hostNormalizado = hostDetectado.includes(":")
-        ? `[${hostDetectado}]`
-        : hostDetectado;
-      return `http://${hostNormalizado}:3000`;
+
+  function detectarLocalUrl(): string | null {
+    if (hostUriExpo) {
+      const hostDetectado = extraerHostDesdeHostUri(hostUriExpo);
+      if (hostDetectado && esHostLanValido(hostDetectado)) {
+        const hostNormalizado = hostDetectado.includes(":")
+          ? `[${hostDetectado}]`
+          : hostDetectado;
+        return `http://${hostNormalizado}:3000`;
+      }
     }
+    if (Platform.OS === "android") {
+      return "http://10.0.2.2:3000";
+    }
+    return null;
   }
 
-  if (Platform.OS === "android") {
-    return "http://10.0.2.2:3000";
+  if (apiUrlConfigurada) {
+    if (apiUrlConfigurada.includes("://localhost") || apiUrlConfigurada.includes("://127.0.0.1")) {
+      const localUrl = detectarLocalUrl();
+      if (localUrl) {
+        console.log(`[apiConfig] EXPO_PUBLIC_API_URL es ${apiUrlConfigurada}, se sobreescribe con detección local → ${localUrl}`);
+        return localUrl;
+      }
+    }
+    console.log(`[apiConfig] Usando EXPO_PUBLIC_API_URL → ${apiUrlConfigurada}`);
+    return apiUrlConfigurada;
   }
 
+  const localUrl = detectarLocalUrl();
+  if (localUrl) {
+    console.log(`[apiConfig] URL detectada local → ${localUrl}`);
+    return localUrl;
+  }
+
+  console.log(`[apiConfig] Fallback producción → ${BACKEND_PRODUCTION_URL}`);
   return BACKEND_PRODUCTION_URL;
 }

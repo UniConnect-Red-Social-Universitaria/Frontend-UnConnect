@@ -39,7 +39,6 @@ type RootStackParamList = {
 	EditarPerfil: undefined;
 	Notificaciones: undefined;
 	SesionesEstudio: undefined;
-	Sprints: undefined;
 	Login: undefined;
 	Home: undefined;
 };
@@ -359,26 +358,6 @@ export default function PrincipalScreen({
 
 			{!selectedMateria ? (
 				<>
-					<Pressable
-						onPress={() => navigation.navigate('Sprints')}
-						style={{
-							flexDirection: 'row', alignItems: 'center', gap: 12,
-							backgroundColor: '#fff', borderRadius: 14, padding: 14,
-							marginBottom: 14, borderWidth: 2, borderColor: '#003e70',
-						}}
-					>
-						<Ionicons name="stats-chart" size={28} color="#003e70" />
-						<View style={{ flex: 1 }}>
-							<RNText style={{ fontSize: 15, fontWeight: '700', color: '#003e70' }}>
-								Scrum — Tablero de Sprints
-							</RNText>
-							<RNText style={{ fontSize: 12, color: '#7a9ab5' }}>
-								Gestiona sprints, historias y métricas
-							</RNText>
-						</View>
-						<Ionicons name="chevron-forward" size={20} color="#003e70" />
-					</Pressable>
-
 					<View
 						style={[
 							styles.searchContainer,
@@ -617,13 +596,6 @@ export default function PrincipalScreen({
 							<Ionicons name="person-circle-outline" size={20} color="#555" />
 							<Text style={styles.sidebarItemText}>Perfil</Text>
 						</Pressable>
-						<Pressable
-							style={styles.sidebarItem}
-							onPress={() => navigation.navigate('Sprints')}
-						>
-							<Ionicons name="stats-chart-outline" size={20} color="#555" />
-							<Text style={styles.sidebarItemText}>Scrum</Text>
-						</Pressable>
 					</View>
 
 					<PrimaryButton style={styles.sidebarLogout} onPress={handleLogout}>
@@ -777,19 +749,20 @@ export default function PrincipalScreen({
 					<Ionicons name="calendar-outline" size={24} style={styles.footerIcon} />
 				</Pressable>
 
+				<Pressable
+					style={styles.footerTab}
+					onPress={() => navigation.navigate('SesionesEstudio')}
+					accessibilityLabel="Sesiones"
+				>
+					<Ionicons name="time-outline" size={24} style={styles.footerIcon} />
+				</Pressable>
+
 			<Pressable
 				style={styles.footerTab}
 				onPress={() => navigation.navigate('Contactos')}
 				accessibilityLabel="Contactos"
 			>
 				<Ionicons name="chatbubbles-outline" size={24} style={styles.footerIcon} />
-			</Pressable>
-			<Pressable
-				style={styles.footerTab}
-				onPress={() => navigation.navigate('Sprints')}
-				accessibilityLabel="Scrum"
-			>
-				<Ionicons name="stats-chart-outline" size={24} style={styles.footerIcon} />
 			</Pressable>
 		</View>
 		</Screen>

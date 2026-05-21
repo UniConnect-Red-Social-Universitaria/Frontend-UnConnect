@@ -32,6 +32,7 @@ type RootStackParamList = {
 	Contactos: undefined;
 	Notificaciones: undefined;
 	Login: undefined;
+	SesionesEstudio: undefined;
 	EditarPerfil: undefined;
 	DetalleGrupo: {
 		grupoId: string;
@@ -260,6 +261,14 @@ export function GruposScreen({ navigation }: GruposScreenProps) {
 							accessibilityLabel="Eventos"
 						>
 							<Ionicons name="calendar-outline" size={24} style={styles.footerIcon} />
+						</Pressable>
+
+						<Pressable
+							style={styles.footerTab}
+							onPress={() => navigation.navigate('SesionesEstudio')}
+							accessibilityLabel="Sesiones"
+						>
+							<Ionicons name="time-outline" size={24} style={styles.footerIcon} />
 						</Pressable>
 
 						<Pressable
