@@ -16,10 +16,6 @@ export default function SprintList() {
     velocidadPlaneada: 20,
   });
 
-  useEffect(() => {
-    loadSprints();
-  }, []);
-
   const loadSprints = async () => {
     try {
       setLoading(true);
@@ -33,6 +29,10 @@ export default function SprintList() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadSprints();
+  }, []);
 
   const handleCreateSprint = async () => {
     try {

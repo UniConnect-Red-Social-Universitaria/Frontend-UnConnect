@@ -12,12 +12,6 @@ export default function SprintDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (sprintId) {
-      loadData();
-    }
-  }, [sprintId]);
-
   const loadData = async () => {
     try {
       setLoading(true);
@@ -38,6 +32,12 @@ export default function SprintDashboard() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (sprintId) {
+      loadData();
+    }
+  }, [sprintId]);
 
   const handleInitiateSprint = async () => {
     try {
