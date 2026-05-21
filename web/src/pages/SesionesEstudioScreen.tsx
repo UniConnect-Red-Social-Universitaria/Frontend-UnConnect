@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { sesionService, CalendarioSesionDTO, FrecuenciaRecurrencia, EstadoAsistencia } from '../services/sesion.service';
+import { sesionService, type CalendarioSesionDTO, type FrecuenciaRecurrencia, type EstadoAsistencia } from '../services/sesion.service';
 import { gruposService } from '../services/grupos.service';
 import { useAuth } from '../context/AuthContext';
 import type { Grupo } from '../types/api.types';
