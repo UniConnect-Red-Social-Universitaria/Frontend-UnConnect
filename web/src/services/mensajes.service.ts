@@ -1,8 +1,9 @@
 /**
  * Mensajes service para web — usa localStorage en vez de AsyncStorage
  */
+import { resolverApiBaseUrl } from '../utils/apiConfig';
 
-const API_URL = `${(import.meta as any).env?.VITE_API_URL || 'http://localhost:3000'}/api`;
+const API_URL = `${resolverApiBaseUrl()}/api`;
 
 const getToken = (): string | null => localStorage.getItem('userToken');
 

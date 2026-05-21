@@ -1,73 +1,77 @@
-# React + TypeScript + Vite
+# 🌐 UniConnect - Web Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Plataforma web de **UniConnect**, la red social universitaria diseñada para conectar a la comunidad académica. Este dashboard administrativo y de usuario está construido con **React 19**, **TypeScript** y **Vite**.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🛠️ Tecno-Stack & Características
 
-## React Compiler
+- **Core:** React 19 & TypeScript para una interfaz reactiva y tipado seguro.
+- **Build Tool:** Vite para un desarrollo ultra-rápido con Hot Module Replacement (HMR).
+- **Tiempo Real:** Conectividad mediante Socket.io Client para chats y notificaciones instantáneas.
+- **Testing:** Suite de pruebas unitarias y de integración con Vitest y Testing Library.
+- **Calidad de Código:** Configuración avanzada de ESLint con reglas para React y TypeScript.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## 🚀 Desarrollo Local
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Requisitos Previos
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- **Node.js** (Versión recomendada: `20.x`)
+- **npm** (Instalado junto con Node)
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Instalación de Dependencias
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Ejecuta el siguiente comando en la raíz del proyecto para instalar las dependencias de todos los espacios de trabajo:
+
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Comandos de Desarrollo
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+| Comando | Descripción |
+| :--- | :--- |
+| `npm run dev` | Inicia el servidor de desarrollo local de Vite en `http://localhost:5173`. |
+| `npm run build` | Compila los tipos de la API (`@uniconnect/api-types`) y construye la app para producción en `./dist`. |
+| `npm run lint` | Analiza el código con ESLint en busca de errores y malas prácticas. |
+| `npm run test` | Ejecuta las pruebas unitarias una sola vez con Vitest. |
+| `npm run test:watch` | Ejecuta las pruebas de forma interactiva (modo watch). |
+| `npm run preview` | Previsualiza la compilación de producción generada en `./dist` localmente. |
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+---
+
+## 🚀 Flujo de CI/CD (Integración y Despliegue Continuos)
+
+El desarrollo del proyecto está completamente automatizado a través de **GitHub Actions**. A continuación se detalla cómo fluyen los cambios desde que se realiza un Pull Request hasta el despliegue a producción.
+
+### Diagrama del Flujo de Trabajo
+
+El siguiente diagrama detalla los pipelines involucrados en el desarrollo y despliegue del Dashboard Web:
+
+![alt text](<Untitled diagram-2026-05-17-234814.png>)
+
+---
+
+## 🌐 Entornos Disponibles
+
+| Entorno | Plataforma / URL | Activador / Trigger | Descripción |
+| :--- | :--- | :--- | :--- |
+| **Desarrollo Local** | `http://localhost:5173` | Manual (`npm run dev`) | Entorno local de desarrollo rápido con HMR y conexión a API local o dev. |
+| **Producción (Web)** | [uniconnect-frontend.fly.dev](https://uniconnect-frontend.fly.dev) | Push automático a `main` | Aplicación web productiva desplegada en Fly.io conectada a la API productiva. |
+
+---
+
+## 🔐 Secretos Requeridos en GitHub Actions
+
+Para asegurar que los workflows de GitHub Actions funcionen correctamente, se deben configurar los siguientes secretos en el repositorio (`Settings > Secrets and variables > Actions`):
+
+| Secreto | Requerido por | Descripción |
+| :--- | :--- | :--- |
+| `FLY_API_TOKEN` | `fly-deploy.yml` | Token de autenticación de Fly.io que permite compilar y desplegar la aplicación web de forma remota, así como gestionar rollbacks automáticos en caso de fallos. |
+| `SLACK_WEBHOOK_URL` | `ci.yml` y `fly-deploy.yml` | URL del Webhook entrante de Slack para enviar notificaciones automáticas al canal del equipo ante éxitos o fallos de compilación/despliegue. |
+| `GITHUB_TOKEN` | `pr-coverage.yml` | Proporcionado automáticamente por GitHub Actions. Permite que la tarea de cobertura de código pueda comentar en las Pull Requests con el informe detallado de cobertura. |
+
+> [!NOTE]
+> Las variables de entorno de la aplicación web en producción como `EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB`, `EXPO_PUBLIC_AUTH0_DOMAIN` y `EXPO_PUBLIC_AUTH0_CLIENT_ID` se configuran como secretos de Fly.io a nivel de contenedor (`fly secrets set`) y no a través de secretos de GitHub Actions, manteniendo la consistencia de seguridad.

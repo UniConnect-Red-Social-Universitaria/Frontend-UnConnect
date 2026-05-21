@@ -172,12 +172,10 @@ export default function DetalleGrupoScreen() {
 		setAgregandoId(id);
 		try {
 			await gruposService.agregarMiembro(grupoId, id);
-			showMsg('Miembro agregado');
+			showMsg('Solicitud enviada al compañero');
 			setShowAddModal(false);
-			const g = await gruposService.getGrupo(grupoId);
-			setGrupo(g);
 		} catch {
-			showMsg('Error al agregar miembro', 'error');
+			showMsg('Error al enviar la solicitud', 'error');
 		} finally {
 			setAgregandoId(null);
 		}
@@ -337,7 +335,9 @@ export default function DetalleGrupoScreen() {
 								<button
 									className="uc-btn primary"
 									onClick={() =>
-										navigate(`/foro/${grupo.materia!.id}?nombre=${encodeURIComponent(grupo.materia!.nombre)}`)
+										navigate(
+											`/foro/${grupo.materia!.id}?nombre=${encodeURIComponent(grupo.materia!.nombre)}`
+										)
 									}
 								>
 									🗣️ Ir al Foro
@@ -367,7 +367,7 @@ export default function DetalleGrupoScreen() {
 											cargarCandidatos();
 										}}
 									>
-										+ Miembro
+										+ Invitar
 									</button>
 									{grupo.estado !== 'PENDIENTE_TRANSFERENCIA' && (
 										<button
@@ -388,24 +388,25 @@ export default function DetalleGrupoScreen() {
 									)}
 								</>
 							)}
-							{grupo.candidatoAdminId === userId && grupo.estado === 'PENDIENTE_TRANSFERENCIA' && (
-								<>
-									<button
-										className="uc-btn success"
-										onClick={() => setConfirmAction({ kind: 'aceptar-transferencia' })}
-										disabled={aceptandoTransferencia}
-									>
-										{aceptandoTransferencia ? '...' : 'Aceptar admin'}
-									</button>
-									<button
-										className="uc-btn danger"
-										onClick={() => setConfirmAction({ kind: 'rechazar-transferencia' })}
-										disabled={rechazandoTransferencia}
-									>
-										{rechazandoTransferencia ? '...' : 'Rechazar admin'}
-									</button>
-								</>
-							)}
+							{grupo.candidatoAdminId === userId &&
+								grupo.estado === 'PENDIENTE_TRANSFERENCIA' && (
+									<>
+										<button
+											className="uc-btn success"
+											onClick={() => setConfirmAction({ kind: 'aceptar-transferencia' })}
+											disabled={aceptandoTransferencia}
+										>
+											{aceptandoTransferencia ? '...' : 'Aceptar admin'}
+										</button>
+										<button
+											className="uc-btn danger"
+											onClick={() => setConfirmAction({ kind: 'rechazar-transferencia' })}
+											disabled={rechazandoTransferencia}
+										>
+											{rechazandoTransferencia ? '...' : 'Rechazar admin'}
+										</button>
+									</>
+								)}
 							{userId && (
 								<button
 									className="uc-btn danger"
@@ -420,7 +421,15 @@ export default function DetalleGrupoScreen() {
 
 						<div style={{ marginTop: 32 }}>
 							<h3 style={{ margin: '0 0 16px', color: '#00284d', fontSize: 18 }}>
-								Biblioteca de Recursos</h3></div><div style={{marginTop: 32}}><RecursosTab grupoId={grupoId!} /></div><div style={{marginTop: 32}}><h3 style={{ margin: '0 0 16px', color: '#00284d', fontSize: 18 }}>Archivos del grupo
+								Biblioteca de Recursos
+							</h3>
+						</div>
+						<div style={{ marginTop: 32 }}>
+							<RecursosTab grupoId={grupoId!} />
+						</div>
+						<div style={{ marginTop: 32 }}>
+							<h3 style={{ margin: '0 0 16px', color: '#00284d', fontSize: 18 }}>
+								Archivos del grupo
 							</h3>
 							<input
 								className="uc-input"
@@ -488,11 +497,12 @@ export default function DetalleGrupoScreen() {
 				<div className="uc-modal-overlay" onClick={() => setShowAddModal(false)}>
 					<div className="uc-modal" onClick={(e) => e.stopPropagation()}>
 						<h2 style={{ margin: '0 0 16px', fontSize: 18, color: '#00284d' }}>
-							Agregar compañero al grupo
+							Invitar compañero al grupo
 						</h2>
 						{candidatos.length === 0 ? (
 							<p style={{ color: '#7a9ab5' }}>
-								No hay compañeros disponibles en esta materia o ya están en el grupo.
+								No hay compañeros disponibles para invitar en esta materia o ya están en
+								el grupo.
 							</p>
 						) : (
 							candidatos.map((c) => (
@@ -511,7 +521,7 @@ export default function DetalleGrupoScreen() {
 										onClick={() => handleAddMiembro(c.id)}
 										disabled={agregandoId === c.id}
 									>
-										{agregandoId === c.id ? '...' : 'Agregar'}
+										{agregandoId === c.id ? '...' : 'Invitar'}
 									</button>
 								</div>
 							))
@@ -533,12 +543,11 @@ export default function DetalleGrupoScreen() {
 							Nominar candidato a administrador
 						</h2>
 						<p style={{ color: '#7a9ab5', fontSize: 14, marginBottom: 16 }}>
-							Elige al miembro que deseas nominar. Deberá aceptar la transferencia para que sea efectiva.
+							Elige al miembro que deseas nominar. Deberá aceptar la transferencia para
+							que sea efectiva.
 						</p>
 						{grupo?.miembros?.filter((m) => m.id !== userId).length === 0 ? (
-							<p style={{ color: '#e74c3c' }}>
-								No hay otros miembros a los que nominar.
-							</p>
+							<p style={{ color: '#e74c3c' }}>No hay otros miembros a los que nominar.</p>
 						) : (
 							grupo?.miembros
 								?.filter((m) => m.id !== userId)
@@ -588,7 +597,8 @@ export default function DetalleGrupoScreen() {
 							{confirmAction.kind === 'transferir-por-error' && 'Nominar candidato'}
 							{confirmAction.kind === 'cancelar-transferencia' && 'Cancelar nominación'}
 							{confirmAction.kind === 'aceptar-transferencia' && 'Aceptar administración'}
-							{confirmAction.kind === 'rechazar-transferencia' && 'Rechazar administración'}
+							{confirmAction.kind === 'rechazar-transferencia' &&
+								'Rechazar administración'}
 						</h2>
 						<p
 							style={{

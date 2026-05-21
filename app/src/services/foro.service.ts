@@ -1,5 +1,4 @@
 import { apiClient } from './api.client';
-// @ts-expect-error - La biblioteca no tiene tipos, pero funciona correctamente
 import type { ForoPregunta, ForoRespuesta } from '@uniconnect/api-types';
 
 export type { ForoPregunta, ForoRespuesta };
@@ -22,6 +21,11 @@ export const foroService = {
 
   publicarRespuesta: async (preguntaId: string, materiaId: string, contenido: string): Promise<ForoRespuesta> => {
     const res = await apiClient.post(`/api/foro/preguntas/${preguntaId}/respuestas`, { contenido, materiaId });
+    return res.data;
+  },
+
+  cerrarPregunta: async (preguntaId: string): Promise<ForoPregunta> => {
+    const res = await apiClient.patch(`/api/foro/preguntas/${preguntaId}/cerrar`);
     return res.data;
   },
 

@@ -1,6 +1,7 @@
 import { createApiClient } from '@uniconnect/api';
+import { resolverApiBaseUrl } from '../utils/apiConfig';
 
-const baseUrl = import.meta.env?.VITE_API_URL || 'http://localhost:3000';
+const baseUrl = resolverApiBaseUrl();
 
 const storage = {
     async getItem(key: string) {

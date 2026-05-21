@@ -41,32 +41,93 @@ type NotificationItem =
 
 export default function NotificacionesScreen() {
 	const navigate = useNavigate();
-	const [unreadDirectChats, setUnreadDirectChats] = useState<UnreadDirectChatNotification[]>([]);
-	const [unreadGroupChats, setUnreadGroupChats] = useState<UnreadGroupChatNotification[]>([]);
-	const [unreadContactRequests, setUnreadContactRequests] = useState<UnreadContactRequestNotification[]>([]);
-	const [unreadRejectedRequests, setUnreadRejectedRequests] = useState<UnreadRejectedRequestNotification[]>([]);
-	const [unreadGroupEvents, setUnreadGroupEvents] = useState<UnreadGroupEventNotification[]>([]);
+	const [unreadDirectChats, setUnreadDirectChats] = useState<
+		UnreadDirectChatNotification[]
+	>([]);
+	const [unreadGroupChats, setUnreadGroupChats] = useState<UnreadGroupChatNotification[]>(
+		[]
+	);
+	const [unreadContactRequests, setUnreadContactRequests] = useState<
+		UnreadContactRequestNotification[]
+	>([]);
+	const [unreadRejectedRequests, setUnreadRejectedRequests] = useState<
+		UnreadRejectedRequestNotification[]
+	>([]);
+	const [unreadGroupEvents, setUnreadGroupEvents] = useState<
+		UnreadGroupEventNotification[]
+	>([]);
 	const [esAdminDeGrupos, setEsAdminDeGrupos] = useState(false);
+	const [processingInvitationId, setProcessingInvitationId] = useState<string | null>(
+		null
+	);
+	const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(
+		null
+	);
+
+	const showMsg = (msg: string, type: 'success' | 'error' = 'success') => {
+		setToast({ msg, type });
+		setTimeout(() => setToast(null), 3500);
+	};
 
 	const unreadChats = useMemo<NotificationItem[]>(() => {
-		const directItems: NotificationItem[] = unreadDirectChats.map((i) => ({ ...i, kind: 'direct', key: `direct-${i.contactoId}` }));
-		const groupItems: NotificationItem[] = unreadGroupChats.map((i) => ({ ...i, kind: 'group', key: `group-${i.grupoId}` }));
-		const requestItems: NotificationItem[] = unreadContactRequests.map((i) => ({ ...i, kind: 'request', key: `request-${i.solicitudId}` }));
-		const rejectedItems: NotificationItem[] = unreadRejectedRequests.map((i) => ({ ...i, kind: 'request-rejected', key: `request-rejected-${i.solicitudId}` }));
-		const grupoEventItems: NotificationItem[] = unreadGroupEvents.map((i) => ({ ...i, kind: 'grupo-event', key: `grupo-event-${i.id}` }));
+		const directItems: NotificationItem[] = unreadDirectChats.map((i) => ({
+			...i,
+			kind: 'direct',
+			key: `direct-${i.contactoId}`,
+		}));
+		const groupItems: NotificationItem[] = unreadGroupChats.map((i) => ({
+			...i,
+			kind: 'group',
+			key: `group-${i.grupoId}`,
+		}));
+		const requestItems: NotificationItem[] = unreadContactRequests.map((i) => ({
+			...i,
+			kind: 'request',
+			key: `request-${i.solicitudId}`,
+		}));
+		const rejectedItems: NotificationItem[] = unreadRejectedRequests.map((i) => ({
+			...i,
+			kind: 'request-rejected',
+			key: `request-rejected-${i.solicitudId}`,
+		}));
+		const grupoEventItems: NotificationItem[] = unreadGroupEvents.map((i) => ({
+			...i,
+			kind: 'grupo-event',
+			key: `grupo-event-${i.id}`,
+		}));
 
-		return [...directItems, ...groupItems, ...requestItems, ...rejectedItems, ...grupoEventItems].sort((a, b) => {
-			const dateA = a.kind === 'request' || a.kind === 'grupo-event' ? new Date(a.createdAt).getTime() : new Date((a as any).updatedAt).getTime();
-			const dateB = b.kind === 'request' || b.kind === 'grupo-event' ? new Date(b.createdAt).getTime() : new Date((b as any).updatedAt).getTime();
+		return [
+			...directItems,
+			...groupItems,
+			...requestItems,
+			...rejectedItems,
+			...grupoEventItems,
+		].sort((a, b) => {
+			const dateA =
+				a.kind === 'request' || a.kind === 'grupo-event'
+					? new Date(a.createdAt).getTime()
+					: new Date((a as any).updatedAt).getTime();
+			const dateB =
+				b.kind === 'request' || b.kind === 'grupo-event'
+					? new Date(b.createdAt).getTime()
+					: new Date((b as any).updatedAt).getTime();
 			return dateB - dateA;
 		});
-	}, [unreadDirectChats, unreadGroupChats, unreadContactRequests, unreadRejectedRequests, unreadGroupEvents]);
+	}, [
+		unreadDirectChats,
+		unreadGroupChats,
+		unreadContactRequests,
+		unreadRejectedRequests,
+		unreadGroupEvents,
+	]);
 
 	useEffect(() => {
 		const unsubDirect = subscribeUnreadDirectChatNotifications(setUnreadDirectChats);
 		const unsubGroup = subscribeUnreadGroupChatNotifications(setUnreadGroupChats);
 		const unsubReq = subscribeUnreadContactRequestNotifications(setUnreadContactRequests);
-		const unsubRej = subscribeUnreadRejectedRequestNotifications(setUnreadRejectedRequests);
+		const unsubRej = subscribeUnreadRejectedRequestNotifications(
+			setUnreadRejectedRequests
+		);
 		const unsubEv = subscribeUnreadGroupEventNotifications(setUnreadGroupEvents);
 
 		getUnreadDirectChatNotifications().then(setUnreadDirectChats);
@@ -75,7 +136,13 @@ export default function NotificacionesScreen() {
 		getUnreadRejectedRequestNotifications().then(setUnreadRejectedRequests);
 		getUnreadGroupEventNotifications().then(setUnreadGroupEvents);
 
-		return () => { unsubDirect(); unsubGroup(); unsubReq(); unsubRej(); unsubEv(); };
+		return () => {
+			unsubDirect();
+			unsubGroup();
+			unsubReq();
+			unsubRej();
+			unsubEv();
+		};
 	}, []);
 
 	useEffect(() => {
@@ -83,14 +150,23 @@ export default function NotificacionesScreen() {
 			try {
 				const userId = await authService.obtenerIdUsuarioActual();
 				const misGrupos = await gruposService.getGrupos();
-				setEsAdminDeGrupos((misGrupos as any[]).some((g) => g.creadorId === userId || g.administradorId === userId));
-			} catch { setEsAdminDeGrupos(false); }
+				setEsAdminDeGrupos(
+					(misGrupos as any[]).some(
+						(g) => g.creadorId === userId || g.administradorId === userId
+					)
+				);
+			} catch {
+				setEsAdminDeGrupos(false);
+			}
 		};
 		verificarAdminGrupos();
 		clearUnreadNotificationsCount(); // Clear global badge count when entering screen
 	}, []);
 
 	const handleVerMensaje = async (item: NotificationItem) => {
+		if (item.kind === 'grupo-event' && item.tipo === 'solicitud-invitacion') {
+			return;
+		}
 		if (item.kind === 'request') {
 			await clearUnreadContactRequestNotification(item.solicitudId);
 			navigate('/solicitudes');
@@ -98,13 +174,17 @@ export default function NotificacionesScreen() {
 		}
 		if (item.kind === 'request-rejected') {
 			await clearUnreadRejectedRequestNotification(item.solicitudId);
-			publishContactRequestRejectionSeen({ solicitudId: item.solicitudId, receptorId: item.receptorId });
+			publishContactRequestRejectionSeen({
+				solicitudId: item.solicitudId,
+				receptorId: item.receptorId,
+			});
 			return;
 		}
 		if (item.kind === 'grupo-event') {
 			await clearUnreadGroupEventNotification(item.id);
 			if (item.tipo === 'solicitud-ingreso') navigate('/solicitudes-grupo');
-			else navigate('/grupos');
+			else if (item.tipo === 'evento-nuevo') navigate('/eventos');
+			else if (item.tipo !== 'notificacion-general') navigate('/grupos');
 			return;
 		}
 		if (item.kind === 'direct') {
@@ -114,6 +194,60 @@ export default function NotificacionesScreen() {
 		}
 		await clearUnreadGroupChatNotification(item.grupoId);
 		navigate(`/mensajes/grupo/${item.grupoId}`);
+	};
+
+	const handleAceptarInvitacion = async (item: UnreadGroupEventNotification) => {
+		if (!item.solicitudId) return;
+		setProcessingInvitationId(item.solicitudId);
+		try {
+			await gruposService.aceptarInvitacion(item.grupoId, item.solicitudId);
+			await clearUnreadGroupEventNotification(item.id);
+			navigate(`/grupos/${item.grupoId}`);
+		} catch {
+			showMsg('No se pudo aceptar la invitación', 'error');
+		} finally {
+			setProcessingInvitationId(null);
+		}
+	};
+
+	const handleRechazarInvitacion = async (item: UnreadGroupEventNotification) => {
+		if (!item.solicitudId) return;
+		setProcessingInvitationId(item.solicitudId);
+		try {
+			await gruposService.rechazarInvitacion(item.grupoId, item.solicitudId);
+			await clearUnreadGroupEventNotification(item.id);
+			showMsg('Invitación rechazada');
+		} catch {
+			showMsg('No se pudo rechazar la invitación', 'error');
+		} finally {
+			setProcessingInvitationId(null);
+		}
+	};
+
+	const handleAceptarTransferencia = async (item: UnreadGroupEventNotification) => {
+		setProcessingInvitationId(item.grupoId);
+		try {
+			await gruposService.aceptarTransferencia(item.grupoId);
+			await clearUnreadGroupEventNotification(item.id);
+			navigate(`/grupos/${item.grupoId}`);
+		} catch {
+			showMsg('No se pudo aceptar la transferencia', 'error');
+		} finally {
+			setProcessingInvitationId(null);
+		}
+	};
+
+	const handleRechazarTransferencia = async (item: UnreadGroupEventNotification) => {
+		setProcessingInvitationId(item.grupoId);
+		try {
+			await gruposService.rechazarTransferencia(item.grupoId);
+			await clearUnreadGroupEventNotification(item.id);
+			showMsg('Transferencia rechazada');
+		} catch {
+			showMsg('No se pudo rechazar la transferencia', 'error');
+		} finally {
+			setProcessingInvitationId(null);
+		}
 	};
 
 	return (
@@ -135,16 +269,55 @@ export default function NotificacionesScreen() {
 				@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 			`}</style>
 
+			{toast && (
+				<div
+					style={{
+						position: 'fixed',
+						bottom: 24,
+						right: 24,
+						zIndex: 9999,
+						backgroundColor: toast.type === 'error' ? '#c0392b' : '#27ae60',
+						color: '#fff',
+						padding: '12px 20px',
+						borderRadius: 10,
+						fontSize: 14,
+						fontWeight: 500,
+						boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+					}}
+				>
+					{toast.msg}
+				</div>
+			)}
+
 			<div style={s.content}>
 				<h1 style={s.pageTitle}>Notificaciones</h1>
-				<p style={s.pageSubtitle}>Aquí verás chats y solicitudes pendientes por revisar.</p>
+				<p style={s.pageSubtitle}>
+					Aquí verás chats y solicitudes pendientes por revisar.
+				</p>
 
 				{esAdminDeGrupos && (
 					<div className="uc-admin-card" onClick={() => navigate('/solicitudes-grupo')}>
-						<div style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#e8f0fe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>👥</div>
+						<div
+							style={{
+								width: 40,
+								height: 40,
+								borderRadius: 20,
+								backgroundColor: '#e8f0fe',
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'center',
+								fontSize: 20,
+							}}
+						>
+							👥
+						</div>
 						<div>
-							<p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#00284d' }}>Solicitudes de ingreso a grupos</p>
-							<p style={{ margin: '2px 0 0', fontSize: 13, color: '#7a9ab5' }}>Revisa quién quiere unirse a tus grupos</p>
+							<p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#00284d' }}>
+								Solicitudes de ingreso a grupos
+							</p>
+							<p style={{ margin: '2px 0 0', fontSize: 13, color: '#7a9ab5' }}>
+								Revisa quién quiere unirse a tus grupos
+							</p>
 						</div>
 					</div>
 				)}
@@ -152,8 +325,19 @@ export default function NotificacionesScreen() {
 				{unreadChats.length === 0 ? (
 					<div style={s.emptyState}>
 						<span style={{ fontSize: 44 }}>🔔</span>
-						<p style={{ fontSize: 16, fontWeight: 600, color: '#00284d', margin: '12px 0 4px' }}>No tienes notificaciones</p>
-						<p style={{ color: '#7a9ab5', fontSize: 14 }}>Cuando te escriban o recibas una solicitud, aparecerá aquí.</p>
+						<p
+							style={{
+								fontSize: 16,
+								fontWeight: 600,
+								color: '#00284d',
+								margin: '12px 0 4px',
+							}}
+						>
+							No tienes notificaciones
+						</p>
+						<p style={{ color: '#7a9ab5', fontSize: 14 }}>
+							Cuando te escriban o recibas una solicitud, aparecerá aquí.
+						</p>
 					</div>
 				) : (
 					<div style={{ animation: 'fadeUp 0.3s ease' }}>
@@ -163,27 +347,130 @@ export default function NotificacionesScreen() {
 							const isReq = item.kind === 'request';
 							const isRej = item.kind === 'request-rejected';
 							const isEv = item.kind === 'grupo-event';
-							
-							const title = isDirect ? item.nombre : isGroup ? item.nombreGrupo : isReq ? item.nombre : isEv ? item.grupoNombre : 'Solicitud rechazada';
-							const message = isReq ? 'Te envió una solicitud de contacto.' : isRej ? `Tu solicitud a ${item.receptorNombre || 'usuario'} fue rechazada.` : isEv ? item.mensaje : item.ultimoMensaje || 'Te envió un mensaje nuevo';
-							const typeClass = isDirect ? 'direct' : isGroup ? 'group' : isReq ? 'request' : 'reject';
-							const typeLabel = isDirect ? 'Mensaje directo' : isGroup ? 'Mensaje de grupo' : isReq ? 'Solicitud de contacto' : isEv ? 'Evento de grupo' : 'Solicitud rechazada';
+
+							const isInvite = isEv && item.tipo === 'solicitud-invitacion';
+							const title = isDirect
+								? item.nombre
+								: isGroup
+									? item.nombreGrupo
+									: isReq
+										? item.nombre
+										: isEv
+											? item.grupoNombre
+											: 'Solicitud rechazada';
+							const chatItem = item as any;
+							const message = isReq
+								? 'Te envió una solicitud de contacto.'
+								: isRej
+									? `Tu solicitud a ${chatItem.receptorNombre || 'usuario'} fue rechazada.`
+									: isEv
+										? chatItem.mensaje
+										: chatItem.ultimoMensaje || 'Te envió un mensaje nuevo';
+							const typeClass = isDirect
+								? 'direct'
+								: isGroup
+									? 'group'
+									: isReq
+										? 'request'
+										: 'reject';
+							const typeLabel = isDirect
+								? 'Mensaje directo'
+								: isGroup
+									? 'Mensaje de grupo'
+									: isReq
+										? 'Solicitud de contacto'
+										: isInvite
+											? 'Invitación de grupo'
+											: isEv
+												? 'Evento de grupo'
+												: 'Solicitud rechazada';
 
 							return (
 								<div key={item.key} className="uc-notif-card">
-									<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-										<h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#00284d' }}>{title}</h3>
-										{(isDirect || isGroup) && item.mensajesNoLeidos > 1 && (
-											<span style={{ backgroundColor: '#e74c3c', color: '#fff', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10 }}>
-												{item.mensajesNoLeidos} nuevos
+									<div
+										style={{
+											display: 'flex',
+											justifyContent: 'space-between',
+											alignItems: 'center',
+										}}
+									>
+										<h3
+											style={{
+												margin: 0,
+												fontSize: 16,
+												fontWeight: 600,
+												color: '#00284d',
+											}}
+										>
+											{title}
+										</h3>
+										{(isDirect || isGroup) && chatItem.mensajesNoLeidos > 1 && (
+											<span
+												style={{
+													backgroundColor: '#e74c3c',
+													color: '#fff',
+													fontSize: 11,
+													fontWeight: 700,
+													padding: '2px 8px',
+													borderRadius: 10,
+												}}
+											>
+												{chatItem.mensajesNoLeidos} nuevos
 											</span>
 										)}
 									</div>
 									<span className={`uc-notif-type ${typeClass}`}>{typeLabel}</span>
 									<p style={{ margin: 0, fontSize: 14, color: '#4a6a85' }}>{message}</p>
-									<button className="uc-btn-view" onClick={() => handleVerMensaje(item)}>
-										{isReq ? 'Ver solicitud' : isRej ? 'Visto' : isEv ? 'Ver evento' : 'Ver mensaje'}
-									</button>
+									{item.kind === 'grupo-event' &&
+									item.tipo === 'transferencia-pendiente' ? (
+										<div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+											<button
+												className="uc-btn-view"
+												onClick={() => handleAceptarTransferencia(item)}
+												disabled={processingInvitationId === item.grupoId}
+											>
+												{processingInvitationId === item.grupoId ? '...' : 'Aceptar'}
+											</button>
+											<button
+												className="uc-btn-view"
+												onClick={() => handleRechazarTransferencia(item)}
+												disabled={processingInvitationId === item.grupoId}
+											>
+												{processingInvitationId === item.grupoId ? '...' : 'Rechazar'}
+											</button>
+										</div>
+									) : null}
+									{isInvite ? (
+										<div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+											<button
+												className="uc-btn-view"
+												onClick={() => handleAceptarInvitacion(item)}
+												disabled={processingInvitationId === item.solicitudId}
+											>
+												{processingInvitationId === item.solicitudId ? '...' : 'Aceptar'}
+											</button>
+											<button
+												className="uc-btn-view"
+												onClick={() => handleRechazarInvitacion(item)}
+												disabled={processingInvitationId === item.solicitudId}
+											>
+												{processingInvitationId === item.solicitudId ? '...' : 'Rechazar'}
+											</button>
+										</div>
+									) : (
+										<button
+											className="uc-btn-view"
+											onClick={() => handleVerMensaje(item)}
+										>
+											{isReq
+												? 'Ver solicitud'
+												: isRej
+													? 'Visto'
+													: isEv
+														? 'Ver evento'
+														: 'Ver mensaje'}
+										</button>
+									)}
 								</div>
 							);
 						})}
@@ -195,9 +482,19 @@ export default function NotificacionesScreen() {
 }
 
 const s: Record<string, React.CSSProperties> = {
-	page: { minHeight: '100%', backgroundColor: '#f0f4f8', fontFamily: "'Inter', sans-serif" },
+	page: {
+		minHeight: '100%',
+		backgroundColor: '#f0f4f8',
+		fontFamily: "'Inter', sans-serif",
+	},
 	content: { maxWidth: 640, margin: '0 auto', padding: '32px 20px 48px' },
 	pageTitle: { margin: '0 0 4px', fontSize: 26, fontWeight: 700, color: '#00284d' },
 	pageSubtitle: { margin: '0 0 24px', fontSize: 15, color: '#7a9ab5' },
-	emptyState: { textAlign: 'center', padding: '64px 0', backgroundColor: '#fff', borderRadius: 14, border: '1px dashed #c5d3df' },
+	emptyState: {
+		textAlign: 'center',
+		padding: '64px 0',
+		backgroundColor: '#fff',
+		borderRadius: 14,
+		border: '1px dashed #c5d3df',
+	},
 };

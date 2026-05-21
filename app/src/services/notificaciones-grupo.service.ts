@@ -4,13 +4,21 @@ const UNREAD_GROUP_NOTIFICATIONS_KEY = 'unreadGroupEventNotifications';
 
 export type GroupNotificationType =
 	| 'solicitud-ingreso'        // Admin recibe: alguien solicitó entrar
+	| 'solicitud-invitacion'     // Estudiante recibe: fue invitado a un grupo
 	| 'solicitud-aprobada'       // Solicitante recibe: aprobaron su solicitud
 	| 'solicitud-rechazada'      // Solicitante recibe: rechazaron su solicitud
-	| 'admin-transferido';       // Nuevo/anterior admin: se transfirió el rol
+	| 'transferencia-pendiente'  // Candidato recibe: le ofrecen transferir la admin
+	| 'transferencia-aceptada'   // Admin/candidato recibe: la transferencia se aceptó
+	| 'transferencia-rechazada'  // Admin/candidato recibe: la transferencia se rechazó
+	| 'transferencia-cancelada'  // Admin/candidato recibe: la transferencia se canceló
+	| 'admin-transferido'        // Nuevo/anterior admin: se transfirió el rol
+	| 'evento-nuevo'
+	| 'notificacion-general';
 
 export type UnreadGroupEventNotification = {
 	id: string; // unique key
 	tipo: GroupNotificationType;
+	solicitudId?: string;
 	grupoId: string;
 	grupoNombre: string;
 	mensaje: string;
@@ -87,8 +95,13 @@ export async function clearUnreadGroupEventNotification(
 ): Promise<void> {
 	await ensureLoaded();
 
+	const removed = unreadItems.filter((item) => item.id === notificationId).length;
 	unreadItems = unreadItems.filter((item) => item.id !== notificationId);
 	await persistAndNotify();
+	if (removed > 0) {
+		const { decrementUnreadNotificationsCount } = await import('./notificaciones-badge.service');
+		await decrementUnreadNotificationsCount(removed);
+	}
 }
 
 export async function clearAllUnreadGroupEventNotifications(): Promise<void> {

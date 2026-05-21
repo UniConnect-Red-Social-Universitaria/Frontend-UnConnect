@@ -1,6 +1,5 @@
 import { apiClient } from "./api.client";
 import {
-  ApiResponse,
   PerfilBaseDTO,
   PerfilEnriquecido,
 } from "../types/api.types";
@@ -37,18 +36,16 @@ class PerfilService {
    * @returns PerfilEnriquecido con perfil base + estadísticas + insignias
    */
   async obtenerPerfilEnriquecido(usuarioId: string): Promise<PerfilEnriquecido> {
-    const response = await apiClient.authenticatedRequest<PerfilEnriquecido>(
+    const response = await apiClient.request(
       `/api/usuarios/perfil/${usuarioId}/estadisticas`,
-      {
-        method: "GET",
-      }
+      { method: "GET" }
     );
 
     if (!response.data) {
       throw new Error("No se pudo obtener el perfil enriquecido del usuario");
     }
 
-    return response.data;
+    return response.data as PerfilEnriquecido;
   }
 
   /**

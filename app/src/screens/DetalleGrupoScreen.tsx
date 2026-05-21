@@ -36,8 +36,15 @@ type DetalleGrupoParamList = {
 type Props = StackScreenProps<DetalleGrupoParamList, 'DetalleGrupo'>;
 
 export function DetalleGrupoScreen({ route, navigation }: Props) {
-	const { grupoId, nombreGrupo, creadorId, administradorId, materiaId, materiaNombre, miembrosIds } =
-		route.params;
+	const {
+		grupoId,
+		nombreGrupo,
+		creadorId,
+		administradorId,
+		materiaId,
+		materiaNombre,
+		miembrosIds,
+	} = route.params;
 
 	const [busqueda, setBusqueda] = useState('');
 	const [modalVisible, setModalVisible] = useState(false);
@@ -147,10 +154,16 @@ export function DetalleGrupoScreen({ route, navigation }: Props) {
 						<Text style={styles.actionButtonSolidText}>Subir PDF</Text>
 					)}
 				</PrimaryButton>
+			</View>
 
-				{isAdmin && (
+			{isAdmin && (
+				<View style={styles.adminActionsRow}>
 					<PrimaryButton
-						style={[styles.actionButton, styles.actionButtonSuccess]}
+						style={[
+							styles.actionButton,
+							styles.actionButtonSuccess,
+							styles.adminActionButton,
+						]}
 						onPress={() => {
 							setModalVisible(true);
 							cargarCandidatos();
@@ -158,25 +171,24 @@ export function DetalleGrupoScreen({ route, navigation }: Props) {
 					>
 						<Text style={styles.actionButtonSolidText}>+ Miembro</Text>
 					</PrimaryButton>
-				)}
 
-				{isAdmin && (
 					<PrimaryButton
 						style={[
 							styles.actionButton,
+							styles.adminActionButton,
 							{ backgroundColor: '#D97706', borderColor: '#D97706' },
 						]}
 						onPress={() => setTransferirModalVisible(true)}
 					>
 						<Text style={styles.actionButtonSolidText}>Transferir</Text>
 					</PrimaryButton>
-				)}
-			</View>
+				</View>
+			)}
 
 			{userId && (
 				<View style={styles.actionsRow}>
 					<PrimaryButton
-						style={[styles.actionButton, styles.actionButtonDanger]}
+						style={[styles.actionButton, styles.actionButtonDanger, styles.exitButton]}
 						onPress={confirmarAbandono}
 						disabled={abandonando}
 					>

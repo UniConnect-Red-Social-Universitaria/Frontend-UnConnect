@@ -52,6 +52,14 @@ class GruposService {
 		return await apiClient.post(`/api/grupos/${grupoId}/miembros`, { usuarioId });
 	}
 
+	async aceptarInvitacion(grupoId: string, solicitudId: string): Promise<ApiResponse> {
+		return await apiClient.patch(`/api/grupos/${grupoId}/invitaciones/${solicitudId}/aceptar`, {});
+	}
+
+	async rechazarInvitacion(grupoId: string, solicitudId: string): Promise<ApiResponse> {
+		return await apiClient.patch(`/api/grupos/${grupoId}/invitaciones/${solicitudId}/rechazar`, {});
+	}
+
 	async getSolicitudesGrupo(grupoId: string): Promise<SolicitudGrupo[]> {
 		const response = await apiClient.get<SolicitudGrupo[]>(`/api/grupos/${grupoId}/solicitudes`);
 		return response.data || [];

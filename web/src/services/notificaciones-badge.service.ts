@@ -46,6 +46,12 @@ export async function incrementUnreadNotificationsCount(step: number = 1): Promi
 	persistAndNotify();
 }
 
+export async function decrementUnreadNotificationsCount(step: number = 1): Promise<void> {
+	ensureLoaded();
+	unreadCount = Math.max(0, unreadCount - Math.max(1, Math.floor(step)));
+	persistAndNotify();
+}
+
 export async function clearUnreadNotificationsCount(): Promise<void> {
 	ensureLoaded();
 	unreadCount = 0;

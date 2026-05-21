@@ -11,13 +11,13 @@ import {
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
-import io, { Socket } from 'socket.io-client';
 import { PrimaryButton, Screen } from '@uniconnect/ui';
 import theme from '../styles/theme';
 import { styles } from '../styles/EventosScreen.styles';
 import { apiClient } from '../services';
 import { CrearEventoModal } from '../components/CrearEventoModal';
 import { resolverApiBaseUrl } from '../utils/apiConfig';
+import { subscribeNuevoEvento } from '../services/evento-events.service';
 import { DesktopSidebar } from '../components/DesktopSidebar';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { useUnreadNotifications } from '../hooks/useUnreadNotifications';
@@ -34,6 +34,7 @@ type RootStackParamList = {
 	Grupos: undefined;
 	Contactos: undefined;
 	Notificaciones: undefined;
+	SesionesEstudio: undefined;
 	EditarPerfil: undefined;
 	Login: undefined;
 };
@@ -103,7 +104,6 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 	);
 	const [notificacionObserver, setNotificacionObserver] = useState<string | null>(null);
 
-	const socketRef = useRef<Socket | null>(null);
 	const apiBaseUrl = resolverApiBaseUrl(); // <-- ¡Usando la función importada!
 	const isDesktop = useIsDesktop();
 	const unreadNotifications = useUnreadNotifications();
@@ -170,24 +170,11 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 	useEffect(() => {
 		let isMounted = true;
 
-		const inicializar = async () => {
+		const cargar = async () => {
 			try {
 				const tokenActivo = await apiClient.getToken();
 				if (isMounted && tokenActivo) {
 					setLoadingEventos(true);
-
-					socketRef.current = io(apiBaseUrl, {
-						auth: { token: tokenActivo },
-						transports: ['websocket'],
-					});
-
-					socketRef.current.on('evento:nuevo:categoria', (evento: Evento) => {
-						setNotificacionObserver(
-							`Nuevo evento "${evento.titulo}" en categoría ${badgeCategoria(evento.categoria)}`
-						);
-						setTimeout(() => setNotificacionObserver(null), 5000);
-					});
-
 					await cargarEventos(filtroActivo);
 				} else if (isMounted) {
 					setError('No hay sesión activa. Inicia sesión para ver eventos.');
@@ -201,12 +188,22 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 			}
 		};
 
-		inicializar();
+		cargar();
+
+		const unsubscribe = subscribeNuevoEvento((payload: any) => {
+			if (isMounted) {
+				setNotificacionObserver(
+					`Nuevo evento "${payload.titulo}" en categoría ${badgeCategoria(payload.categoria)}`
+				);
+				setTimeout(() => setNotificacionObserver(null), 5000);
+			}
+		});
+
 		return () => {
 			isMounted = false;
-			socketRef.current?.disconnect();
+			unsubscribe();
 		};
-	}, [apiBaseUrl, cargarEventos, filtroActivo]);
+	}, [cargarEventos, filtroActivo]);
 
 	const aplicarFiltro = async (cat: CategoriaEvento | 'todas') => {
 		setFiltroActivo(cat);
@@ -451,6 +448,14 @@ export function EventosScreen({ navigation }: EventosScreenProps) {
 							accessibilityLabel="Eventos"
 						>
 							<Ionicons name="calendar" size={24} style={styles.footerIcon} />
+						</Pressable>
+
+						<Pressable
+							style={styles.footerTab}
+							onPress={() => navigation.navigate('SesionesEstudio')}
+							accessibilityLabel="Sesiones"
+						>
+							<Ionicons name="time-outline" size={24} style={styles.footerIcon} />
 						</Pressable>
 
 						<Pressable

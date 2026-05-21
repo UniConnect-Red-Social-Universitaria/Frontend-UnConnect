@@ -19,6 +19,7 @@ const NAV_ITEMS: NavItem[] = [
 	{ path: '/notificaciones', label: 'Notificaciones', icon: '🔔', activeIcon: '🔔' },
 	{ path: '/sesiones',      label: 'Sesiones',       icon: '📚', activeIcon: '📚' },
 	{ path: '/editar-perfil',label: 'Perfil',         icon: '👤', activeIcon: '👤' },
+	{ path: '/scrum',        label: 'Scrum',          icon: '📊', activeIcon: '📊' },
 ];
 
 export default function AppLayout() {

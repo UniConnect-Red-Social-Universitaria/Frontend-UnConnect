@@ -13,6 +13,7 @@ export { encuestasService } from './encuestas.service';
 export { default as notificacionesService } from './notificaciones.service';
 export { onboardingService } from './onboarding.service';
 export { perfilService } from './perfil.service';
+export { sesionService } from './sesion.service';
 
 // Re-exportar tipos para conveniencia
 export type {

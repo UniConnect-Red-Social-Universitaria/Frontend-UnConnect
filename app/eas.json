@@ -1,27 +1,78 @@
 {
-  "cli": {
-    "version": ">= 16.17.4",
-    "appVersionSource": "remote"
-  },
-  "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal"
-    },
-    "preview": {
-      "distribution": "internal",
-      "android": {
-        "buildType": "apk"
-      }
-    },
-    "production": {
-      "autoIncrement": true,
-      "android": {
-        "buildType": "app-bundle"
-      }
-    }
-  },
-  "submit": {
-    "production": {}
-  }
+	"cli": {
+		"version": ">= 16.17.4",
+		"appVersionSource": "remote"
+	},
+
+	"build": {
+		"development": {
+			"developmentClient": true,
+			"distribution": "internal",
+
+			"env": {
+				"EXPO_PUBLIC_API_URL": "https://uniconnect-backend.fly.dev",
+
+				"EXPO_PUBLIC_ALLOWED_DOMAIN": "ucaldas.edu.co",
+
+				"EXPO_PUBLIC_AUTH0_DOMAIN": "dev-orxxfhogwtwn2og3.us.auth0.com",
+				"EXPO_PUBLIC_AUTH0_CLIENT_ID": "q8CktbeLx1u7H2UtSqogVd3rvooKOJ73",
+				"EXPO_PUBLIC_AUTH0_CONNECTION": "google-oauth2",
+
+				"EXPO_PUBLIC_GOOGLE_CLIENT_ID_EXPO": "962671967940-0ui1kavjc190n9iaj8kc0vsn9h81ppsu.apps.googleusercontent.com",
+				"EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB": "962671967940-0ui1kavjc190n9iaj8kc0vsn9h81ppsu.apps.googleusercontent.com",
+				"EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID": "962671967940-m9tnqmq052i4nar6kkvpn1ipm2b0htnk.apps.googleusercontent.com",
+				"EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS": "962671967940-pi085gmpgnnatro0dgcjk1cbrguusva7.apps.googleusercontent.com"
+			}
+		},
+
+		"preview": {
+			"distribution": "internal",
+
+			"android": {
+				"buildType": "apk"
+			},
+
+			"env": {
+				"EXPO_PUBLIC_API_URL": "https://uniconnect-backend.fly.dev",
+
+				"EXPO_PUBLIC_ALLOWED_DOMAIN": "ucaldas.edu.co",
+
+				"EXPO_PUBLIC_AUTH0_DOMAIN": "dev-orxxfhogwtwn2og3.us.auth0.com",
+				"EXPO_PUBLIC_AUTH0_CLIENT_ID": "q8CktbeLx1u7H2UtSqogVd3rvooKOJ73",
+				"EXPO_PUBLIC_AUTH0_CONNECTION": "google-oauth2",
+
+				"EXPO_PUBLIC_GOOGLE_CLIENT_ID_EXPO": "962671967940-0ui1kavjc190n9iaj8kc0vsn9h81ppsu.apps.googleusercontent.com",
+				"EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB": "962671967940-0ui1kavjc190n9iaj8kc0vsn9h81ppsu.apps.googleusercontent.com",
+				"EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID": "962671967940-m9tnqmq052i4nar6kkvpn1ipm2b0htnk.apps.googleusercontent.com",
+				"EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS": "962671967940-pi085gmpgnnatro0dgcjk1cbrguusva7.apps.googleusercontent.com"
+			}
+		},
+
+		"production": {
+			"autoIncrement": true,
+
+			"android": {
+				"buildType": "app-bundle"
+			},
+
+			"env": {
+				"EXPO_PUBLIC_API_URL": "https://uniconnect-backend.fly.dev",
+
+				"EXPO_PUBLIC_ALLOWED_DOMAIN": "ucaldas.edu.co",
+
+				"EXPO_PUBLIC_AUTH0_DOMAIN": "dev-orxxfhogwtwn2og3.us.auth0.com",
+				"EXPO_PUBLIC_AUTH0_CLIENT_ID": "q8CktbeLx1u7H2UtSqogVd3rvooKOJ73",
+				"EXPO_PUBLIC_AUTH0_CONNECTION": "google-oauth2",
+
+				"EXPO_PUBLIC_GOOGLE_CLIENT_ID_EXPO": "962671967940-0ui1kavjc190n9iaj8kc0vsn9h81ppsu.apps.googleusercontent.com",
+				"EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB": "962671967940-0ui1kavjc190n9iaj8kc0vsn9h81ppsu.apps.googleusercontent.com",
+				"EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID": "962671967940-m9tnqmq052i4nar6kkvpn1ipm2b0htnk.apps.googleusercontent.com",
+				"EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS": "962671967940-pi085gmpgnnatro0dgcjk1cbrguusva7.apps.googleusercontent.com"
+			}
+		}
+	},
+
+	"submit": {
+		"production": {}
+	}
 }

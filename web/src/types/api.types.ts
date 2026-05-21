@@ -133,6 +133,7 @@ export interface PerfilEnriquecido {
 export interface SolicitudGrupo {
 	id: string;
 	estado: 'PENDIENTE' | 'APROBADA' | 'RECHAZADA';
+	tipo?: 'INGRESO' | 'INVITACION';
 	createdAt: string;
 	solicitante?: {
 		id: string;
@@ -145,4 +146,177 @@ export interface SolicitudGrupo {
 		nombre: string;
 		materia: { id: string; nombre: string };
 	};
+}
+
+// ── SCRUM TYPES ──
+
+export type SprintEstado = 'PLANEACION' | 'ACTIVO' | 'COMPLETADO' | 'CANCELADO';
+export type HUEstado = 'PENDIENTE' | 'EN_PROGRESO' | 'BLOQUEADA' | 'COMPLETADA' | 'CANCELADA';
+export type ImpedimentoEstado = 'ABIERTO' | 'EN_PROGRESO' | 'RESUELTO' | 'CERRADO';
+export type ImpactoImpedimento = 'Alto' | 'Medio' | 'Bajo';
+export type TipoRepositorio = 'BACKEND' | 'FRONTEND';
+export type EstadoPR = 'OPEN' | 'MERGED' | 'CLOSED';
+export type TipoArtefacto = 'COMMIT' | 'PR' | 'DEPLOY';
+export type EstadoAcuerdo = 'PENDIENTE' | 'EN_PROGRESO' | 'COMPLETADO';
+
+export interface Sprint {
+	id: string;
+	numero: number;
+	nombre: string;
+	descripcion?: string;
+	estado: SprintEstado;
+	fechaInicio?: string;
+	fechaFin?: string;
+	velocidadPlaneada: number;
+	velocidadReal?: number;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface HistoriaUsuario {
+	id: string;
+	codigo: string;
+	titulo: string;
+	descripcion: string;
+	storyPoints: number;
+	estado: HUEstado;
+	prioridad: number;
+	asignadoA?: string;
+	sprintId: string;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface CriterioAceptacion {
+	id: string;
+	numero: number;
+	descripcion: string;
+	huId: string;
+	cumplido: boolean;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface EvaluacionCriterio {
+	id: string;
+	criterioId: string;
+	cumplido: boolean;
+	observaciones?: string;
+	evaluadoPor?: string;
+	createdAt: string;
+}
+
+export interface MetricasSprint {
+	sprintId: string;
+	numero: number;
+	velocidadPlaneada: number;
+	velocidadReal: number;
+	porcentajeCumplimiento: number;
+	huTotales: number;
+	huCompletadas: number;
+	huEnProgreso: number;
+	huBloqueadas: number;
+	promedio3Sprints?: number;
+}
+
+export interface BurnDownDia {
+	dia: number;
+	fecha: string;
+	spRestantesReal: number;
+	spRestantesIdeal: number;
+	huCompletadas: number;
+}
+
+export interface BurnDownData {
+	sprintId: string;
+	totalSpPlaneados: number;
+	spCompletados: number;
+	proyeccionFinal: number;
+	dias: BurnDownDia[];
+}
+
+export interface CumplimientoSprint {
+	sprintId: string;
+	criteriosTotales: number;
+	criteriosCumplidos: number;
+	porcentajeCumplimiento: number;
+}
+
+export interface VelocidadHistorica {
+	sprintId: string;
+	numero: number;
+	nombre?: string;
+	velocidadPlaneada: number;
+	velocidadReal: number;
+	porcentajeCumplimiento: number;
+}
+
+export interface TrazabilidadItem {
+	id: string;
+	repositorio: TipoRepositorio;
+	nombreRepositorio: string;
+	tipoArtefacto: TipoArtefacto;
+	enlace: string;
+	referencia: string;
+	extraido?: string;
+}
+
+export interface TrazabilidadHU {
+	huId: string;
+	codigo: string;
+	titulo: string;
+	trazas: TrazabilidadItem[];
+}
+
+export interface LinkTrazabilidadRequest {
+	huId: string;
+	repositorio: TipoRepositorio;
+	nombreRepositorio: string;
+	shaCommit?: string;
+	urlCommit?: string;
+	mensajeCommit?: string;
+	autorCommit?: string;
+	numeroPR?: number;
+	urlPR?: string;
+	estadoPR?: string;
+}
+
+export interface Retrospectiva {
+	id: string;
+	sprintId: string;
+	fechaRetrospectiva: string;
+	comentariosGenerales?: string;
+	acuerdos: AcuerdoRetro[];
+	impedimentos: ImpedimentoRetro[];
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface AcuerdoRetro {
+	id: string;
+	descripcion: string;
+	responsable?: string;
+	estado: EstadoAcuerdo;
+}
+
+export interface ImpedimentoRetro {
+	id: string;
+	descripcion: string;
+	impacto: ImpactoImpedimento;
+	responsable?: string;
+	estado: ImpedimentoEstado;
+}
+
+export interface Impedimento {
+	id: string;
+	sprintId?: string;
+	descripcion: string;
+	estado: ImpedimentoEstado;
+	esCritico: boolean;
+	diasAbierto: number;
+	responsable?: string;
+	fechaApertura: string;
+	fechaResolucion?: string;
+	createdAt: string;
+	updatedAt: string;
 }

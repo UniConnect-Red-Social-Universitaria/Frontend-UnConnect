@@ -128,3 +128,4 @@ export interface PerfilEnriquecido extends PerfilBaseDTO {
     estadisticas: EstadisticasPerfil;
     insignias: Insignia[];
 }
+

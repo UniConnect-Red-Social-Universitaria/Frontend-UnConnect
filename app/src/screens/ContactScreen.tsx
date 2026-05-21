@@ -505,6 +505,18 @@ export default function ContactScreen() {
 						</Pressable>
 
 						<Pressable
+							style={principalStyles.footerTab}
+							onPress={() => navigation.navigate('SesionesEstudio')}
+							accessibilityLabel="Sesiones"
+						>
+							<Ionicons
+								name="time-outline"
+								size={24}
+								style={principalStyles.footerIcon}
+							/>
+						</Pressable>
+
+						<Pressable
 							style={[principalStyles.footerTab, principalStyles.footerTabActive]}
 							onPress={() => navigation.navigate('Contactos')}
 							accessibilityLabel="Contactos"

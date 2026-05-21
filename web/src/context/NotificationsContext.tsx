@@ -5,14 +5,14 @@ import {
 	incrementUnreadNotificationsCount,
 	subscribeUnreadNotificationsCount,
 } from '../services/notificaciones-badge.service';
-import { upsertUnreadDirectChatNotification } from '../services/notificaciones-chat.service';
-import { upsertUnreadGroupChatNotification } from '../services/notificaciones-chat.service';
+import { upsertUnreadDirectChatNotification, upsertUnreadGroupChatNotification } from '../services/notificaciones-chat.service';
 import { upsertUnreadContactRequestNotification } from '../services/notificaciones-solicitudes.service';
 import { upsertUnreadRejectedRequestNotification } from '../services/notificaciones-rechazos.service';
 import { upsertUnreadGroupEventNotification } from '../services/notificaciones-grupo.service';
-import { publishContactRequestRejected } from '../services/contacto-events.service';
+import { fetchNotificaciones } from '../services/notificaciones-api.service';
+import { resolverApiBaseUrl } from '../utils/apiConfig';
 
-const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3000';
+const API_URL = resolverApiBaseUrl();
 
 interface NotificationsContextValue {
 	unreadCount: number;
@@ -37,6 +37,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 	const activeChatRef = useRef<{ type: 'direct' | 'group'; id: string } | null>(null);
 	const [unreadCount, setUnreadCount] = useState(0);
 	const [toasts, setToasts] = useState<ToastItem[]>([]);
+	const apiSyncedRef = useRef(false);
 
 	// Suscribirse al badge counter
 	useEffect(() => {
@@ -73,6 +74,18 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
 		// Evitar duplicar socket si ya existe con el mismo token
 		if (socketRef.current?.connected) return;
+
+		// Sincronizar notificaciones desde backend al montar
+		if (!apiSyncedRef.current) {
+			apiSyncedRef.current = true;
+			fetchNotificaciones().then(async (res) => {
+				const noLeidas = res.meta?.noLeidas ?? 0;
+				if (noLeidas > 0) {
+					const { incrementUnreadNotificationsCount } = await import('../services/notificaciones-badge.service');
+					incrementUnreadNotificationsCount(noLeidas);
+				}
+			}).catch(() => {});
+		}
 
 		const socket = io(API_URL, {
 			auth: { token },
@@ -117,8 +130,8 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 				typeof msg?.nombreGrupo === 'string' && msg.nombreGrupo.trim()
 					? msg.nombreGrupo.trim()
 					: typeof msg?.grupo?.nombre === 'string' && msg.grupo.nombre.trim()
-					? msg.grupo.nombre.trim()
-					: null;
+						? msg.grupo.nombre.trim()
+						: null;
 
 			await upsertUnreadGroupChatNotification({
 				grupoId: String(msg?.grupoId ?? ''),
@@ -128,9 +141,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
 			await incrementUnreadNotificationsCount();
 			addToast(
-				nombreGrupo
-					? `Nuevo mensaje en ${nombreGrupo}`
-					: 'Nuevo mensaje de grupo'
+				nombreGrupo ? `Nuevo mensaje en ${nombreGrupo}` : 'Nuevo mensaje de grupo'
 			);
 		});
 
@@ -150,7 +161,34 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
 			await incrementUnreadNotificationsCount();
 			addToast(
-				nombre ? `${nombre} te envió una solicitud de contacto` : 'Nueva solicitud de contacto'
+				nombre
+					? `${nombre} te envió una solicitud de contacto`
+					: 'Nueva solicitud de contacto'
+			);
+		});
+
+		socket.on('contacto:solicitud:aceptada', async (payload: any) => {
+			const nombre = [payload?.solicitanteNombre, payload?.solicitanteApellido]
+				.filter(Boolean)
+				.join(' ')
+				.trim();
+
+			await upsertUnreadGroupEventNotification({
+				id: `contacto-aceptada-${payload?.solicitudId ?? Date.now()}`,
+				tipo: 'notificacion-general',
+				grupoId: 'contactos',
+				grupoNombre: nombre || 'Usuario',
+				mensaje: nombre
+					? `${nombre} aceptó tu solicitud de contacto`
+					: 'Un usuario aceptó tu solicitud de contacto',
+				createdAt: new Date().toISOString(),
+			});
+
+			await incrementUnreadNotificationsCount();
+			addToast(
+				nombre
+					? `${nombre} aceptó tu solicitud de contacto`
+					: 'Solicitud de contacto aceptada'
 			);
 		});
 
@@ -175,13 +213,6 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 					? `${receptorNombre} rechazó tu solicitud de contacto.`
 					: 'Una solicitud fue rechazada.'
 			);
-
-			publishContactRequestRejected({
-				solicitudId: String(payload?.solicitudId ?? ''),
-				solicitanteId: String(payload?.solicitanteId ?? ''),
-				receptorId: String(payload?.receptorId ?? ''),
-				updatedAt: typeof payload?.updatedAt === 'string' ? payload.updatedAt : undefined,
-			});
 		});
 
 		socket.on('grupo:solicitud:nueva', async (payload: any) => {
@@ -190,17 +221,26 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 				.join(' ')
 				.trim();
 
+			const esInvitacion = payload?.tipo === 'INVITACION';
+
 			await upsertUnreadGroupEventNotification({
 				id: `solicitud-${payload?.solicitudId ?? Date.now()}`,
-				tipo: 'solicitud-ingreso',
+				tipo: esInvitacion ? 'solicitud-invitacion' : 'solicitud-ingreso',
+				solicitudId: String(payload?.solicitudId ?? ''),
 				grupoId: String(payload?.grupoId ?? ''),
 				grupoNombre: String(payload?.grupoNombre ?? 'Grupo'),
-				mensaje: `${nombre || 'Un estudiante'} quiere unirse a tu grupo "${payload?.grupoNombre ?? 'Grupo'}".`,
+				mensaje: esInvitacion
+					? `Te invitaron a unirte al grupo "${payload?.grupoNombre ?? 'Grupo'}".`
+					: `${nombre || 'Un estudiante'} quiere unirse a tu grupo "${payload?.grupoNombre ?? 'Grupo'}".`,
 				createdAt: new Date().toISOString(),
 			});
 
 			await incrementUnreadNotificationsCount();
-			addToast(`${nombre || 'Un estudiante'} quiere unirse a "${payload?.grupoNombre ?? ''}"`);
+			addToast(
+				esInvitacion
+					? `Tienes una invitación para "${payload?.grupoNombre ?? ''}"`
+					: `${nombre || 'Un estudiante'} quiere unirse a "${payload?.grupoNombre ?? ''}"`
+			);
 		});
 
 		socket.on('grupo:solicitud:resuelta', async (payload: any) => {
@@ -248,6 +288,132 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 					? `Ahora eres admin de "${grupoNombre}"`
 					: `Transferiste admin de "${grupoNombre}"`
 			);
+		});
+
+		socket.on('grupo:admin:transferencia_pendiente', async (payload: any) => {
+			if (payload?.candidatoId !== userId) return;
+
+			const grupoNombre = String(payload?.grupoNombre ?? 'Grupo');
+			await upsertUnreadGroupEventNotification({
+				id: `transferencia-${payload?.grupoId ?? Date.now()}`,
+				tipo: 'transferencia-pendiente',
+				grupoId: String(payload?.grupoId ?? ''),
+				grupoNombre,
+				mensaje: `El administrador de "${grupoNombre}" quiere transferirte el rol.`,
+				createdAt: new Date().toISOString(),
+			});
+
+			await incrementUnreadNotificationsCount();
+			addToast(`Transferencia pendiente en "${grupoNombre}"`);
+		});
+
+		socket.on('grupo:admin:transferencia_aceptada', async (payload: any) => {
+			const grupoNombre = String(payload?.grupoNombre ?? 'Grupo');
+			await upsertUnreadGroupEventNotification({
+				id: `transferencia-${payload?.grupoId ?? Date.now()}`,
+				tipo: 'transferencia-aceptada',
+				grupoId: String(payload?.grupoId ?? ''),
+				grupoNombre,
+				mensaje: `La transferencia de administración de "${grupoNombre}" fue aceptada.`,
+				createdAt: new Date().toISOString(),
+			});
+
+			await incrementUnreadNotificationsCount();
+			addToast(`Transferencia aceptada en "${grupoNombre}"`);
+		});
+
+		socket.on('grupo:admin:transferencia_rechazada', async (payload: any) => {
+			const grupoNombre = String(payload?.grupoNombre ?? 'Grupo');
+			await upsertUnreadGroupEventNotification({
+				id: `transferencia-${payload?.grupoId ?? Date.now()}`,
+				tipo: 'transferencia-rechazada',
+				grupoId: String(payload?.grupoId ?? ''),
+				grupoNombre,
+				mensaje: `La transferencia de administración de "${grupoNombre}" fue rechazada.`,
+				createdAt: new Date().toISOString(),
+			});
+
+			await incrementUnreadNotificationsCount();
+			addToast(`Transferencia rechazada en "${grupoNombre}"`);
+		});
+
+		socket.on('grupo:admin:transferencia_cancelada', async (payload: any) => {
+			const grupoNombre = String(payload?.grupoNombre ?? 'Grupo');
+			await upsertUnreadGroupEventNotification({
+				id: `transferencia-${payload?.grupoId ?? Date.now()}`,
+				tipo: 'transferencia-cancelada',
+				grupoId: String(payload?.grupoId ?? ''),
+				grupoNombre,
+				mensaje: `La transferencia de administración de "${grupoNombre}" fue cancelada.`,
+				createdAt: new Date().toISOString(),
+			});
+
+			await incrementUnreadNotificationsCount();
+			addToast(`Transferencia cancelada en "${grupoNombre}"`);
+		});
+
+		socket.on('evento:nuevo:categoria', async (payload: any) => {
+			if (payload?.creadorId === userId) return;
+
+			const titulo = payload?.titulo || 'Nuevo Evento';
+			const categoria = payload?.categoria || 'general';
+
+			await upsertUnreadGroupEventNotification({
+				id: `evento-${payload?.id ?? Date.now()}`,
+				tipo: 'evento-nuevo',
+				grupoId: String(categoria),
+				grupoNombre: titulo,
+				mensaje: `Se ha creado un nuevo evento de categoría ${categoria}: ${titulo}.`,
+				createdAt: new Date().toISOString(),
+			});
+
+			await incrementUnreadNotificationsCount();
+			addToast(`Nuevo evento de categoría ${categoria}: ${titulo}`);
+		});
+
+		socket.on('notificacion:nueva', async (payload: any) => {
+			// Estos tipos ya los manejan mensaje:nuevo y grupo:mensaje:nuevo
+			const tiposIgnorados = [
+				'mensaje',
+				'mensaje-grupo',
+				'solicitud-contacto',
+				'solicitud-grupo',
+				'invitacion-grupo',
+				'transferencia-admin',
+			];
+			if (tiposIgnorados.includes(payload?.tipoEvento)) return;
+
+			const prioridad = payload?.prioridad || 'normal';
+			const titulo = payload?.titulo || 'Notificación';
+			const mensaje = payload?.mensaje || 'Tienes una nueva notificación.';
+			const accion = payload?.accion || null;
+			const referenciaId = payload?.referenciaId || null;
+
+			const toastMsg = prioridad === 'urgente' ? `🔴 ${titulo}` : titulo;
+
+			await upsertUnreadGroupEventNotification({
+				id: `notif-${Date.now()}-${Math.random()}`,
+				tipo: 'notificacion-general',
+				grupoId: prioridad === 'urgente' ? 'urgente' : 'general',
+				grupoNombre: titulo,
+				mensaje,
+				createdAt: new Date().toISOString(),
+			});
+
+			await incrementUnreadNotificationsCount();
+
+			// Notificaciones urgentes tienen un estilo visual distinto
+			if (prioridad === 'urgente') {
+				addToast(mensaje || titulo, 'error');
+			} else {
+				addToast(toastMsg);
+			}
+
+			// Notificaciones de recordatorio navegan al detalle de sesión
+			if (payload?.tipoEvento === 'recordatorio' && referenciaId) {
+				const { marcarNotificacionLeida } = await import('../services/notificaciones-api.service');
+				await marcarNotificacionLeida(payload?.id || referenciaId);
+			}
 		});
 
 		return () => {

@@ -1,6 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { ApiResponse } from '../types/api.types';
-// @ts-expect-error - La biblioteca no tiene tipos, pero funciona correctamente
 import type { Encuesta } from '@uniconnect/api-types';
 import { resolverApiBaseUrl } from '../utils/apiConfig';
 

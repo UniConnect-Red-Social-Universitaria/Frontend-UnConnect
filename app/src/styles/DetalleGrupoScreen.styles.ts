@@ -30,16 +30,31 @@ export const styles = StyleSheet.create({
   },
   actionsRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     paddingHorizontal: 15,
     marginTop: 15,
     gap: 10,
+    alignItems: "stretch",
+  },
+  adminActionsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    paddingHorizontal: 15,
+    marginTop: 10,
+    gap: 10,
+    alignItems: "stretch",
   },
   actionButton: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: "31%",
+    minWidth: 92,
+    minHeight: 56,
     backgroundColor: "#FFF",
     paddingVertical: 12,
+    paddingHorizontal: 10,
     borderRadius: 10,
     alignItems: "center",
+    justifyContent: "center",
     elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
@@ -52,12 +67,14 @@ export const styles = StyleSheet.create({
     color: theme.colors.primary,
     fontWeight: "bold",
     fontSize: 15,
+    textAlign: "center",
   },
   actionButtonSolid: {
     backgroundColor: theme.colors.primary,
   },
   actionButtonSolidText: {
     color: "#FFF",
+    textAlign: "center",
   },
   searchContainer: {
     padding: 15,
@@ -133,10 +150,16 @@ export const styles = StyleSheet.create({
   },
   actionButtonSuccess: {
     backgroundColor: "#142688",
-    marginLeft: 10,
   },
   actionButtonDanger: {
     backgroundColor: "#dc3545",
     borderColor: "#dc3545",
+  },
+  adminActionButton: {
+    flexBasis: "48%",
+  },
+  exitButton: {
+    flexBasis: "100%",
+    marginTop: 2,
   },
 });

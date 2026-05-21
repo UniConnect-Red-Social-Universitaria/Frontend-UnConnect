@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { gruposService } from '../services/grupos.service';
 import { authService } from '../services/auth.service';
+import { clearUnreadGroupEventNotification } from '../services/notificaciones-grupo.service';
 import type { SolicitudGrupo } from '../types/api.types';
 
 type GrupoConSolicitudes = {
@@ -58,6 +59,7 @@ export default function SolicitudesGrupoScreen() {
 		setProcessingId(solId);
 		try {
 			await gruposService.aprobarSolicitud(grupoId, solId);
+			await clearUnreadGroupEventNotification(`solicitud-${solId}`);
 			showMsg('Solicitud aprobada. Estudiante agregado al grupo.');
 			await cargarSolicitudes();
 		} catch (err: any) {
@@ -71,6 +73,7 @@ export default function SolicitudesGrupoScreen() {
 		setProcessingId(solId);
 		try {
 			await gruposService.rechazarSolicitud(grupoId, solId);
+			await clearUnreadGroupEventNotification(`solicitud-${solId}`);
 			showMsg('Solicitud rechazada.');
 			await cargarSolicitudes();
 		} catch (err: any) {

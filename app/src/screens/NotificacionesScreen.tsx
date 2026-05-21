@@ -75,6 +75,9 @@ export default function NotificacionesScreen({
 		UnreadGroupEventNotification[]
 	>([]);
 	const [esAdminDeGrupos, setEsAdminDeGrupos] = useState(false);
+	const [processingNotificationId, setProcessingNotificationId] = useState<string | null>(
+		null
+	);
 	const { width } = useWindowDimensions();
 	const logoWidth = width < 380 ? 150 : width < 480 ? 180 : 220;
 	const isDesktop = useIsDesktop();
@@ -275,6 +278,63 @@ export default function NotificacionesScreen({
 		});
 	};
 
+	const handleAceptarInvitacion = async (item: UnreadGroupEventNotification) => {
+		if (!item.solicitudId) return;
+		setProcessingNotificationId(item.solicitudId);
+		try {
+			await gruposService.aceptarInvitacion(item.grupoId, item.solicitudId);
+			await clearUnreadGroupEventNotification(item.id);
+			navigation.navigate('MensajeGrupo', {
+				grupoId: item.grupoId,
+				nombreGrupo: item.grupoNombre,
+			});
+		} catch {
+			showToast.error('No se pudo aceptar la invitación');
+		} finally {
+			setProcessingNotificationId(null);
+		}
+	};
+
+	const handleRechazarInvitacion = async (item: UnreadGroupEventNotification) => {
+		if (!item.solicitudId) return;
+		setProcessingNotificationId(item.solicitudId);
+		try {
+			await gruposService.rechazarInvitacion(item.grupoId, item.solicitudId);
+			await clearUnreadGroupEventNotification(item.id);
+			showToast.info('Invitación rechazada');
+		} catch {
+			showToast.error('No se pudo rechazar la invitación');
+		} finally {
+			setProcessingNotificationId(null);
+		}
+	};
+
+	const handleAceptarTransferencia = async (item: UnreadGroupEventNotification) => {
+		setProcessingNotificationId(item.grupoId);
+		try {
+			await gruposService.aceptarTransferencia(item.grupoId);
+			await clearUnreadGroupEventNotification(item.id);
+			navigation.navigate('Grupos');
+		} catch {
+			showToast.error('No se pudo aceptar la transferencia');
+		} finally {
+			setProcessingNotificationId(null);
+		}
+	};
+
+	const handleRechazarTransferencia = async (item: UnreadGroupEventNotification) => {
+		setProcessingNotificationId(item.grupoId);
+		try {
+			await gruposService.rechazarTransferencia(item.grupoId);
+			await clearUnreadGroupEventNotification(item.id);
+			showToast.info('Transferencia rechazada');
+		} catch {
+			showToast.error('No se pudo rechazar la transferencia');
+		} finally {
+			setProcessingNotificationId(null);
+		}
+	};
+
 	const renderNotification = ({ item }: { item: NotificationItem }) => (
 		<View style={localStyles.card}>
 			<View style={localStyles.cardHeader}>
@@ -308,7 +368,17 @@ export default function NotificacionesScreen({
 										? 'Solicitud aprobada'
 										: item.tipo === 'solicitud-rechazada'
 											? 'Solicitud rechazada'
-											: 'Cambio de administrador'
+											: item.tipo === 'solicitud-invitacion'
+												? 'Invitación de grupo'
+												: item.tipo === 'transferencia-pendiente'
+													? 'Transferencia de admin'
+													: item.tipo === 'transferencia-aceptada'
+														? 'Transferencia aceptada'
+														: item.tipo === 'transferencia-rechazada'
+															? 'Transferencia rechazada'
+															: item.tipo === 'transferencia-cancelada'
+																? 'Transferencia cancelada'
+																: 'Cambio de administrador'
 								: 'Solicitud rechazada'}
 			</Text>
 			<Text style={localStyles.cardMessage} numberOfLines={2}>
@@ -321,24 +391,78 @@ export default function NotificacionesScreen({
 							: item.ultimoMensaje || 'Te envió un mensaje nuevo'}
 			</Text>
 
-			<PrimaryButton
-				style={localStyles.viewButton}
-				onPress={() => {
-					void handleVerMensaje(item);
-				}}
-			>
-				<Text style={localStyles.viewButtonText}>
-					{item.kind === 'request'
-						? 'Ver solicitud'
-						: item.kind === 'request-rejected'
-							? 'Visto'
-							: item.kind === 'grupo-event'
-								? item.tipo === 'solicitud-ingreso'
-									? 'Ver solicitudes'
-									: 'Ver grupo'
-								: 'Ver mensaje'}
-				</Text>
-			</PrimaryButton>
+			{item.kind === 'grupo-event' && item.tipo === 'solicitud-invitacion' ? (
+				<View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
+					<PrimaryButton
+						style={localStyles.viewButton}
+						onPress={() => {
+							void handleAceptarInvitacion(item);
+						}}
+						disabled={processingNotificationId === item.solicitudId}
+					>
+						<Text style={localStyles.viewButtonText}>
+							{processingNotificationId === item.solicitudId ? '...' : 'Aceptar'}
+						</Text>
+					</PrimaryButton>
+					<PrimaryButton
+						style={localStyles.viewButton}
+						onPress={() => {
+							void handleRechazarInvitacion(item);
+						}}
+						disabled={processingNotificationId === item.solicitudId}
+					>
+						<Text style={localStyles.viewButtonText}>
+							{processingNotificationId === item.solicitudId ? '...' : 'Rechazar'}
+						</Text>
+					</PrimaryButton>
+				</View>
+			) : item.kind === 'grupo-event' && item.tipo === 'transferencia-pendiente' ? (
+				<View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
+					<PrimaryButton
+						style={localStyles.viewButton}
+						onPress={() => {
+							void handleAceptarTransferencia(item);
+						}}
+						disabled={processingNotificationId === item.grupoId}
+					>
+						<Text style={localStyles.viewButtonText}>
+							{processingNotificationId === item.grupoId ? '...' : 'Aceptar'}
+						</Text>
+					</PrimaryButton>
+					<PrimaryButton
+						style={localStyles.viewButton}
+						onPress={() => {
+							void handleRechazarTransferencia(item);
+						}}
+						disabled={processingNotificationId === item.grupoId}
+					>
+						<Text style={localStyles.viewButtonText}>
+							{processingNotificationId === item.grupoId ? '...' : 'Rechazar'}
+						</Text>
+					</PrimaryButton>
+				</View>
+			) : (
+				<PrimaryButton
+					style={localStyles.viewButton}
+					onPress={() => {
+						void handleVerMensaje(item);
+					}}
+				>
+					<Text style={localStyles.viewButtonText}>
+						{item.kind === 'request'
+							? 'Ver solicitud'
+							: item.kind === 'request-rejected'
+								? 'Visto'
+								: item.kind === 'grupo-event'
+									? item.tipo === 'solicitud-ingreso'
+										? 'Ver solicitudes'
+										: item.tipo === 'transferencia-pendiente'
+											? 'Revisar'
+											: 'Ver grupo'
+									: 'Ver mensaje'}
+					</Text>
+				</PrimaryButton>
+			)}
 		</View>
 	);
 
@@ -469,6 +593,14 @@ export default function NotificacionesScreen({
 							accessibilityLabel="Eventos"
 						>
 							<Ionicons name="calendar-outline" size={24} style={styles.footerIcon} />
+						</Pressable>
+
+						<Pressable
+							style={styles.footerTab}
+							onPress={() => navigation.navigate('SesionesEstudio')}
+							accessibilityLabel="Sesiones"
+						>
+							<Ionicons name="time-outline" size={24} style={styles.footerIcon} />
 						</Pressable>
 
 						<Pressable
