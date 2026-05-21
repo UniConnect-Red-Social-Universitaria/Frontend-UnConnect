@@ -127,12 +127,11 @@ function VelocidadChartSVG({ data }: { data: VelocidadHistorica[] }) {
 function PieChartSVG({ values, colors }: { values: { label: string; value: number; color: string }[] }) {
 	const total = values.reduce((s, v) => s + v.value, 0) || 1;
 	const r = 80, cx = 100, cy = 80;
-	let acc = 0;
-	const pieces = values.filter(v => v.value > 0).map((v) => {
+	const filtered = values.filter(v => v.value > 0);
+	const pieces = filtered.map((v, i) => {
 		const p = (v.value / total) * 360;
-		const start = acc;
-		acc += p;
-		const end = acc;
+		const start = filtered.slice(0, i).reduce((s, item) => s + (item.value / total) * 360, 0);
+		const end = start + p;
 		const sr = ((start - 90) * Math.PI) / 180;
 		const er = ((end - 90) * Math.PI) / 180;
 		const x1 = cx + r * Math.cos(sr), y1 = cy + r * Math.sin(sr);
