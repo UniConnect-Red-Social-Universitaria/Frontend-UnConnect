@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Linking, Image, Alert, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Linking, Image, Alert, Modal, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { recursosService, Recurso } from '../services/recursos.service';
 import { authService } from '../services/auth.service';
 
@@ -222,70 +222,80 @@ export function RecursosTab({ grupoId }: { grupoId: string }) {
 
             <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
                 <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Compartir Recurso</Text>
-                            <TouchableOpacity style={styles.modalClose} onPress={() => setModalVisible(false)}>
-                                <Text style={styles.modalCloseText}>✕</Text>
-                            </TouchableOpacity>
-                        </View>
-
-                        <Text style={styles.label}>Tipo</Text>
-                        <View style={styles.typeGrid}>
-                            {[
-                                { v: 'VIDEO',   icon: '🎬', label: 'Video'   },
-                                { v: 'PDF',     icon: '📄', label: 'PDF'     },
-                                { v: 'IMAGEN',  icon: '🖼️', label: 'Imagen'  },
-                                { v: 'ARCHIVO', icon: '📁', label: 'Archivo' },
-                            ].map(opt => (
-                                <TouchableOpacity
-                                    key={opt.v}
-                                    style={[styles.typeBtn, newRecurso.tipo === opt.v && styles.typeBtnActive]}
-                                    onPress={() => setNewRecurso({ ...newRecurso, tipo: opt.v })}
-                                >
-                                    <Text style={styles.typeBtnIcon}>{opt.icon}</Text>
-                                    <Text style={[styles.typeBtnLabel, newRecurso.tipo === opt.v && styles.typeBtnLabelActive]}>
-                                        {opt.label}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-
-                        <Text style={styles.label}>Nombre del recurso *</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="ej: Clase 3 - Derivadas"
-                            value={newRecurso.nombre}
-                            onChangeText={v => setNewRecurso({ ...newRecurso, nombre: v })}
-                        />
-
-                        <Text style={styles.label}>URL *</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="https://..."
-                            value={newRecurso.url}
-                            onChangeText={v => setNewRecurso({ ...newRecurso, url: v })}
-                            autoCapitalize="none"
-                            keyboardType="url"
-                        />
-                        <Text style={styles.hint}>Se extraerá la vista previa automáticamente.</Text>
-
-                        <Text style={styles.label}>Etiquetas (separadas por coma)</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="ej: parcial, semana 5"
-                            value={newRecurso.etiquetas}
-                            onChangeText={v => setNewRecurso({ ...newRecurso, etiquetas: v })}
-                        />
-
-                        <TouchableOpacity
-                            style={[styles.submitBtn, saving && { opacity: 0.7 }]}
-                            onPress={handleCrear}
-                            disabled={saving}
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                        style={{ justifyContent: 'flex-end' }}
+                    >
+                        <ScrollView
+                            keyboardShouldPersistTaps="handled"
+                            contentContainerStyle={{ justifyContent: 'flex-end' }}
                         >
-                            {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitBtnText}>🚀 Publicar</Text>}
-                        </TouchableOpacity>
-                    </View>
+                            <View style={styles.modalContent}>
+                                <View style={styles.modalHeader}>
+                                    <Text style={styles.modalTitle}>Compartir Recurso</Text>
+                                    <TouchableOpacity style={styles.modalClose} onPress={() => setModalVisible(false)}>
+                                        <Text style={styles.modalCloseText}>✕</Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                <Text style={styles.label}>Tipo</Text>
+                                <View style={styles.typeGrid}>
+                                    {[
+                                        { v: 'VIDEO',   icon: '🎬', label: 'Video'   },
+                                        { v: 'PDF',     icon: '📄', label: 'PDF'     },
+                                        { v: 'IMAGEN',  icon: '🖼️', label: 'Imagen'  },
+                                        { v: 'ARCHIVO', icon: '📁', label: 'Archivo' },
+                                    ].map(opt => (
+                                        <TouchableOpacity
+                                            key={opt.v}
+                                            style={[styles.typeBtn, newRecurso.tipo === opt.v && styles.typeBtnActive]}
+                                            onPress={() => setNewRecurso({ ...newRecurso, tipo: opt.v })}
+                                        >
+                                            <Text style={styles.typeBtnIcon}>{opt.icon}</Text>
+                                            <Text style={[styles.typeBtnLabel, newRecurso.tipo === opt.v && styles.typeBtnLabelActive]}>
+                                                {opt.label}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+
+                                <Text style={styles.label}>Nombre del recurso *</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="ej: Clase 3 - Derivadas"
+                                    value={newRecurso.nombre}
+                                    onChangeText={v => setNewRecurso({ ...newRecurso, nombre: v })}
+                                />
+
+                                <Text style={styles.label}>URL *</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="https://..."
+                                    value={newRecurso.url}
+                                    onChangeText={v => setNewRecurso({ ...newRecurso, url: v })}
+                                    autoCapitalize="none"
+                                    keyboardType="url"
+                                />
+                                <Text style={styles.hint}>Se extraerá la vista previa automáticamente.</Text>
+
+                                <Text style={styles.label}>Etiquetas (separadas por coma)</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="ej: parcial, semana 5"
+                                    value={newRecurso.etiquetas}
+                                    onChangeText={v => setNewRecurso({ ...newRecurso, etiquetas: v })}
+                                />
+
+                                <TouchableOpacity
+                                    style={[styles.submitBtn, saving && { opacity: 0.7 }]}
+                                    onPress={handleCrear}
+                                    disabled={saving}
+                                >
+                                    {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitBtnText}>🚀 Publicar</Text>}
+                                </TouchableOpacity>
+                            </View>
+                        </ScrollView>
+                    </KeyboardAvoidingView>
                 </View>
             </Modal>
         </View>
