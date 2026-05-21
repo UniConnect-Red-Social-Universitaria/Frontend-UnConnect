@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { foroService } from '../services/foro.service';
+import { useAuth } from '../context/AuthContext';
 import type { ForoPregunta, ForoRespuesta } from '../services/foro.service';
 
 type ForoRespuestaUI = ForoRespuesta & {
@@ -43,6 +44,13 @@ const CSS = `
   .foro-textarea { resize: vertical; min-height: 100px; }
   .foro-modal-btns { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
   .foro-btn-secondary { background: none; border: 1px solid #dde4ec; border-radius: 8px; padding: 9px 16px; cursor: pointer; font-size: 14px; }
+  .foro-pregunta-info { padding: 16px 0; border-bottom: 1px solid #eee; margin-bottom: 16px; }
+  .foro-pregunta-content { font-size: 14px; color: #445566; white-space: pre-wrap; margin-bottom: 8px; }
+  .foro-pregunta-actions { display: flex; align-items: center; gap: 12px; }
+  .foro-badge-cerrada { font-size: 12px; font-weight: 700; color: #c0392b; background: #fde8e8; padding: 4px 10px; border-radius: 6px; }
+  .foro-btn-cerrar { display: inline-flex; align-items: center; gap: 6px; background: none; border: 1px solid #c0392b; border-radius: 8px; padding: 8px 14px; cursor: pointer; font-size: 13px; font-weight: 600; color: #c0392b; }
+  .foro-btn-cerrar:hover { background: #fef2f2; }
+  .foro-btn-cerrar:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
 type Vista = 'preguntas' | 'respuestas';
@@ -51,6 +59,7 @@ export default function ForoScreen() {
 	const { materiaId } = useParams<{ materiaId: string }>();
 	const [searchParams] = useSearchParams();
 	const navigate = useNavigate();
+	const { userId } = useAuth();
 	const materiaNombre = searchParams.get('nombre') ?? 'Asignatura';
 
 	const [vista, setVista] = useState<Vista>('preguntas');
@@ -93,6 +102,28 @@ export default function ForoScreen() {
 	useEffect(() => {
 		cargarPreguntas();
 	}, [cargarPreguntas]);
+
+	useEffect(() => {
+		const intervalo = setInterval(() => {
+			if (vista === 'preguntas' && materiaId) {
+				foroService.obtenerPreguntas(materiaId)
+					.then(setPreguntas)
+					.catch(() => {});
+			} else if (vista === 'respuestas' && preguntaSeleccionada) {
+				foroService.obtenerRespuestas(preguntaSeleccionada.id)
+					.then((nuevas) =>
+						setRespuestas((prev) =>
+							(nuevas as ForoRespuestaUI[]).map((r) => ({
+								...r,
+								miVoto: prev.find((p) => p.id === r.id)?.miVoto,
+							}))
+						)
+					)
+					.catch(() => {});
+			}
+		}, 15_000);
+		return () => clearInterval(intervalo);
+	}, [vista, preguntaSeleccionada?.id, materiaId]);
 
 	const abrirPregunta = (p: ForoPregunta) => {
 		setPreguntaSeleccionada(p);
@@ -162,6 +193,19 @@ export default function ForoScreen() {
 		}
 	};
 
+	const handleCerrarPregunta = async () => {
+		if (!preguntaSeleccionada) return;
+		setEnviando(true);
+		try {
+			const cerrada = await foroService.cerrarPregunta(preguntaSeleccionada.id);
+			setPreguntaSeleccionada(cerrada);
+		} catch {
+			/* ignore */
+		} finally {
+			setEnviando(false);
+		}
+	};
+
 	return (
 		<>
 			<style>{CSS}</style>
@@ -185,6 +229,12 @@ export default function ForoScreen() {
 						className="foro-btn"
 						onClick={() =>
 							vista === 'preguntas' ? setModalPregunta(true) : setModalRespuesta(true)
+						}
+						disabled={vista === 'respuestas' && !!preguntaSeleccionada?.cerrada}
+						style={
+							vista === 'respuestas' && preguntaSeleccionada?.cerrada
+								? { opacity: 0.5, cursor: 'not-allowed' }
+								: {}
 						}
 					>
 						{vista === 'preguntas' ? '+ Pregunta' : '+ Respuesta'}
@@ -213,7 +263,32 @@ export default function ForoScreen() {
 						))
 					))}
 
-				{/* Lista respuestas */}
+				{/* Info pregunta + Lista respuestas */}
+				{!cargando && vista === 'respuestas' && preguntaSeleccionada && (
+					<div className="foro-pregunta-info">
+						<div className="foro-card-meta">
+							{preguntaSeleccionada.autorNombre} ·{' '}
+							{new Date(preguntaSeleccionada.createdAt).toLocaleDateString()}
+						</div>
+						<div className="foro-pregunta-content">{preguntaSeleccionada.contenido}</div>
+						<div className="foro-pregunta-actions">
+							{preguntaSeleccionada.cerrada && (
+								<span className="foro-badge-cerrada">Cerrada</span>
+							)}
+							{!preguntaSeleccionada.cerrada &&
+								userId === preguntaSeleccionada.autorId && (
+									<button
+										type="button"
+										className="foro-btn-cerrar"
+										onClick={handleCerrarPregunta}
+										disabled={enviando}
+									>
+										🔒 {enviando ? 'Cerrando...' : 'Cerrar pregunta'}
+									</button>
+								)}
+						</div>
+					</div>
+				)}
 				{!cargando &&
 					vista === 'respuestas' &&
 					(respuestas.length === 0 ? (

@@ -751,12 +751,20 @@ export default function PrincipalScreen({
 
 				<Pressable
 					style={styles.footerTab}
-					onPress={() => navigation.navigate('Contactos')}
-					accessibilityLabel="Contactos"
+					onPress={() => navigation.navigate('SesionesEstudio')}
+					accessibilityLabel="Sesiones"
 				>
-					<Ionicons name="chatbubbles-outline" size={24} style={styles.footerIcon} />
+					<Ionicons name="time-outline" size={24} style={styles.footerIcon} />
 				</Pressable>
-			</View>
+
+			<Pressable
+				style={styles.footerTab}
+				onPress={() => navigation.navigate('Contactos')}
+				accessibilityLabel="Contactos"
+			>
+				<Ionicons name="chatbubbles-outline" size={24} style={styles.footerIcon} />
+			</Pressable>
+		</View>
 		</Screen>
 	);
 }

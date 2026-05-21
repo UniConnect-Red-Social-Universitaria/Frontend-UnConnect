@@ -3,10 +3,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
 	ActivityIndicator,
 	FlatList,
-	Modal,
 	Pressable,
 	Text,
-	TextInput,
 	View,
 	StyleSheet,
 	StatusBar,
@@ -15,6 +13,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { foroService, ForoPregunta, ForoRespuesta } from '../services/foro.service';
+import { authService } from '../services/auth.service';
 import { showToast } from '../utils/toast';
 import theme from '../styles/theme';
 
@@ -23,7 +22,7 @@ type ForoRespuestaUI = ForoRespuesta & {
 };
 
 type RootStackParamList = {
-	Foro: { materiaId: string; materiaNombre: string };
+	Foro: { materiaId: string; materiaNombre: string; refresh?: number };
 };
 
 type ForoScreenProps = {
@@ -44,13 +43,14 @@ export default function ForoScreen({ navigation, route }: ForoScreenProps) {
 	);
 	const [cargando, setCargando] = useState(false);
 
-	const [modalPregunta, setModalPregunta] = useState(false);
-	const [modalRespuesta, setModalRespuesta] = useState(false);
-	const [titulo, setTitulo] = useState('');
-	const [contenido, setContenido] = useState('');
+
 	const [enviando, setEnviando] = useState(false);
 	const [votoEnCurso, setVotoEnCurso] = useState<string | null>(null);
-	const [votoPersonal, setVotoPersonal] = useState<Record<string, 1 | -1>>({});
+	const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+	useEffect(() => {
+		authService.obtenerIdUsuarioActual().then(setCurrentUserId).catch(() => {});
+	}, []);
 
 	const cargarPreguntas = useCallback(async () => {
 		setCargando(true);
@@ -80,47 +80,41 @@ export default function ForoScreen({ navigation, route }: ForoScreenProps) {
 		cargarPreguntas();
 	}, [cargarPreguntas]);
 
+	useEffect(() => {
+		const intervalo = setInterval(() => {
+			if (vista === 'preguntas') {
+				foroService.obtenerPreguntas(materiaId)
+					.then(setPreguntas)
+					.catch(() => {});
+			} else if (preguntaSeleccionada) {
+				foroService.obtenerRespuestas(preguntaSeleccionada.id)
+					.then((nuevas) =>
+						setRespuestas((prev) =>
+							(nuevas as ForoRespuestaUI[]).map((r) => ({
+								...r,
+								miVoto: prev.find((p) => p.id === r.id)?.miVoto,
+							}))
+						)
+					)
+					.catch(() => {});
+			}
+		}, 15_000);
+		return () => clearInterval(intervalo);
+	}, [vista, preguntaSeleccionada?.id, materiaId]);
+
+	useEffect(() => {
+		if (route.params?.refresh) {
+			cargarPreguntas();
+			if (vista === 'respuestas' && preguntaSeleccionada) {
+				cargarRespuestas(preguntaSeleccionada.id);
+			}
+		}
+	}, [route.params?.refresh]);
+
 	const abrirPregunta = (pregunta: ForoPregunta) => {
 		setPreguntaSeleccionada(pregunta);
 		setVista('respuestas');
 		cargarRespuestas(pregunta.id);
-	};
-
-	const handlePublicarPregunta = async () => {
-		if (!titulo.trim() || !contenido.trim()) return;
-		setEnviando(true);
-		try {
-			const nueva = await foroService.publicarPregunta(materiaId, titulo, contenido);
-			setPreguntas((prev) => [nueva, ...prev]);
-			setTitulo('');
-			setContenido('');
-			setModalPregunta(false);
-			showToast.success('Pregunta publicada');
-		} catch (e: any) {
-			showToast.error(
-				e?.response?.data?.error || 'No puedes publicar en esta asignatura'
-			);
-		} finally {
-			setEnviando(false);
-		}
-	};
-
-	const handlePublicarRespuesta = async () => {
-		if (!contenido.trim() || !preguntaSeleccionada) return;
-		setEnviando(true);
-		try {
-			await foroService.publicarRespuesta(preguntaSeleccionada.id, materiaId, contenido);
-			setContenido('');
-			setModalRespuesta(false);
-			await cargarRespuestas(preguntaSeleccionada.id);
-			showToast.success('Respuesta publicada');
-		} catch (e: any) {
-			showToast.error(
-				e?.response?.data?.error || 'No puedes responder en esta asignatura'
-			);
-		} finally {
-			setEnviando(false);
-		}
 	};
 
 	const handleVotar = async (respuestaId: string, valor: 1 | -1) => {
@@ -144,6 +138,20 @@ export default function ForoScreen({ navigation, route }: ForoScreenProps) {
 		}
 	};
 
+	const handleCerrarPregunta = async () => {
+		if (!preguntaSeleccionada) return;
+		setEnviando(true);
+		try {
+			const cerrada = await foroService.cerrarPregunta(preguntaSeleccionada.id);
+			setPreguntaSeleccionada(cerrada);
+			showToast.success('Pregunta cerrada');
+		} catch (e: any) {
+			showToast.error(e?.message || 'Error al cerrar pregunta');
+		} finally {
+			setEnviando(false);
+		}
+	};
+
 	return (
 		<View style={s.container}>
 			{/* Header */}
@@ -164,11 +172,22 @@ export default function ForoScreen({ navigation, route }: ForoScreenProps) {
 				</Text>
 				<Pressable
 					onPress={() =>
-						vista === 'preguntas' ? setModalPregunta(true) : setModalRespuesta(true)
+						vista === 'preguntas'
+							? navigation.navigate('CrearPregunta' as never, { materiaId, materiaNombre } as never)
+							: navigation.navigate('CrearRespuesta' as never, { preguntaId: preguntaSeleccionada?.id, materiaId, materiaNombre } as never)
 					}
 					style={s.addBtn}
+					disabled={vista === 'respuestas' && !!preguntaSeleccionada?.cerrada}
 				>
-					<Ionicons name="add-circle" size={28} color={theme.colors.primary} />
+					<Ionicons
+						name="add-circle"
+						size={28}
+						color={
+							vista === 'respuestas' && preguntaSeleccionada?.cerrada
+								? '#ccc'
+								: theme.colors.primary
+						}
+					/>
 				</Pressable>
 			</View>
 
@@ -199,6 +218,33 @@ export default function ForoScreen({ navigation, route }: ForoScreenProps) {
 				))}
 
 			{/* Lista respuestas */}
+			{vista === 'respuestas' && preguntaSeleccionada && (
+				<View style={s.preguntaInfo}>
+					<Text style={s.cardMeta}>
+						{preguntaSeleccionada.autorNombre} ·{' '}
+						{new Date(preguntaSeleccionada.createdAt).toLocaleDateString()}
+					</Text>
+					<Text style={s.cardPreview}>{preguntaSeleccionada.contenido}</Text>
+					<View style={s.preguntaActions}>
+						{preguntaSeleccionada.cerrada && (
+							<Text style={s.badgeCerrada}>Cerrada</Text>
+						)}
+						{!preguntaSeleccionada.cerrada &&
+							currentUserId === preguntaSeleccionada.autorId && (
+								<Pressable
+									style={s.btnCerrar}
+									onPress={handleCerrarPregunta}
+									disabled={enviando}
+								>
+									<Ionicons name="lock-closed" size={16} color="#c0392b" />
+									<Text style={s.btnCerrarText}>
+										{enviando ? 'Cerrando...' : 'Cerrar pregunta'}
+									</Text>
+								</Pressable>
+							)}
+					</View>
+				</View>
+			)}
 			{vista === 'respuestas' &&
 				(cargando ? (
 					<ActivityIndicator style={s.loader} color={theme.colors.primary} />
@@ -268,71 +314,6 @@ export default function ForoScreen({ navigation, route }: ForoScreenProps) {
 					/>
 				))}
 
-			{/* Modal nueva pregunta */}
-			<Modal visible={modalPregunta} transparent animationType="slide">
-				<View style={s.modalOverlay}>
-					<View style={s.modal}>
-						<Text style={s.modalTitle}>Nueva pregunta</Text>
-						<TextInput
-							style={s.input}
-							placeholder="Título"
-							value={titulo}
-							onChangeText={setTitulo}
-						/>
-						<TextInput
-							style={[s.input, s.inputMulti]}
-							placeholder="Describe tu duda..."
-							value={contenido}
-							onChangeText={setContenido}
-							multiline
-						/>
-						<View style={s.modalBtns}>
-							<Pressable style={s.btnSecondary} onPress={() => setModalPregunta(false)}>
-								<Text>Cancelar</Text>
-							</Pressable>
-							<Pressable
-								style={s.btnPrimary}
-								onPress={handlePublicarPregunta}
-								disabled={enviando}
-							>
-								<Text style={s.btnPrimaryText}>
-									{enviando ? 'Publicando...' : 'Publicar'}
-								</Text>
-							</Pressable>
-						</View>
-					</View>
-				</View>
-			</Modal>
-
-			{/* Modal nueva respuesta */}
-			<Modal visible={modalRespuesta} transparent animationType="slide">
-				<View style={s.modalOverlay}>
-					<View style={s.modal}>
-						<Text style={s.modalTitle}>Responder</Text>
-						<TextInput
-							style={[s.input, s.inputMulti]}
-							placeholder="Escribe tu respuesta..."
-							value={contenido}
-							onChangeText={setContenido}
-							multiline
-						/>
-						<View style={s.modalBtns}>
-							<Pressable style={s.btnSecondary} onPress={() => setModalRespuesta(false)}>
-								<Text>Cancelar</Text>
-							</Pressable>
-							<Pressable
-								style={s.btnPrimary}
-								onPress={handlePublicarRespuesta}
-								disabled={enviando}
-							>
-								<Text style={s.btnPrimaryText}>
-									{enviando ? 'Publicando...' : 'Responder'}
-								</Text>
-							</Pressable>
-						</View>
-					</View>
-				</View>
-			</Modal>
 		</View>
 	);
 }
@@ -343,7 +324,8 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 16,   // ← reemplaza paddingBottom + paddingTop
+    paddingTop: (StatusBar.currentHeight || 24) + 8,
+    paddingBottom: 16,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderColor: '#eee',
@@ -354,6 +336,22 @@ const s = StyleSheet.create({
 	loader: { flex: 1, marginTop: 40 },
 	list: { padding: 12, gap: 10 },
 	empty: { textAlign: 'center', color: '#999', marginTop: 40 },
+	preguntaInfo: {
+		padding: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#eee',
+	},
+	preguntaActions: {
+		flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 8,
+	},
+	badgeCerrada: {
+		fontSize: 12, fontWeight: '700', color: '#c0392b', backgroundColor: '#fde8e8',
+		paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6, overflow: 'hidden',
+	},
+	btnCerrar: {
+		flexDirection: 'row', alignItems: 'center', gap: 6,
+		paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8,
+		borderWidth: 1, borderColor: '#c0392b',
+	},
+	btnCerrarText: { fontSize: 13, color: '#c0392b', fontWeight: '600' },
 	card: {
 		backgroundColor: '#fff',
 		borderRadius: 10,
@@ -419,29 +417,4 @@ const s = StyleSheet.create({
 	scoreNeutral: { backgroundColor: '#eef4f8', color: '#4a6a85' },
 	scorePositive: { backgroundColor: '#e7f7ee', color: '#1e8449' },
 	scoreNegative: { backgroundColor: '#fce8e8', color: '#c0392b' },
-	modalOverlay: {
-		flex: 1,
-		backgroundColor: 'rgba(0,0,0,0.5)',
-		justifyContent: 'flex-end',
-	},
-	modal: {
-		backgroundColor: '#fff',
-		borderTopLeftRadius: 20,
-		borderTopRightRadius: 20,
-		padding: 20,
-		gap: 12,
-	},
-	modalTitle: { fontSize: 18, fontWeight: '700' },
-	input: {
-		borderWidth: 1,
-		borderColor: '#ddd',
-		borderRadius: 8,
-		padding: 12,
-		fontSize: 14,
-	},
-	inputMulti: { height: 100, textAlignVertical: 'top' },
-	modalBtns: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
-	btnSecondary: { padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#ddd' },
-	btnPrimary: { padding: 12, borderRadius: 8, backgroundColor: theme.colors.primary },
-	btnPrimaryText: { color: '#fff', fontWeight: '600' },
 });

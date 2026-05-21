@@ -9,7 +9,6 @@ import {
   updatePreferenciasGlobales,
   CANALES,
   type CanalNotificacion,
-  type TipoEvento,
   getDefaultPreferencias,
 } from "../services/notificaciones-preferencias.service";
 import type { Materia, PerfilEnriquecido, Insignia } from "../types/api.types";

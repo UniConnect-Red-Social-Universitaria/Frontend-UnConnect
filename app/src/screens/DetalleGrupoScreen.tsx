@@ -21,6 +21,7 @@ type DetalleGrupoParamList = {
 		materiaId: string;
 		materiaNombre: string;
 		miembrosIds: string[];
+		refresh?: number;
 	};
 	MensajeGrupo: {
 		grupoId: string;
@@ -51,6 +52,14 @@ export function DetalleGrupoScreen({ route, navigation }: Props) {
 	const [transferirModalVisible, setTransferirModalVisible] = useState(false);
 	const [userId, setUserId] = useState<string | null>(null);
 	const [abandonando, setAbandonando] = useState(false);
+	const [recursosRefreshKey, setRecursosRefreshKey] = useState(0);
+
+	useEffect(() => {
+		if (route.params?.refresh) {
+			setRecursosRefreshKey(k => k + 1);
+			cargarArchivos();
+		}
+	}, [route.params?.refresh]);
 
 	const {
 		archivos,
@@ -238,7 +247,7 @@ export function DetalleGrupoScreen({ route, navigation }: Props) {
 					keyExtractor={(item) => item.id}
 					ListHeaderComponent={
 						<>
-							<RecursosTab grupoId={grupoId} />
+							<RecursosTab key={recursosRefreshKey} grupoId={grupoId} onPressAgregar={() => navigation.navigate('CrearRecurso' as never, { grupoId } as never)} />
 							<Text style={styles.sectionTitle}>Archivos del grupo</Text>
 						</>
 					}

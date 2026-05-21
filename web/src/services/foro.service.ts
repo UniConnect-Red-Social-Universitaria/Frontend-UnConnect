@@ -25,6 +25,11 @@ class ForoService {
     return res.data;
   }
 
+  async cerrarPregunta(preguntaId: string): Promise<ForoPregunta> {
+    const res = await apiClient.patch(`/api/foro/preguntas/${preguntaId}/cerrar`);
+    return res.data;
+  }
+
   async votarRespuesta(respuestaId: string, valor: 1 | -1): Promise<ForoRespuesta> {
     const res = await apiClient.post(`/api/foro/respuestas/${respuestaId}/votos`, { valor });
     return res.data;
