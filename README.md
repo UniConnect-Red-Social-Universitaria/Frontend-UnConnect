@@ -91,4 +91,34 @@ Frontend-UnConnect/
 ---
 **Nota:** Ante cualquier problema de conexión (sockets, peticiones a API), verificar los archivos de variables de entorno (como `.env` o la configuración en `utils/apiConfig.ts`) para garantizar que apuntan al puerto correcto del backend local (usualmente `http://localhost:3000`).
 
-## Flujo de CI/CD
+## Pruebas End-to-End (E2E) con Playwright
+Antes de correr las pruebas debes tener los siguentes valores en tu archivo `.env`:
+
+```env
+TEST_USER_EMAIL=tu-usuario-de-staging@correo.com
+TEST_USER_PASSWORD=tu-contraseña-de-staging
+```
+
+## Correr todas las pruebas
+
+```bash
+npx playwright test
+```
+
+## Correr pruebas específicas
+
+```bash
+npx playwright test e2e/<nombre-de-la-prueba>.spec.ts
+```
+
+## Abrir la interfaz interactiva de Playwright
+
+```bash
+npx playwright test --ui
+```
+
+## Reporte de pruebas
+
+```bash
+npx playwright show-report
+```

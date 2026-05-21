@@ -59,7 +59,7 @@ El siguiente diagrama detalla los pipelines involucrados en el desarrollo y desp
 | Entorno | Plataforma / URL | Activador / Trigger | Descripción |
 | :--- | :--- | :--- | :--- |
 | **Desarrollo Local** | `http://localhost:5173` | Manual (`npm run dev`) | Entorno local de desarrollo rápido con HMR y conexión a API local o dev. |
-| **Producción (Web)** | [uniconnect-frontend.fly.dev](https://uniconnect-frontend.fly.dev) | Push automático a `main` | Aplicación web productiva desplegada en Fly.io conectada a la API productiva. |
+| **Producción (Web)** | [uniconnect-frontend.fly.dev](https://uniconnect-frontend.fly.dev/) | Push automático a `main` | Aplicación web productiva desplegada en Fly.io conectada a la API productiva. |
 
 ---
 
